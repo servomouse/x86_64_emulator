@@ -1,4 +1,5 @@
-#include <stdio.h> 
+// http://ref.x86asm.net/coder64.html
+#include <stdio.h>
 #include <stdint.h> 
 #include <stdlib.h>
 
@@ -517,50 +518,185 @@ void process_instruction(uint8_t * pc, uint16_t prefix, uint8_t second_byte)
         case 0xBF:  // MOV 16/32bit, OP_0 is EDI, OP_1 is m16/32
         break;
         case 0xC0:
+            switch(get_reg_opcode(pc[1]))
+            {
+                case 0: // ROL 8bit OP_0 is R/M, OP_1 is imm8   (rotate)
+                break;
+                case 1: // ROR 8bit OP_0 is R/M, OP_1 is imm8   (rotate)
+                break;
+                case 2: // RCL 8bit OP_0 is R/M, OP_1 is imm8   (rotate)
+                break;
+                case 3: // RCR 8bit OP_0 is R/M, OP_1 is imm8   (rotate)
+                break;
+                case 4: // SHL/SAL 8bit OP_0 is R/M, OP_1 is imm8   (shift)
+                break;
+                case 5: // SHR 8bit OP_0 is R/M, OP_1 is imm8   (shift)
+                break;
+                case 6: // SAL/SHL 8bit OP_0 is R/M, OP_1 is imm8   (shift)
+                break;
+                case 7: // SAR 8bit OP_0 is R/M, OP_1 is imm8   (shift)
+                break;
+            }
         break;
         case 0xC1:
+            switch(get_reg_opcode(pc[1]))
+            {
+                case 0: // ROL 16/32/64 bit OP_0 is R/M, OP_1 is imm8   (rotate)
+                break;
+                case 1: // ROR 16/32/64 bit OP_0 is R/M, OP_1 is imm8   (rotate)
+                break;
+                case 2: // RCL 16/32/64 bit OP_0 is R/M, OP_1 is imm8   (rotate)
+                break;
+                case 3: // RCR 16/32/64 bit OP_0 is R/M, OP_1 is imm8   (rotate)
+                break;
+                case 4: // SHL/SAL 16/32/64 bit OP_0 is R/M, OP_1 is imm8   (shift)
+                break;
+                case 5: // SHR 16/32/64 bit OP_0 is R/M, OP_1 is imm8   (shift)
+                break;
+                case 6: // SAL/SHL 16/32/64 bit OP_0 is R/M, OP_1 is imm8   (shift)
+                break;
+                case 7: // SAR 16/32/64 bit OP_0 is R/M, OP_1 is imm8   (shift)
+                break;
+            }
         break;
-        case 0xC2:
+        case 0xC2:  // RETN, OP_0 is imm16  (return from procedure)
         break;
-        case 0xC3:
+        case 0xC3:  // RETN  (return from procedure)
         break;
         case 0xC4:
+            invalid_command();
         break;
         case 0xC5:
+            invalid_command();
         break;
         case 0xC6:
+            switch(get_reg_opcode(pc[1]))
+            {
+                case 0: // MOV 8bit, OP_0 is R/M, OP_1 is imm8  (move)
+                break;
+                default:
+                invalid_command();
+                break;
+            }
         break;
         case 0xC7:
+            switch(get_reg_opcode(pc[1]))
+            {
+                case 0: // MOV 16/32/64 bit, OP_0 is R/M, OP_1 is imm16/32  (move)
+                break;
+                default:
+                invalid_command();
+                break;
+            }
         break;
-        case 0xC8:
+        case 0xC8:  // ENTER OP_0 is rBP, OP_1 is imm16, OP_2 is imm8 (make stack frame for procedure parameters)
         break;
-        case 0xC9:
+        case 0xC9:  // LEAVE OP_0 is rBP (high level procedure exit)
         break;
-        case 0xCA:
+        case 0xCA:  // RETF OP_0 is imm16   (return from procedure)
         break;
-        case 0xCB:
+        case 0xCB:  // RETF (return from procedure)
         break;
-        case 0xCC:
+        case 0xCC:  // INT OP_0 is 3, OP_1 is eFlags (call to interrupt procedure)
         break;
-        case 0xCD:
+        case 0xCD:  // INT OP_0 is imm8, OP_1 is eFlags (call to interrupt procedure)
         break;
-        case 0xCE:
+        case 0xCE:  // INT0 OP_0 is eFlags (call to interrupt procedure)
         break;
-        case 0xCF:
+        case 0xCF:  // IRET/IRETD/IRETQ OP_0 is Flags/EFlags/RFlags (interrupt return)
         break;
         case 0xD0:
+            switch(get_reg_opcode(pc[1]))
+            {
+                case 0: // ROL 8 bit OP_0 is R/M, OP_1 is 1   (rotate)
+                break;
+                case 1: // ROR 8 bit OP_0 is R/M, OP_1 is 1   (rotate)
+                break;
+                case 2: // RCL 8 bit OP_0 is R/M, OP_1 is 1   (rotate)
+                break;
+                case 3: // RCR 8 bit OP_0 is R/M, OP_1 is 1   (rotate)
+                break;
+                case 4: // SHL/SAL 8 bit OP_0 is R/M, OP_1 is 1   (shift)
+                break;
+                case 5: // SHR 8 bit OP_0 is R/M, OP_1 is 1   (shift)
+                break;
+                case 6: // SAL/SHL 8 bit OP_0 is R/M, OP_1 is 1   (shift)
+                break;
+                case 7: // SAR 8 bit OP_0 is R/M, OP_1 is 1   (shift)
+                break;
+            }
         break;
         case 0xD1:
+            switch(get_reg_opcode(pc[1]))
+            {
+                case 0: // ROL 16/32/64 bit OP_0 is R/M, OP_1 is 1   (rotate)
+                break;
+                case 1: // ROR 16/32/64 bit OP_0 is R/M, OP_1 is 1   (rotate)
+                break;
+                case 2: // RCL 16/32/64 bit OP_0 is R/M, OP_1 is 1   (rotate)
+                break;
+                case 3: // RCR 16/32/64 bit OP_0 is R/M, OP_1 is 1   (rotate)
+                break;
+                case 4: // SHL/SAL 16/32/64 bit OP_0 is R/M, OP_1 is 1   (shift)
+                break;
+                case 5: // SHR 16/32/64 bit OP_0 is R/M, OP_1 is 1   (shift)
+                break;
+                case 6: // SAL/SHL 16/32/64 bit OP_0 is R/M, OP_1 is 1   (shift)
+                break;
+                case 7: // SAR 16/32/64 bit OP_0 is R/M, OP_1 is 1   (shift)
+                break;
+            }
         break;
         case 0xD2:
+            switch(get_reg_opcode(pc[1]))
+            {
+                case 0: // ROL 8 bit OP_0 is R/M, OP_1 is CL   (rotate)
+                break;
+                case 1: // ROR 8 bit OP_0 is R/M, OP_1 is CL   (rotate)
+                break;
+                case 2: // RCL 8 bit OP_0 is R/M, OP_1 is CL   (rotate)
+                break;
+                case 3: // RCR 8 bit OP_0 is R/M, OP_1 is CL   (rotate)
+                break;
+                case 4: // SHL/SAL 8 bit OP_0 is R/M, OP_1 is CL   (shift)
+                break;
+                case 5: // SHR 8 bit OP_0 is R/M, OP_1 is CL   (shift)
+                break;
+                case 6: // SAL/SHL 8 bit OP_0 is R/M, OP_1 is CL   (shift)
+                break;
+                case 7: // SAR 8 bit OP_0 is R/M, OP_1 is CL   (shift)
+                break;
+            }
         break;
         case 0xD3:
+            switch(get_reg_opcode(pc[1]))
+            {
+                case 0: // ROL 16/32/64 bit OP_0 is R/M, OP_1 is CL   (rotate)
+                break;
+                case 1: // ROR 16/32/64 bit OP_0 is R/M, OP_1 is CL   (rotate)
+                break;
+                case 2: // RCL 16/32/64 bit OP_0 is R/M, OP_1 is CL   (rotate)
+                break;
+                case 3: // RCR 16/32/64 bit OP_0 is R/M, OP_1 is CL   (rotate)
+                break;
+                case 4: // SHL/SAL 16/32/64 bit OP_0 is R/M, OP_1 is CL   (shift)
+                break;
+                case 5: // SHR 16/32/64 bit OP_0 is R/M, OP_1 is CL   (shift)
+                break;
+                case 6: // SAL/SHL 16/32/64 bit OP_0 is R/M, OP_1 is CL   (shift)
+                break;
+                case 7: // SAR 16/32/64 bit OP_0 is R/M, OP_1 is CL   (shift)
+                break;
+            }
         break;
         case 0xD4:
+            invalid_command();
         break;
         case 0xD5:
+            invalid_command();
         break;
         case 0xD6:
+            invalid_command();
         break;
         case 0xD7:
         break;
