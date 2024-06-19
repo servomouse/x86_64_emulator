@@ -67,6 +67,22 @@ uint8_t or_op(uint8_t opcode, uint8_t *data) {
     return 1;
 }
 
+uint8_t adc_op(uint8_t opcode, uint8_t *data) {
+    return 1;
+}
+
+uint8_t sbb_op(uint8_t opcode, uint8_t *data) {
+    return 1;
+}
+
+uint8_t and_op(uint8_t opcode, uint8_t *data) {
+    return 1;
+}
+
+uint8_t sub_op(uint8_t opcode, uint8_t *data) {
+    return 1;
+}
+
 uint8_t push_op(uint16_t val) {
     return 1;
 }
@@ -103,68 +119,62 @@ void process_instruction(uint8_t *memory) {
             INVALID_INSTRUCTION;
             break;
         case 0x10:
-            break;
         case 0x11:
-            break;
         case 0x12:
-            break;
         case 0x13:
-            break;
         case 0x14:
-            break;
         case 0x15:
+            registers.IP += adc_op(memory[1], &memory[2]);
             break;
         case 0x16:
+            registers.IP += push_op(registers.SS);
             break;
         case 0x17:
+            registers.SS = pop_op();
+            registers.IP += 1;
             break;
         case 0x18:
-            break;
         case 0x19:
-            break;
         case 0x1A:
-            break;
         case 0x1B:
-            break;
         case 0x1C:
-            break;
         case 0x1D:
+            registers.IP += sbb_op(memory[1], &memory[2]);
             break;
         case 0x1E:
+            registers.IP += push_op(registers.DS);
             break;
         case 0x1F:
+            registers.DS = pop_op();
+            registers.IP += 1;
             break;
         case 0x20:
-            break;
         case 0x21:
-            break;
         case 0x22:
-            break;
         case 0x23:
-            break;
         case 0x24:
-            break;
         case 0x25:
+            registers.IP += and_op(memory[1], &memory[2]);
             break;
         case 0x26:
+            registers.IP += es_op();  // ES: segment overrige prefix
             break;
         case 0x27:
+            registers.IP += daa_op();
             break;
         case 0x28:
-            break;
         case 0x29:
-            break;
         case 0x2A:
-            break;
         case 0x2B:
-            break;
         case 0x2C:
-            break;
         case 0x2D:
+            registers.IP += sub_op(memory[1], &memory[2]);
             break;
         case 0x2E:
+            registers.IP += cs_op();  // CS: segment overrige prefix
             break;
         case 0x2F:
+            registers.IP += das_op();
             break;
         case 0x30:
             break;
