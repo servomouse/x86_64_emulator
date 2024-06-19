@@ -83,6 +83,10 @@ uint8_t sub_op(uint8_t opcode, uint8_t *data) {
     return 1;
 }
 
+uint8_t xor_op(uint8_t opcode, uint8_t *data) {
+    return 1;
+}
+
 uint8_t push_op(uint16_t val) {
     return 1;
 }
@@ -177,16 +181,12 @@ void process_instruction(uint8_t *memory) {
             registers.IP += das_op();
             break;
         case 0x30:
-            break;
         case 0x31:
-            break;
         case 0x32:
-            break;
         case 0x33:
-            break;
         case 0x34:
-            break;
         case 0x35:
+            registers.IP += xor_op(memory[1], &memory[2]);
             break;
         case 0x36:
             break;
