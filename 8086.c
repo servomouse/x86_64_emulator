@@ -531,8 +531,62 @@ void process_instruction(uint8_t *memory) {
             }
             break;
         case 0x82:
+            // 8-bit operations
+            switch(get_mode_field(memory[1])) {
+                case 0:
+                    registers.IP += add_op(memory[1], &memory[2]);
+                    break;
+                case 1:
+                    INVALID_INSTRUCTION;
+                    break;
+                case 2:
+                    registers.IP += adc_op(memory[1], &memory[2]);
+                    break;
+                case 3:
+                    registers.IP += sbb_op(memory[1], &memory[2]);
+                    break;
+                case 4:
+                    INVALID_INSTRUCTION;
+                    break;
+                case 5:
+                    registers.IP += sub_op(memory[1], &memory[2]);
+                    break;
+                case 6:
+                    INVALID_INSTRUCTION;
+                    break;
+                case 7:
+                    registers.IP += cmp_op(memory[1], &memory[2]);
+                    break;
+            }
             break;
         case 0x83:
+            // 16-bit operations
+            switch(get_mode_field(memory[1])) {
+                case 0:
+                    registers.IP += add_op(memory[1], &memory[2]);
+                    break;
+                case 1:
+                    INVALID_INSTRUCTION;
+                    break;
+                case 2:
+                    registers.IP += adc_op(memory[1], &memory[2]);
+                    break;
+                case 3:
+                    registers.IP += sbb_op(memory[1], &memory[2]);
+                    break;
+                case 4:
+                    INVALID_INSTRUCTION;
+                    break;
+                case 5:
+                    registers.IP += sub_op(memory[1], &memory[2]);
+                    break;
+                case 6:
+                    INVALID_INSTRUCTION;
+                    break;
+                case 7:
+                    registers.IP += cmp_op(memory[1], &memory[2]);
+                    break;
+            }
             break;
         case 0x84:
             break;
