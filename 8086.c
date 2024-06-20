@@ -36,7 +36,7 @@ struct {
         unsigned int PF : 1;    // Parity flag
         unsigned int U0 : 1;    // Unused field
         unsigned int CF : 1;    // Carry flag
-    } Flags;
+    } flags;
 } registers;
 
 typedef enum {
@@ -54,6 +54,43 @@ typedef enum {
     ES,
     SS,
 } register_t;
+
+/*===== J-instructions =====*/
+// https://www.dei.isep.ipp.pt/~nsilva/ensino/ArqC/ArqC1998-1999/nguide/ng-j.htm
+
+uint8_t jo_op(void) {   // jump if the overflow flag is set
+    return 1;
+}
+
+uint8_t jb_op(void) {   // Jump if Carry
+    return 1;
+}
+
+uint8_t je_op(void) {   // Same as JZ: Jump if SF = 1
+    return 1;
+}
+
+uint8_t jbe_op(void) {  // Jump if CF = 1 or ZF = 1
+    return 1;
+}
+
+uint8_t js_op(void) {   // Jump if SF = 1
+    return 1;
+}
+
+uint8_t jp_op(void) {   // Jump if PF = 1
+    return 1;
+}
+
+uint8_t jl_op(void) {   // Jump if SF <> OF (jump if less)
+    return 1;
+}
+
+uint8_t jle_op(void) {  // Jump if SF <> OF or ZF = 1 (jump if less or equal)
+    return 1;
+}
+
+/*==== !J-instructions =====*/
 
 uint32_t segment_override(register_t segment) {
     return 1;
@@ -354,72 +391,144 @@ void process_instruction(uint8_t *memory) {
             registers.IP += pop_reg_op(DI);
             break;
         case 0x60:
-            break;
         case 0x61:
-            break;
         case 0x62:
-            break;
         case 0x63:
-            break;
         case 0x64:
-            break;
         case 0x65:
-            break;
         case 0x66:
-            break;
         case 0x67:
-            break;
         case 0x68:
-            break;
         case 0x69:
-            break;
         case 0x6A:
-            break;
         case 0x6B:
-            break;
         case 0x6C:
-            break;
         case 0x6D:
-            break;
         case 0x6E:
-            break;
         case 0x6F:
+            INVALID_INSTRUCTION;
             break;
         case 0x70:
+            if(jo_op())
+                registers.IP = memory[1];
             break;
         case 0x71:
+            if(!jo_op())
+                registers.IP = memory[1];
             break;
         case 0x72:
+            if(jb_op())
+                registers.IP = memory[1];
             break;
         case 0x73:
+            if(!jb_op())
+                registers.IP = memory[1];
             break;
         case 0x74:
+            if(je_op())
+                registers.IP = memory[1];
             break;
         case 0x75:
+            if(!je_op())
+                registers.IP = memory[1];
             break;
         case 0x76:
+            if(jbe_op())
+                registers.IP = memory[1];
             break;
         case 0x77:
+            if(!jbe_op())
+                registers.IP = memory[1];
             break;
         case 0x78:
+            if(js_op())
+                registers.IP = memory[1];
             break;
         case 0x79:
+            if(!js_op())
+                registers.IP = memory[1];
             break;
         case 0x7A:
+            if(jp_op())
+                registers.IP = memory[1];
             break;
         case 0x7B:
+            if(!jp_op())
+                registers.IP = memory[1];
             break;
         case 0x7C:
+            if(jl_op())
+                registers.IP = memory[1];
             break;
         case 0x7D:
+            if(!jl_op())
+                registers.IP = memory[1];
             break;
         case 0x7E:
+            if(jle_op())
+                registers.IP = memory[1];
             break;
         case 0x7F:
+            if(!jle_op())
+                registers.IP = memory[1];
             break;
         case 0x80:
+            // 8-bit operations
+            switch(get_mode_field(memory[1])) {
+                case 0:
+                    registers.IP += add_op(memory[1], &memory[2]);
+                    break;
+                case 1:
+                    registers.IP += or_op(memory[1], &memory[2]);
+                    break;
+                case 2:
+                    registers.IP += adc_op(memory[1], &memory[2]);
+                    break;
+                case 3:
+                    registers.IP += sbb_op(memory[1], &memory[2]);
+                    break;
+                case 4:
+                    registers.IP += and_op(memory[1], &memory[2]);
+                    break;
+                case 5:
+                    registers.IP += sub_op(memory[1], &memory[2]);
+                    break;
+                case 6:
+                    registers.IP += xor_op(memory[1], &memory[2]);
+                    break;
+                case 7:
+                    registers.IP += cmp_op(memory[1], &memory[2]);
+                    break;
+            }
             break;
         case 0x81:
+            // 16-bit operations
+            switch(get_mode_field(memory[1])) {
+                case 0:
+                    registers.IP += add_op(memory[1], &memory[2]);
+                    break;
+                case 1:
+                    registers.IP += or_op(memory[1], &memory[2]);
+                    break;
+                case 2:
+                    registers.IP += adc_op(memory[1], &memory[2]);
+                    break;
+                case 3:
+                    registers.IP += sbb_op(memory[1], &memory[2]);
+                    break;
+                case 4:
+                    registers.IP += and_op(memory[1], &memory[2]);
+                    break;
+                case 5:
+                    registers.IP += sub_op(memory[1], &memory[2]);
+                    break;
+                case 6:
+                    registers.IP += xor_op(memory[1], &memory[2]);
+                    break;
+                case 7:
+                    registers.IP += cmp_op(memory[1], &memory[2]);
+                    break;
+            }
             break;
         case 0x82:
             break;
