@@ -39,6 +39,30 @@ struct {
     } Flags;
 } registers;
 
+typedef enum {
+    AX = 0,
+    BX,
+    CX,
+    DX,
+    SI,
+    DI,
+    BP,
+    SP,
+    IP,
+    CS,
+    DS,
+    ES,
+    SS,
+} register_t;
+
+uint32_t segment_override(register_t segment) {
+    return 1;
+}
+
+uint32_t inc_register(register_t reg) {
+    return 1;
+}
+
 uint32_t get_addr(uint16_t segment_reg, uint16_t addr) {
     uint32_t ret_val = segment_reg;
     ret_val <<= 4;
@@ -87,7 +111,35 @@ uint8_t xor_op(uint8_t opcode, uint8_t *data) {
     return 1;
 }
 
-uint8_t push_op(uint16_t val) {
+uint8_t cmp_op(uint8_t opcode, uint8_t *data) {
+    return 1;
+}
+
+uint8_t inc_op(uint8_t opcode, uint8_t *data) {
+    return 1;
+}
+
+uint8_t dec_op(uint8_t opcode, uint8_t *data) {
+    return 1;
+}
+
+uint8_t push_reg_op(register_t reg) {
+    return 1;
+}
+
+uint8_t pop_reg_op(register_t reg) {
+    return 1;
+}
+
+uint8_t aaa_op(void) {
+    return 1;
+}
+
+uint8_t aas_op(void) {
+    return 1;
+}
+
+uint8_t push_val_op(uint16_t val) {
     return 1;
 }
 
@@ -102,11 +154,10 @@ void process_instruction(uint8_t *memory) {
             registers.IP += add_op(memory[1], &memory[2]);
             break;
         case 0x06:
-            registers.IP += push_op(registers.ES);
+            registers.IP += push_reg_op(registers.ES);
             break;
         case 0x07:
-            registers.ES = pop_op();
-            registers.IP += 1;
+            registers.IP += pop_reg_op(ES);
             break;
         case 0x08:
         case 0x09:
@@ -117,7 +168,7 @@ void process_instruction(uint8_t *memory) {
             registers.IP += or_op(memory[1], &memory[2]);
             break;
         case 0x0E:
-            registers.IP += push_op(registers.CS);
+            registers.IP += push_reg_op(registers.CS);
             break;
         case 0x0F:
             INVALID_INSTRUCTION;
@@ -131,11 +182,10 @@ void process_instruction(uint8_t *memory) {
             registers.IP += adc_op(memory[1], &memory[2]);
             break;
         case 0x16:
-            registers.IP += push_op(registers.SS);
+            registers.IP += push_reg_op(registers.SS);
             break;
         case 0x17:
-            registers.SS = pop_op();
-            registers.IP += 1;
+            registers.IP += pop_reg_op(SS);
             break;
         case 0x18:
         case 0x19:
@@ -146,11 +196,10 @@ void process_instruction(uint8_t *memory) {
             registers.IP += sbb_op(memory[1], &memory[2]);
             break;
         case 0x1E:
-            registers.IP += push_op(registers.DS);
+            registers.IP += push_reg_op(registers.DS);
             break;
         case 0x1F:
-            registers.DS = pop_op();
-            registers.IP += 1;
+            registers.IP += pop_reg_op(DS);
             break;
         case 0x20:
         case 0x21:
@@ -161,7 +210,7 @@ void process_instruction(uint8_t *memory) {
             registers.IP += and_op(memory[1], &memory[2]);
             break;
         case 0x26:
-            registers.IP += es_op();  // ES: segment overrige prefix
+            registers.IP += segment_override(ES);  // ES: segment overrige prefix
             break;
         case 0x27:
             registers.IP += daa_op();
@@ -175,7 +224,7 @@ void process_instruction(uint8_t *memory) {
             registers.IP += sub_op(memory[1], &memory[2]);
             break;
         case 0x2E:
-            registers.IP += cs_op();  // CS: segment overrige prefix
+            registers.IP += segment_override(CS);  // CS: segment overrige prefix
             break;
         case 0x2F:
             registers.IP += das_op();
@@ -189,88 +238,120 @@ void process_instruction(uint8_t *memory) {
             registers.IP += xor_op(memory[1], &memory[2]);
             break;
         case 0x36:
+            registers.IP += segment_override(SS);  // SS: segment overrige prefix
             break;
         case 0x37:
+            registers.IP += aaa_op();
             break;
         case 0x38:
-            break;
         case 0x39:
-            break;
         case 0x3A:
-            break;
         case 0x3B:
-            break;
         case 0x3C:
-            break;
         case 0x3D:
+            registers.IP += cmp_op(memory[1], &memory[2]);
             break;
         case 0x3E:
+            registers.IP += segment_override(DS);  // DS: segment overrige prefix
             break;
         case 0x3F:
+            registers.IP += aas_op();
             break;
         case 0x40:
+            registers.IP += inc_register(AX);
             break;
         case 0x41:
+            registers.IP += inc_register(CX);
             break;
         case 0x42:
+            registers.IP += inc_register(DX);
             break;
         case 0x43:
+            registers.IP += inc_register(BX);
             break;
         case 0x44:
+            registers.IP += inc_register(SP);
             break;
         case 0x45:
+            registers.IP += inc_register(BP);
             break;
         case 0x46:
+            registers.IP += inc_register(SI);
             break;
         case 0x47:
+            registers.IP += inc_register(DI);
             break;
         case 0x48:
+            registers.IP += dec_register(AX);
             break;
         case 0x49:
+            registers.IP += dec_register(CX);
             break;
         case 0x4A:
+            registers.IP += dec_register(DX);
             break;
         case 0x4B:
+            registers.IP += dec_register(BX);
             break;
         case 0x4C:
+            registers.IP += dec_register(SP);
             break;
         case 0x4D:
+            registers.IP += dec_register(BP);
             break;
         case 0x4E:
+            registers.IP += dec_register(SI);
             break;
         case 0x4F:
+            registers.IP += dec_register(DI);
             break;
         case 0x50:
+            registers.IP += push_reg_op(AX);
             break;
         case 0x51:
+            registers.IP += push_reg_op(CX);
             break;
         case 0x52:
+            registers.IP += push_reg_op(DX);
             break;
         case 0x53:
+            registers.IP += push_reg_op(BX);
             break;
         case 0x54:
+            registers.IP += push_reg_op(SP);
             break;
         case 0x55:
+            registers.IP += push_reg_op(BP);
             break;
         case 0x56:
+            registers.IP += push_reg_op(SI);
             break;
         case 0x57:
+            registers.IP += push_reg_op(DI);
             break;
         case 0x58:
+            registers.IP += pop_reg_op(AX);
             break;
         case 0x59:
+            registers.IP += pop_reg_op(CX);
             break;
         case 0x5A:
+            registers.IP += pop_reg_op(DX);
             break;
         case 0x5B:
+            registers.IP += pop_reg_op(BX);
             break;
         case 0x5C:
+            registers.IP += pop_reg_op(SP);
             break;
         case 0x5D:
+            registers.IP += pop_reg_op(BP);
             break;
         case 0x5E:
+            registers.IP += pop_reg_op(SI);
             break;
         case 0x5F:
+            registers.IP += pop_reg_op(DI);
             break;
         case 0x60:
             break;
