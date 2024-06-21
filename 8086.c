@@ -689,37 +689,53 @@ void process_instruction(uint8_t *memory) {
         case 0x9F:  // LAHF
                 registers.IP += lahf_op();
             break;
-        case 0xA0:
+        case 0xA0:  // MOV AL, MEM8
+            registers.IP += mov_op(memory[1], &memory[2]); // ADDR-LO, ADDR-HI
             break;
-        case 0xA1:
+        case 0xA1:  // MOV AX, MEM16
+            registers.IP += mov_op(memory[1], &memory[2]); // ADDR-LO, ADDR-HI
             break;
-        case 0xA2:
+        case 0xA2:  // MOV MEM8, AL
+            registers.IP += mov_op(memory[1], &memory[2]); // ADDR-LO, ADDR-HI
             break;
-        case 0xA3:
+        case 0xA3:  // MOV MEM8, AX
+            registers.IP += mov_op(memory[1], &memory[2]); // ADDR-LO, ADDR-HI
             break;
-        case 0xA4:
+        case 0xA4:  // MOVS DEST-STR8, SRC-STR8
+            registers.IP += mov_str_op(memory[1], &memory[2]);
             break;
-        case 0xA5:
+        case 0xA5:  // MOVS DEST-STR16, SRC-STR16
+            registers.IP += mov_str_op(memory[1], &memory[2]);
             break;
-        case 0xA6:
+        case 0xA6:  // CMPSS DEST-STR8, SRC-STR8
+            registers.IP += cmps_str_op(memory[1], &memory[2]);
             break;
-        case 0xA7:
+        case 0xA7:  // CMPSS DEST-STR16, SRC-STR16
+            registers.IP += cmps_str_op(memory[1], &memory[2]);
             break;
-        case 0xA8:
+        case 0xA8:  // TEST AL, IMMED8
+            registers.IP += cmps_str_op(memory[1], &memory[2]); // DATA8
             break;
-        case 0xA9:
+        case 0xA9:  // TEST AX, IMMED16
+            registers.IP += cmps_str_op(memory[1], &memory[2]); // DATA_LO, DATA-HI
             break;
-        case 0xAA:
+        case 0xAA:  // STOS DEST-STR8
+            registers.IP += stos_str_op(memory[1], &memory[2]);
             break;
-        case 0xAB:
+        case 0xAB:  // STOS DEST-STR16
+            registers.IP += stos_str_op(memory[1], &memory[2]);
             break;
-        case 0xAC:
+        case 0xAC:  // LODS DEST-STR8
+            registers.IP += stos_str_op(memory[1], &memory[2]);
             break;
-        case 0xAD:
+        case 0xAD:  // LODS DEST-STR16
+            registers.IP += stos_str_op(memory[1], &memory[2]);
             break;
-        case 0xAE:
+        case 0xAE:  // SCAS DEST-STR8
+            registers.IP += stos_str_op(memory[1], &memory[2]);
             break;
-        case 0xAF:
+        case 0xAF:  // SCAS DEST-STR16
+            registers.IP += stos_str_op(memory[1], &memory[2]);
             break;
         case 0xB0:
             break;
