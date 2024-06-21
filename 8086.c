@@ -160,6 +160,14 @@ uint8_t dec_op(uint8_t opcode, uint8_t *data) {
     return 1;
 }
 
+uint8_t test_8b_op(uint8_t opcode, uint8_t *data) {
+    return 1;
+}
+
+uint8_t test_16b_op(uint8_t opcode, uint8_t *data) {
+    return 1;
+}
+
 uint8_t push_reg_op(register_t reg) {
     return 1;
 }
@@ -589,60 +597,97 @@ void process_instruction(uint8_t *memory) {
             }
             break;
         case 0x84:
+            registers.IP += test_8b_op(memory[1], &memory[2]);
             break;
         case 0x85:
+            registers.IP += test_16b_op(memory[1], &memory[2]);
             break;
         case 0x86:
+            registers.IP += xchg_8b_op(memory[1], &memory[2]);
             break;
         case 0x87:
+            registers.IP += xchg_16b_op(memory[1], &memory[2]);
             break;
         case 0x88:
+            registers.IP += mov_16b_op(memory[1], &memory[2]);
             break;
         case 0x89:
+            registers.IP += mov_16b_op(memory[1], &memory[2]);
             break;
         case 0x8A:
+            registers.IP += mov_16b_op(memory[1], &memory[2]);
             break;
         case 0x8B:
+            registers.IP += mov_16b_op(memory[1], &memory[2]);
             break;
         case 0x8C:
+            if(3 & get_mode_field(memory[1]))
+                INVALID_INSTRUCTION;
+            else
+                registers.IP += mov_16b_op(memory[1], &memory[2]);
             break;
-        case 0x8D:
+        case 0x8D:  // LEA REG16, MEM16
+            registers.IP += lea_op(memory[1], &memory[2]);  // DISP-LO, DISP-HI
             break;
         case 0x8E:
+            if((3 & get_mode_field(memory[1])) == 0)    // MOV SEGREG, REG16/MEM16
+                registers.IP += mov_16b_op(memory[1], &memory[2]);  // DISP-LO, DISP-HI
+            else
+                INVALID_INSTRUCTION;
             break;
         case 0x8F:
+            if(0 == get_mode_field(memory[1]))  // POP REG16/MEM16
+                registers.IP += pop_op(memory[1], &memory[2]);  // DISP-LO, DISP-HI
+            else
+                INVALID_INSTRUCTION;
             break;
-        case 0x90:
+        case 0x90:  // NOP, XCHG AX AX
+                registers.IP += nop_op();
             break;
-        case 0x91:
+        case 0x91:  // XCHG AX CX
+                registers.IP += xchg_reg_op(AX, CX);
             break;
-        case 0x92:
+        case 0x92:  // XCHG AX, DX
+                registers.IP += xchg_reg_op(AX, DX);
             break;
-        case 0x93:
+        case 0x93:  // XCHG AX, BX
+                registers.IP += xchg_reg_op(AX, BX);
             break;
-        case 0x94:
+        case 0x94:  // XCHG AX, SP
+                registers.IP += xchg_reg_op(AX, SP);
             break;
-        case 0x95:
+        case 0x95:  // XCHG AX, BP
+                registers.IP += xchg_reg_op(AX, BP);
             break;
-        case 0x96:
+        case 0x96:  // XCHG AX, SI
+                registers.IP += xchg_reg_op(AX, SI);
             break;
-        case 0x97:
+        case 0x97:  // XCHG AX, DI
+                registers.IP += xchg_reg_op(AX, DI);
             break;
-        case 0x98:
+        case 0x98:  // CBW
+                registers.IP += cbw_op();
             break;
-        case 0x99:
+        case 0x99:  // CWD
+                registers.IP += cwd_op();
             break;
-        case 0x9A:
+        case 0x9A:  // CALL FAR_PROC
+            registers.IP += call_op(memory[1], &memory[2]); // [DISP-LO, DISP-HIGH, SEG-LO, SEG-HI]
             break;
-        case 0x9B:
+        case 0x9B:  // WAIT
+                registers.IP += wait_op();
             break;
-        case 0x9C:
+        case 0x9C:  // PUSHF
+                registers.IP += pushf_op();
             break;
-        case 0x9D:
+        case 0x9D:  // POPF
+                registers.IP += popf_op();
             break;
-        case 0x9E:
+        case 0x9E:  // SAHF
+                registers.IP += sahf_op();
             break;
-        case 0x9F:
+        case 0x9F:  // LAHF
+                registers.IP += lahf_op();
             break;
         case 0xA0:
             break;
