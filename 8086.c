@@ -814,36 +814,60 @@ void process_instruction(uint8_t *memory) {
             registers.IP += 3;
             break;
         case 0xC0:
+            INVALID_INSTRUCTION;
             break;
         case 0xC1:
+            INVALID_INSTRUCTION;
             break;
-        case 0xC2:
+        case 0xC2:  // RET IMMED16 (intrasegment)
+            registers.IP += ret_op(memory[1], &memory[2]);  // DATA-LO, DATA-HI
             break;
-        case 0xC3:
+        case 0xC3:  // RET (intrasegment)
+            registers.IP += ret_op(memory[1], &memory[2]);
             break;
-        case 0xC4:
+        case 0xC4:  // LES REG16, MEM16
+            registers.IP += les_op(memory[1], &memory[2]);  // MOD REG R/M, DISP-LO, DISP-HI
             break;
-        case 0xC5:
+        case 0xC5:  // LDS REG16, MEM16
+            registers.IP += lds_op(memory[1], &memory[2]);  // MOD REG R/M, DISP-LO, DISP-HI
             break;
-        case 0xC6:
+        case 0xC6:  // MOV MEM8, IMMED8
+            if(get_mode_field(memory[1]) == 0) {
+                registers.IP += mov_op(memory[1], &memory[2]);  // MOD 000 R/M, DISP-LO, DISP-HI, DATA-8
+            } else {
+                INVALID_INSTRUCTION;
+            }
             break;
-        case 0xC7:
+        case 0xC7:  // MOV MEM16, IMMED16
+            if(get_mode_field(memory[1]) == 0) {
+                registers.IP += mov_op(memory[1], &memory[2]);  // MOD 000 R/M, DISP-LO, DISP-HI, DATA-LO, DATA-HI
+            } else {
+                INVALID_INSTRUCTION;
+            }
             break;
         case 0xC8:
+            INVALID_INSTRUCTION;
             break;
         case 0xC9:
+            INVALID_INSTRUCTION;
             break;
-        case 0xCA:
+        case 0xCA:  // RET IMMED16 (intersegment)
+            registers.IP += ret_op(memory[1], &memory[2]);  // DATA-LO, DATA-HI
             break;
-        case 0xCB:
+        case 0xCB:  // RET (intersegment)
+            registers.IP += ret_op(memory[1], &memory[2]);
             break;
-        case 0xCC:
+        case 0xCC:  // INT 3
+            registers.IP += int_op(3);
             break;
-        case 0xCD:
+        case 0xCD:  // INT IMMED8
+            registers.IP += int_op(memory[1]);  // DATA-8
             break;
-        case 0xCE:
+        case 0xCE:  // INTO
+            registers.IP += into_op();
             break;
-        case 0xCF:
+        case 0xCF:  // IRET
+            registers.IP += iret_op();
             break;
         case 0xD0:
             break;
