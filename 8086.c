@@ -92,6 +92,18 @@ uint8_t jle_op(void) {  // Jump if SF <> OF or ZF = 1 (jump if less or equal)
 
 /*==== !J-instructions =====*/
 
+uint16_t set_h(uint16_t reg_value, uint8_t value) {
+    reg_value &= 0xFF;
+    reg_value |= (value << 8);
+    return reg_value;
+}
+
+uint16_t set_l(uint16_t reg_value, uint8_t value) {
+    reg_value &= 0xFF00;
+    reg_value |= value;
+    return reg_value;
+}
+
 uint32_t segment_override(register_t segment) {
     return 1;
 }
@@ -737,37 +749,69 @@ void process_instruction(uint8_t *memory) {
         case 0xAF:  // SCAS DEST-STR16
             registers.IP += stos_str_op(memory[1], &memory[2]);
             break;
-        case 0xB0:
+        case 0xB0:  // MOV AL, IMMED8
+            registers.AX = set_l(registers.AX, memory[1]); // DATA-8
+            registers.IP += 2;
             break;
-        case 0xB1:
+        case 0xB1:  // MOV CL, IMMED8
+            registers.CX = set_l(registers.CX, memory[1]); // DATA-8
+            registers.IP += 2;
             break;
-        case 0xB2:
+        case 0xB2:  // MOV DL, IMMED8
+            registers.DX = set_l(registers.DX, memory[1]); // DATA-8
+            registers.IP += 2;
             break;
-        case 0xB3:
+        case 0xB3:  // MOV BL, IMMED8
+            registers.BX = set_l(registers.BX, memory[1]); // DATA-8
+            registers.IP += 2;
             break;
-        case 0xB4:
+        case 0xB4:  // MOV AH, IMMED8
+            registers.AX = set_h(registers.AX, memory[1]); // DATA-8
+            registers.IP += 2;
             break;
-        case 0xB5:
+        case 0xB5:  // MOV CH, IMMED8
+            registers.CX = set_h(registers.CX, memory[1]); // DATA-8
+            registers.IP += 2;
             break;
-        case 0xB6:
+        case 0xB6:  // MOV DH, IMMED8
+            registers.DX = set_h(registers.DX, memory[1]); // DATA-8
+            registers.IP += 2;
             break;
-        case 0xB7:
+        case 0xB7:  // MOV BH, IMMED8
+            registers.BX = set_h(registers.BX, memory[1]); // DATA-8
+            registers.IP += 2;
             break;
-        case 0xB8:
+        case 0xB8:  // MOV AX, IMMED16
+            registers.AX = (memory[2] << 8) + memory[1]; // DATA-LO, DATA-HI
+            registers.IP += 3;
             break;
-        case 0xB9:
+        case 0xB9:  // MOV CX, IMMED16
+            registers.CX = (memory[2] << 8) + memory[1]; // DATA-LO, DATA-HI
+            registers.IP += 3;
             break;
-        case 0xBA:
+        case 0xBA:  // MOV DX, IMMED16
+            registers.DX = (memory[2] << 8) + memory[1]; // DATA-LO, DATA-HI
+            registers.IP += 3;
             break;
-        case 0xBB:
+        case 0xBB:  // MOV BX, IMMED16
+            registers.BX = (memory[2] << 8) + memory[1]; // DATA-LO, DATA-HI
+            registers.IP += 3;
             break;
-        case 0xBC:
+        case 0xBC:  // MOV SP, IMMED16
+            registers.SP = (memory[2] << 8) + memory[1]; // DATA-LO, DATA-HI
+            registers.IP += 3;
             break;
-        case 0xBD:
+        case 0xBD:  // MOV BP, IMMED16
+            registers.BP = (memory[2] << 8) + memory[1]; // DATA-LO, DATA-HI
+            registers.IP += 3;
             break;
-        case 0xBE:
+        case 0xBE:  // MOV SI, IMMED16
+            registers.SI = (memory[2] << 8) + memory[1]; // DATA-LO, DATA-HI
+            registers.IP += 3;
             break;
-        case 0xBF:
+        case 0xBF:  // MOV DI, IMMED16
+            registers.DI = (memory[2] << 8) + memory[1]; // DATA-LO, DATA-HI
+            registers.IP += 3;
             break;
         case 0xC0:
             break;
