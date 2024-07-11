@@ -27,7 +27,7 @@ struct {
     struct{
         unsigned int U3 : 4;    // Unused fields
         unsigned int OF : 1;    // Overflow flag
-        unsigned int DF : 1;    // Direction flag
+        unsigned int DF : 1;    // Direction flag, used to influence the direction in which string instructions offset pointer registers
         unsigned int IF : 1;    // Interrupt flag
         unsigned int TF : 1;    // Trap flag
         unsigned int SF : 1;    // Sign flag
@@ -56,6 +56,53 @@ typedef enum {
     ES,
     SS,
 } register_t;
+
+uint32_t get_addr(uint16_t segment_reg, uint16_t addr) {
+    uint32_t ret_val = segment_reg;
+    ret_val <<= 4;
+    return ret_val + addr;
+}
+
+#define INVALID_INSTRUCTION while(1)
+
+uint8_t get_mode_field(uint8_t byte) {
+    // 00 -> Memory mode, no displacement follows (except when reg_mem_field == 110, then 16-bit displacement follows)
+    // 01 -> Memory mode, 8-bit displacement follows
+    // 01 -> Memory mode, 16-bit displacement follows
+    // 01 -> Register mode, no displacement
+    return byte >> 6;
+}
+
+uint8_t get_register_field(uint8_t byte) {
+    //        W=0 w=1
+    // 000 -> AL  AX
+    // 001 -> CL  CX
+    // 010 -> DL  DX
+    // 011 -> BL  BX
+    // 100 -> AH  SP
+    // 101 -> CH  BP
+    // 110 -> DH  SI
+    // 111 -> BH  DI
+    return (byte & 0xC7) >> 3;
+}
+
+uint8_t get_reg_mem_field(uint8_t byte) {
+    // See page 4-20, table 4-10 for more info
+    return byte & 0x07;
+}
+
+uint8_t get_direction(uint8_t byte) {
+    // 1 -> destination specified in REG field
+    // 0 -> source specified in REG field
+    if(byte & 0x02)
+        return 1;
+    return 0;
+}
+
+uint8_t get_width(uint8_t byte) {
+    // 1 -> word, 0 -> byte
+    return byte & 0x02;
+}
 
 /*===== J-instructions =====*/
 // https://www.dei.isep.ipp.pt/~nsilva/ensino/ArqC/ArqC1998-1999/nguide/ng-j.htm
@@ -134,46 +181,12 @@ uint8_t get_l(uint16_t reg_value) {
 }
 
 uint32_t segment_override(register_t segment) {
+    // Use the given segment instead of standard to calculate the address in the next instruction
+    // https://www.includehelp.com/embedded-system/segment-override-prefix-8086-microprocessor.aspx
     return 1;
 }
 
 uint32_t inc_register(register_t reg) {
-    return 1;
-}
-
-uint32_t get_addr(uint16_t segment_reg, uint16_t addr) {
-    uint32_t ret_val = segment_reg;
-    ret_val <<= 4;
-    return ret_val + addr;
-}
-
-#define INVALID_INSTRUCTION while(1)
-
-uint8_t get_mode_field(uint8_t byte) {
-    return byte >> 6;
-}
-
-uint8_t get_register_field(uint8_t byte) {
-    return (byte & 0xC7) >> 3;
-}
-
-uint8_t get_reg_mem_field(uint8_t byte) {
-    return byte & 0x07;
-}
-
-uint8_t add_op(uint8_t opcode, uint8_t *data) {
-    return 1;
-}
-
-uint8_t or_op(uint8_t opcode, uint8_t *data) {
-    return 1;
-}
-
-uint8_t adc_op(uint8_t opcode, uint8_t *data) {
-    return 1;
-}
-
-uint8_t sbb_op(uint8_t opcode, uint8_t *data) {
     return 1;
 }
 
@@ -229,91 +242,152 @@ uint8_t push_val_op(uint16_t val) {
     return 1;
 }
 
+uint8_t add_op(uint8_t *memory) {
+    return 1;
+}
+
+uint8_t or_op(uint8_t *memory) {
+    return 1;
+}
+
+uint8_t adc_op(uint8_t *memory) {
+    // ADD with carry
+    return 1;
+}
+
+uint8_t sbb_op(uint8_t *memory) {
+    // Substract with borrow
+    return 1;
+}
+
+void daa_op(void) {
+    // decimal adjust after addition
+    // Called after an ADD instruction and makes AL register decimal
+    uint8_t al = get_l(registers.AX);
+    if((al & 0x0F) > 9 || registers.flags.AF) {
+        al += 6;
+    }
+    if((al > 0x9F) || registers.flags.CF) {
+        al += 0x60;
+        registers.flags.CF = 1;
+    } else {
+        registers.flags.CF = 0;
+    }
+    registers.AX = set_l(registers.AX, al);
+}
+
+void das_op(void) {
+    // decimal adjust after subtraction
+    // Called after a SUB instruction and makes AL register decimal
+    uint8_t al = get_l(registers.AX);
+    if((al & 0x0F) > 9 || registers.flags.AF) {
+        al -= 6;
+    }
+    if((al > 0x9F) || registers.flags.CF) {
+        al -= 0x60;
+        registers.flags.CF = 1;
+    } else {
+        registers.flags.CF = 0;
+    }
+    registers.AX = set_l(registers.AX, al);
+}
+
 void process_instruction(uint8_t *memory) {
     switch(memory[0]) {
-        case 0x00:
-        case 0x01:
-        case 0x02:
-        case 0x03:
-        case 0x04:
-        case 0x05:
-            registers.IP += add_op(memory[1], &memory[2]);
+        case 0x00:  // ADD REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x01:  // ADD REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x02:  // ADD REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x03:  // ADD REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x04:  // ADD AL, IMMED8           [DATA-8]
+        case 0x05:  // ADD AX, immed16          [DATA-LO, DATA-HI]
+            registers.IP += add_op(memory);
             break;
-        case 0x06:
-            registers.IP += push_reg_op(registers.ES);
+        case 0x06:  // PUSH ES
+            push_reg_op(registers.ES);
+            registers.IP += 1;
             break;
-        case 0x07:
-            registers.IP += pop_reg_op(ES);
+        case 0x07:  // POP ES
+            pop_reg_op(ES);
+            registers.IP += 1;
             break;
-        case 0x08:
-        case 0x09:
-        case 0x0A:
-        case 0x0B:
-        case 0x0C:
-        case 0x0D:
-            registers.IP += or_op(memory[1], &memory[2]);
+        case 0x08:  // OR REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x09:  // OR REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x0A:  // OR REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x0B:  // OR REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x0C:  // OR AL, IMMED8           [DATA-8]
+        case 0x0D:  // OR AX, immed16          [DATA-LO, DATA-HI]
+            registers.IP += or_op(memory);
             break;
-        case 0x0E:
-            registers.IP += push_reg_op(registers.CS);
+        case 0x0E:  // PUSH CS
+            push_reg_op(registers.CS);
+            registers.IP += 1;
             break;
-        case 0x0F:
+        case 0x0F:  // NOT USED
             INVALID_INSTRUCTION;
             break;
-        case 0x10:
-        case 0x11:
-        case 0x12:
-        case 0x13:
-        case 0x14:
-        case 0x15:
-            registers.IP += adc_op(memory[1], &memory[2]);
+        case 0x10:  // ADC REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x11:  // ADC REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x12:  // ADC REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x13:  // ADC REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x14:  // ADC AL, IMMED8           [DATA-8]
+        case 0x15:  // ADC AX, immed16          [DATA-LO, DATA-HI]
+            registers.IP += adc_op(memory);
             break;
-        case 0x16:
-            registers.IP += push_reg_op(registers.SS);
+        case 0x16:  // PUSH SS
+            push_reg_op(registers.SS);
+            registers.IP += 1;
             break;
-        case 0x17:
-            registers.IP += pop_reg_op(SS);
+        case 0x17:  // POP SS
+            pop_reg_op(SS);
+            registers.IP += 1;
             break;
-        case 0x18:
-        case 0x19:
-        case 0x1A:
-        case 0x1B:
-        case 0x1C:
-        case 0x1D:
-            registers.IP += sbb_op(memory[1], &memory[2]);
+        case 0x18:  // SBB REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x19:  // SBB REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x1A:  // SBB REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x1B:  // SBB REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x1C:  // SBB AL, IMMED8           [DATA-8]
+        case 0x1D:  // SBB AX, immed16          [DATA-LO, DATA-HI]
+            registers.IP += sbb_op(memory);
             break;
-        case 0x1E:
-            registers.IP += push_reg_op(registers.DS);
+        case 0x1E:  // PUSH DS
+            push_reg_op(registers.DS);
+            registers.IP += 1;
             break;
-        case 0x1F:
-            registers.IP += pop_reg_op(DS);
+        case 0x1F:  // POP DS
+            pop_reg_op(DS);
+            registers.IP += 1;
             break;
-        case 0x20:
-        case 0x21:
-        case 0x22:
-        case 0x23:
-        case 0x24:
-        case 0x25:
+        case 0x20:  // AND REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x21:  // AND REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x22:  // AND REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x23:  // AND REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x24:  // AND AL, IMMED8           [DATA-8]
+        case 0x25:  // AND AX, immed16          [DATA-LO, DATA-HI]
             registers.IP += and_op(memory[1], &memory[2]);
             break;
-        case 0x26:
-            registers.IP += segment_override(ES);  // ES: segment overrige prefix
+        case 0x26:  // ES:
+            segment_override(ES);  // ES: segment overrige prefix
+            registers.IP += 1;
             break;
-        case 0x27:
-            registers.IP += daa_op();
+        case 0x27:  // DAA
+            daa_op();
+            registers.IP += 1;
             break;
-        case 0x28:
-        case 0x29:
-        case 0x2A:
-        case 0x2B:
-        case 0x2C:
-        case 0x2D:
+        case 0x28:  // SUB REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x29:  // SUB REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x2A:  // SUB REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x2B:  // SUB REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x2C:  // SUB AL, IMMED8           [DATA-8]
+        case 0x2D:  // SUB AX, immed16          [DATA-LO, DATA-HI]
             registers.IP += sub_op(memory[1], &memory[2]);
             break;
-        case 0x2E:
-            registers.IP += segment_override(CS);  // CS: segment overrige prefix
+        case 0x2E:  // CS:
+            segment_override(CS);  // CS: segment overrige prefix
+            registers.IP += 1;
             break;
-        case 0x2F:
-            registers.IP += das_op();
+        case 0x2F:  // DAS
+            das_op();
+            registers.IP += 1;
             break;
         case 0x30:
         case 0x31:
@@ -1147,33 +1221,133 @@ void process_instruction(uint8_t *memory) {
             set_io_16bit(registers.DX, registers.AX); // DATA-8
             registers.IP += 1;
             break;
-        case 0xF0:
+        case 0xF0:  // LOCK (prefix)
+            assert_LOCK_pin();
+            registers.IP += 1;
             break;
         case 0xF1:
+            INVALID_INSTRUCTION;
             break;
-        case 0xF2:
+        case 0xF2:  // REPNE/REPNZ
+            // while(registers.CX != 0) {
+            //     execute_next_command();
+            //     registers.CX --;
+            // }
             break;
-        case 0xF3:
+        case 0xF3:  // REP/REPE/REPZ
+            // while(registers.CX != 0) {
+            //     execute_next_command();
+            //     registers.CX --;
+            // }
             break;
-        case 0xF4:
+        case 0xF4:  // HLT
+            // halts the CPU until the next external interrupt is fired
             break;
-        case 0xF5:
+        case 0xF5:  // CMC
+            // Inverts the CF flag
+            if(registers.flags.CF) {
+                registers.flags.CF = 0;
+            } else {
+                registers.flags.CF = 1;
+            }
+            registers.IP += 1;
             break;
         case 0xF6:
+            switch(get_mode_field(memory[1])) {
+                case 0: // TEST REG8/MEM8, IMMED8
+                    // TEST sets the zero flag, ZF, when the result of the AND operation is zero.
+                    // If two operands are equal, their bitwise AND is zero when both are zero.
+                    // TEST also sets the sign flag, SF, when the most significant bit is set in
+                    // the result, and the parity flag, PF, when the number of set bits is even.
+                    registers.IP += test_8b_op(memory[1], &memory[2]);  // MOD 000 R/M, DISP-LO, DISP-HI, DATA-8
+                    break;
+                case 1:
+                    INVALID_INSTRUCTION;
+                    break;
+                case 2: // NOT REG8/MEM8
+                    registers.IP += not_op(memory[1], &memory[2]);  // NOT 010 R/M, DISP-LO, DISP-HI
+                    break;
+                case 3: // NEG REG8/MEM8
+                    // subtracts the operand from zero and stores the result in the same operand.
+                    // The NEG instruction affects the carry, overflow, sign, zero, and parity flags according to the result.
+                    registers.IP += neg_op(memory[1], &memory[2]);  // NEG 010 R/M, DISP-LO, DISP-HI
+                    break;
+                case 4: // MUL REG8/MEM8
+                    // the source operand (in a general-purpose register or memory location) is multiplied by the value in the AL, AX, EAX, or RAX
+                    // register (depending on the operand size) and the product (twice the size of the input operand) is stored in the
+                    // AX, DX:AX, EDX:EAX, or RDX:RAX registers, respectively
+                    registers.IP += mul_op(memory[1], &memory[2]);  // MUL 010 R/M, DISP-LO, DISP-HI
+                    break;
+                case 5: // IMUL REG8/MEM8 (signed)
+                    registers.IP += mul_op(memory[1], &memory[2]);  // IMUL 010 R/M, DISP-LO, DISP-HI
+                    break;
+                case 6: // DIV REG8/MEM8
+                    registers.IP += div_op(memory[1], &memory[2]);  // DIV 010 R/M, DISP-LO, DISP-HI
+                    break;
+                case 7: // IDIV REG8/MEM8
+                    registers.IP += idiv_op(memory[1], &memory[2]);  // IDIV 010 R/M, DISP-LO, DISP-HI
+                    break;
+            }
             break;
         case 0xF7:
+            switch(get_mode_field(memory[1])) {
+                case 0: // TEST REG16/MEM16, IMMED16
+                    registers.IP += test_16b_op(memory[1], &memory[2]);  // MOD 000 R/M, DISP-LO, DISP-HI, DATA-16
+                    break;
+                case 1:
+                    INVALID_INSTRUCTION;
+                    break;
+                case 2: // NOT REG16/MEM16
+                    registers.IP += not_op(memory[1], &memory[2]);  // NOT 010 R/M, DISP-LO, DISP-HI
+                    break;
+                case 3: // NEG REG16/MEM16
+                    registers.IP += neg_op(memory[1], &memory[2]);  // NEG 010 R/M, DISP-LO, DISP-HI
+                    break;
+                case 4: // MUL REG16/MEM16
+                    registers.IP += mul_op(memory[1], &memory[2]);  // MUL 010 R/M, DISP-LO, DISP-HI
+                    break;
+                case 5: // IMUL REG16/MEM16 (signed)
+                    registers.IP += mul_op(memory[1], &memory[2]);  // IMUL 010 R/M, DISP-LO, DISP-HI
+                    break;
+                case 6: // DIV REG16/MEM16
+                    registers.IP += div_op(memory[1], &memory[2]);  // DIV 010 R/M, DISP-LO, DISP-HI
+                    break;
+                case 7: // IDIV REG16/MEM16
+                    registers.IP += idiv_op(memory[1], &memory[2]);  // IDIV 010 R/M, DISP-LO, DISP-HI
+                    break;
+            }
             break;
-        case 0xF8:
+        case 0xF8:  // CLC
+            // Clear Carry Flag
+            registers.flags.CF = 0;
+            registers.IP += 1;
             break;
-        case 0xF9:
+        case 0xF9:  // STC
+            // Set Carry Flag
+            registers.flags.CF = 1;
+            registers.IP += 1;
             break;
-        case 0xFA:
+        case 0xFA:  // CLI
+            // Clear Interrupt Flag, causes the processor to ignore maskable external interrupts
+            registers.flags.IF = 0;
+            registers.IP += 1;
             break;
-        case 0xFB:
+        case 0xFB:  // STI
+            // Set Interrupt Flag
+            registers.flags.IF = 1;
+            registers.IP += 1;
             break;
-        case 0xFC:
+        case 0xFC:  // CLD
+            // Clear Direction Flag
+            // when the direction flag is 0, the instructions work by incrementing the pointer
+            // to the data after every iteration, while if the flag is 1, the pointer is decremented
+            registers.flags.DF = 0;
+            registers.IP += 1;
             break;
-        case 0xFD:
+        case 0xFD:  // CLD
+            // Set Direction Flag
+            registers.flags.DF = 1;
+            registers.IP += 1;
             break;
         case 0xFE:
             break;
