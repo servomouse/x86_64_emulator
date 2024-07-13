@@ -198,14 +198,6 @@ uint8_t sub_op(uint8_t opcode, uint8_t *data) {
     return 1;
 }
 
-uint8_t xor_op(uint8_t opcode, uint8_t *data) {
-    return 1;
-}
-
-uint8_t cmp_op(uint8_t opcode, uint8_t *data) {
-    return 1;
-}
-
 uint8_t inc_op(uint8_t opcode, uint8_t *data) {
     return 1;
 }
@@ -227,10 +219,6 @@ uint8_t push_reg_op(register_t reg) {
 }
 
 uint8_t pop_reg_op(register_t reg) {
-    return 1;
-}
-
-uint8_t aas_op(void) {
     return 1;
 }
 
@@ -281,11 +269,18 @@ void daa_op(void) {
 }
 
 void das_op(void) {
-    // decimal adjust after subtraction
-    // Called after a SUB instruction and makes AL register decimal
+    // if ( (al and 0Fh) > 9 or (AuxC = 1)) then
+    //         al := al -6
+    //         AuxC = 1
+    // endif
+    // if (al > 9Fh or Carry = 1) then
+    //         al := al - 60h
+    //         Carry := 1              ;Set the Carry flag.
+    // endif
     uint8_t al = get_l(registers.AX);
     if((al & 0x0F) > 9 || registers.flags.AF) {
         al -= 6;
+        registers.flags.AF = 1;
     }
     if((al > 0x9F) || registers.flags.CF) {
         al -= 0x60;
@@ -323,6 +318,40 @@ void aaa_op(void) {
         registers.flags.CF = 0;
     }
     registers.AX = set_l(registers.AX, al & 0x0F);
+}
+
+void aas_op(void) {
+    // if ( (al and 0Fh) > 9 or AuxC = 1) then
+    //         al := al - 6
+    //         ah := ah - 1
+    //         AuxC := 1       ;Set auxilliary carry
+    //         Carry := 1      ; and carry flags.
+    // else
+    //         AuxC := 0       ;Clear Auxilliary carry
+    //         Carry := 0      ; and carry flags.
+    // endif
+    // al := al and 0Fh
+    uint8_t al = get_l(registers.AX);
+    uint8_t ah = get_h(registers.AX);
+    if((al & 0x0F) > 9 || registers.flags.AF == 1) {
+        al -= 6;
+        ah -= 1;
+        registers.flags.AF = 1;
+        registers.flags.CF = 1;
+    } else {
+        registers.flags.AF = 0;
+        registers.flags.CF = 0;
+    }
+    registers.AX = set_h(registers.AX, ah);
+    registers.AX = set_l(registers.AX, al & 0x0F);
+}
+
+uint8_t xor_op(uint8_t *memory) {
+    return 1;
+}
+
+uint8_t cmp_op(uint8_t *memory) {
+    return 1;
 }
 
 void process_instruction(uint8_t *memory) {
@@ -428,28 +457,31 @@ void process_instruction(uint8_t *memory) {
         case 0x33:  // XOR REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x34:  // XOR AL, IMMED8           [DATA-8]
         case 0x35:  // XOR AX, immed16          [DATA-LO, DATA-HI]
-            registers.IP += xor_op(memory[1], &memory[2]);
+            registers.IP += xor_op(memory);
             break;
         case 0x36:  // SS:
             segment_override(SS);  // SS: segment overrige prefix
             registers.IP += 1;
             break;
-        case 0x37:
-            registers.IP += aaa_op();
+        case 0x37:  // AAA
+            aaa_op();
+            registers.IP += 1;
             break;
-        case 0x38:
-        case 0x39:
-        case 0x3A:
-        case 0x3B:
-        case 0x3C:
-        case 0x3D:
-            registers.IP += cmp_op(memory[1], &memory[2]);
+        case 0x38:  // CMP REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x39:  // CMP REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x3A:  // CMP REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x3B:  // CMP REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x3C:  // CMP AL, IMMED8           [DATA-8]
+        case 0x3D:  // CMP AX, immed16          [DATA-LO, DATA-HI]
+            registers.IP += cmp_op(memory);
             break;
-        case 0x3E:
-            registers.IP += segment_override(DS);  // DS: segment overrige prefix
+        case 0x3E:  // DS:
+            segment_override(DS);  // DS: segment overrige prefix
+            registers.IP += 1;
             break;
-        case 0x3F:
-            registers.IP += aas_op();
+        case 0x3F:  // AAS
+            aas_op();
+            registers.IP += 1;
             break;
         case 0x40:
             registers.IP += inc_register(AX);
