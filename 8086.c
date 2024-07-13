@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 uint8_t *IO_SPACE = NULL;
+uint8_t *MEMORY = NULL;
 
 struct {
     // Main registers
@@ -186,8 +187,65 @@ uint32_t segment_override(register_t segment) {
     return 1;
 }
 
-uint32_t inc_register(register_t reg) {
-    return 1;
+void inc_register(uint8_t opcode) {
+    opcode &= 0x0F;
+    switch(opcode) {
+        case 0x00:  // INC AX
+            registers.AX ++;
+            break;
+        case 0x01:  // INC CX
+            registers.CX ++;
+            break;
+        case 0x02:  // INC DX
+            registers.DX ++;
+            break;
+        case 0x03:  // INC BX
+            registers.BX ++;
+            break;
+        case 0x04:  // INC SP
+            registers.SP ++;
+            break;
+        case 0x05:  // INC BP
+            registers.BP ++;
+            break;
+        case 0x06:  // INC SI
+            registers.SI ++;
+            break;
+        case 0x07:  // INC DI
+            registers.DI ++;
+            break;
+    }
+}
+
+void dec_register(uint8_t opcode) {
+    opcode -= 8;
+    opcode &= 0x0F;
+    switch(opcode) {
+        case 0x00:  // DEC AX
+            registers.AX --;
+            break;
+        case 0x01:  // DEC CX
+            registers.CX --;
+            break;
+        case 0x02:  // DEC DX
+            registers.DX --;
+            break;
+        case 0x03:  // DEC BX
+            registers.BX --;
+            break;
+        case 0x04:  // DEC SP
+            registers.SP --;
+            break;
+        case 0x05:  // DEC BP
+            registers.BP --;
+            break;
+        case 0x06:  // DEC SI
+            registers.SI --;
+            break;
+        case 0x07:  // DEC DI
+            registers.DI --;
+            break;
+    }
 }
 
 uint8_t and_op(uint8_t opcode, uint8_t *data) {
@@ -214,8 +272,52 @@ uint8_t test_16b_op(uint8_t opcode, uint8_t *data) {
     return 1;
 }
 
-uint8_t push_reg_op(register_t reg) {
-    return 1;
+void push_16b(uint16_t value) {
+    registers.SP -= 2;
+    uint16_t *memory = (uint16_t *)MEMORY;
+    memory[get_addr(registers.SS, registers.SP)] = value;
+    return;
+}
+
+void push_reg_op(opcode) {
+    switch(opcode) {
+        case 0x06:  // PUSH ES
+            push_16b(registers.ES);
+            break;
+        case 0x0E:  // PUSH CS
+            push_16b(registers.CS);
+            break;
+        case 0x16:  // PUSH SS
+            push_16b(registers.SS);
+            break;
+        case 0x1E:  // PUSH DS
+            push_16b(registers.DS);
+            break;
+        case 0x50:  // PUSH AX
+            push_16b(registers.AX);
+            break;
+        case 0x51:  // PUSH CX
+            push_16b(registers.CX);
+            break;
+        case 0x52:  // PUSH DX
+            push_16b(registers.DX);
+            break;
+        case 0x53:  // PUSH BX
+            push_16b(registers.BX);
+            break;
+        case 0x54:  // PUSH SP
+            push_16b(registers.SP);
+            break;
+        case 0x55:  // PUSH BP
+            push_16b(registers.BP);
+            break;
+        case 0x56:  // PUSH SI
+            push_16b(registers.SI);
+            break;
+        case 0x57:  // PUSH DI
+            push_16b(registers.DI);
+            break;
+    }
 }
 
 uint8_t pop_reg_op(register_t reg) {
@@ -354,18 +456,18 @@ uint8_t cmp_op(uint8_t *memory) {
     return 1;
 }
 
-void process_instruction(uint8_t *memory) {
-    switch(memory[0]) {
+void process_instruction(void) {
+    switch(MEMORY[registers.IP]) {
         case 0x00:  // ADD REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x01:  // ADD REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x02:  // ADD REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x03:  // ADD REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x04:  // ADD AL, IMMED8           [DATA-8]
         case 0x05:  // ADD AX, immed16          [DATA-LO, DATA-HI]
-            registers.IP += add_op(memory);
+            registers.IP += add_op(&MEMORY[registers.IP]);
             break;
         case 0x06:  // PUSH ES
-            push_reg_op(registers.ES);
+            push_reg_op(MEMORY[registers.IP]);
             registers.IP += 1;
             break;
         case 0x07:  // POP ES
@@ -378,10 +480,10 @@ void process_instruction(uint8_t *memory) {
         case 0x0B:  // OR REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x0C:  // OR AL, IMMED8           [DATA-8]
         case 0x0D:  // OR AX, immed16          [DATA-LO, DATA-HI]
-            registers.IP += or_op(memory);
+            registers.IP += or_op(&MEMORY[registers.IP]);
             break;
         case 0x0E:  // PUSH CS
-            push_reg_op(registers.CS);
+            push_reg_op(MEMORY[registers.IP]);
             registers.IP += 1;
             break;
         case 0x0F:  // NOT USED
@@ -393,10 +495,10 @@ void process_instruction(uint8_t *memory) {
         case 0x13:  // ADC REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x14:  // ADC AL, IMMED8           [DATA-8]
         case 0x15:  // ADC AX, immed16          [DATA-LO, DATA-HI]
-            registers.IP += adc_op(memory);
+            registers.IP += adc_op(&MEMORY[registers.IP]);
             break;
         case 0x16:  // PUSH SS
-            push_reg_op(registers.SS);
+            push_reg_op(MEMORY[registers.IP]);
             registers.IP += 1;
             break;
         case 0x17:  // POP SS
@@ -409,10 +511,10 @@ void process_instruction(uint8_t *memory) {
         case 0x1B:  // SBB REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x1C:  // SBB AL, IMMED8           [DATA-8]
         case 0x1D:  // SBB AX, immed16          [DATA-LO, DATA-HI]
-            registers.IP += sbb_op(memory);
+            registers.IP += sbb_op(&MEMORY[registers.IP]);
             break;
         case 0x1E:  // PUSH DS
-            push_reg_op(registers.DS);
+            push_reg_op(MEMORY[registers.IP]);
             registers.IP += 1;
             break;
         case 0x1F:  // POP DS
@@ -425,7 +527,7 @@ void process_instruction(uint8_t *memory) {
         case 0x23:  // AND REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x24:  // AND AL, IMMED8           [DATA-8]
         case 0x25:  // AND AX, immed16          [DATA-LO, DATA-HI]
-            registers.IP += and_op(memory[1], &memory[2]);
+            registers.IP += and_op(&MEMORY[registers.IP]);
             break;
         case 0x26:  // ES:
             segment_override(ES);  // ES: segment overrige prefix
@@ -441,7 +543,7 @@ void process_instruction(uint8_t *memory) {
         case 0x2B:  // SUB REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x2C:  // SUB AL, IMMED8           [DATA-8]
         case 0x2D:  // SUB AX, immed16          [DATA-LO, DATA-HI]
-            registers.IP += sub_op(memory[1], &memory[2]);
+            registers.IP += sub_op(&MEMORY[registers.IP]);
             break;
         case 0x2E:  // CS:
             segment_override(CS);  // CS: segment overrige prefix
@@ -457,7 +559,7 @@ void process_instruction(uint8_t *memory) {
         case 0x33:  // XOR REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x34:  // XOR AL, IMMED8           [DATA-8]
         case 0x35:  // XOR AX, immed16          [DATA-LO, DATA-HI]
-            registers.IP += xor_op(memory);
+            registers.IP += xor_op(&MEMORY[registers.IP]);
             break;
         case 0x36:  // SS:
             segment_override(SS);  // SS: segment overrige prefix
@@ -473,7 +575,7 @@ void process_instruction(uint8_t *memory) {
         case 0x3B:  // CMP REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x3C:  // CMP AL, IMMED8           [DATA-8]
         case 0x3D:  // CMP AX, immed16          [DATA-LO, DATA-HI]
-            registers.IP += cmp_op(memory);
+            registers.IP += cmp_op(&MEMORY[registers.IP]);
             break;
         case 0x3E:  // DS:
             segment_override(DS);  // DS: segment overrige prefix
@@ -483,77 +585,38 @@ void process_instruction(uint8_t *memory) {
             aas_op();
             registers.IP += 1;
             break;
-        case 0x40:
-            registers.IP += inc_register(AX);
+        case 0x40:  // INC AX
+        case 0x41:  // INC CX
+        case 0x42:  // INC DX
+        case 0x43:  // INC BX
+        case 0x44:  // INC SP
+        case 0x45:  // INC BP
+        case 0x46:  // INC SI
+        case 0x47:  // INC DI
+            inc_register(&MEMORY[registers.IP]);
+            registers.IP += 1;
             break;
-        case 0x41:
-            registers.IP += inc_register(CX);
+        case 0x48:  // DEC AX
+        case 0x49:  // DEC CX
+        case 0x4A:  // DEC DX
+        case 0x4B:  // DEC BX
+        case 0x4C:  // DEC SP
+        case 0x4D:  // DEC BP
+        case 0x4E:  // DEC SI
+        case 0x4F:  // DEC DI
+            dec_register(&MEMORY[registers.IP]);
+            registers.IP += 1;
             break;
-        case 0x42:
-            registers.IP += inc_register(DX);
-            break;
-        case 0x43:
-            registers.IP += inc_register(BX);
-            break;
-        case 0x44:
-            registers.IP += inc_register(SP);
-            break;
-        case 0x45:
-            registers.IP += inc_register(BP);
-            break;
-        case 0x46:
-            registers.IP += inc_register(SI);
-            break;
-        case 0x47:
-            registers.IP += inc_register(DI);
-            break;
-        case 0x48:
-            registers.IP += dec_register(AX);
-            break;
-        case 0x49:
-            registers.IP += dec_register(CX);
-            break;
-        case 0x4A:
-            registers.IP += dec_register(DX);
-            break;
-        case 0x4B:
-            registers.IP += dec_register(BX);
-            break;
-        case 0x4C:
-            registers.IP += dec_register(SP);
-            break;
-        case 0x4D:
-            registers.IP += dec_register(BP);
-            break;
-        case 0x4E:
-            registers.IP += dec_register(SI);
-            break;
-        case 0x4F:
-            registers.IP += dec_register(DI);
-            break;
-        case 0x50:
-            registers.IP += push_reg_op(AX);
-            break;
-        case 0x51:
-            registers.IP += push_reg_op(CX);
-            break;
-        case 0x52:
-            registers.IP += push_reg_op(DX);
-            break;
-        case 0x53:
-            registers.IP += push_reg_op(BX);
-            break;
-        case 0x54:
-            registers.IP += push_reg_op(SP);
-            break;
-        case 0x55:
-            registers.IP += push_reg_op(BP);
-            break;
-        case 0x56:
-            registers.IP += push_reg_op(SI);
-            break;
-        case 0x57:
-            registers.IP += push_reg_op(DI);
+        case 0x50:  // PUSH AX
+        case 0x51:  // PUSH CX
+        case 0x52:  // PUSH DX
+        case 0x53:  // PUSH BX
+        case 0x54:  // PUSH SP
+        case 0x55:  // PUSH BP
+        case 0x56:  // PUSH SI
+        case 0x57:  // PUSH DI
+            push_reg_op(&MEMORY[registers.IP]);
+            registers.IP += 1;
             break;
         case 0x58:
             registers.IP += pop_reg_op(AX);
