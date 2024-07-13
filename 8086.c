@@ -33,7 +33,7 @@ struct {
         unsigned int SF : 1;    // Sign flag
         unsigned int ZF : 1;    // Zero flag
         unsigned int U2 : 1;    // Unused field
-        unsigned int AF : 1;    // Auxiliary carry flag
+        unsigned int AF : 1;    // Auxiliary (decimal) carry flag
         unsigned int U1 : 1;    // Unused field
         unsigned int PF : 1;    // Parity flag
         unsigned int U0 : 1;    // Unused field
@@ -230,10 +230,6 @@ uint8_t pop_reg_op(register_t reg) {
     return 1;
 }
 
-uint8_t aaa_op(void) {
-    return 1;
-}
-
 uint8_t aas_op(void) {
     return 1;
 }
@@ -261,13 +257,21 @@ uint8_t sbb_op(uint8_t *memory) {
 }
 
 void daa_op(void) {
-    // decimal adjust after addition
-    // Called after an ADD instruction and makes AL register decimal
+    // https://www.phatcode.net/res/223/files/html/Chapter_6/CH06-2.html
+    // if ( (AL and 0Fh) > 9 or (AuxC = 1)) then
+    //         al := al + 6
+    //         AuxC := 1               ;Set Auxilliary carry.
+    // endif
+    // if ( (al > 9Fh) or (Carry = 1)) then
+    //         al := al + 60h
+    //         Carry := 1;             ;Set carry flag.
+    // endif
     uint8_t al = get_l(registers.AX);
-    if((al & 0x0F) > 9 || registers.flags.AF) {
+    if((al & 0x0F) > 9 || registers.flags.AF == 1) {
         al += 6;
+        registers.flags.AF = 1;
     }
-    if((al > 0x9F) || registers.flags.CF) {
+    if((al > 0x9F) || registers.flags.CF == 1) {
         al += 0x60;
         registers.flags.CF = 1;
     } else {
@@ -290,6 +294,35 @@ void das_op(void) {
         registers.flags.CF = 0;
     }
     registers.AX = set_l(registers.AX, al);
+}
+
+void aaa_op(void) {
+    //  If AX contains OOFFh, executing AAA on an 8088 will leave AX=0105h. On an 80386, the same operation will leave AX=0205h.
+    // if ( (al and 0Fh) > 9 or (AuxC =1) ) then
+    //         if (8088 or 8086) then 
+    //                 al := al + 6
+    //         else 
+    //                 ax := ax + 6
+    //         endif
+    //         ah := ah + 1
+    //         AuxC := 1               ;Set auxilliary carry
+    //         Carry := 1              ; and carry flags.
+    // else
+    //         AuxC := 0               ;Clear auxilliary carry
+    //         Carry := 0              ; and carry flags.
+    // endif
+    // al := al and 0Fh
+    uint8_t al = get_l(registers.AX);
+    if((al & 0x0F) > 9 || registers.flags.AF == 1) {
+        al += 6;
+        registers.AX += 0x0100;
+        registers.flags.AF = 1;
+        registers.flags.CF = 1;
+    } else {
+        registers.flags.AF = 0;
+        registers.flags.CF = 0;
+    }
+    registers.AX = set_l(registers.AX, al & 0x0F);
 }
 
 void process_instruction(uint8_t *memory) {
@@ -389,16 +422,17 @@ void process_instruction(uint8_t *memory) {
             das_op();
             registers.IP += 1;
             break;
-        case 0x30:
-        case 0x31:
-        case 0x32:
-        case 0x33:
-        case 0x34:
-        case 0x35:
+        case 0x30:  // XOR REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x31:  // XOR REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x32:  // XOR REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x33:  // XOR REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x34:  // XOR AL, IMMED8           [DATA-8]
+        case 0x35:  // XOR AX, immed16          [DATA-LO, DATA-HI]
             registers.IP += xor_op(memory[1], &memory[2]);
             break;
-        case 0x36:
-            registers.IP += segment_override(SS);  // SS: segment overrige prefix
+        case 0x36:  // SS:
+            segment_override(SS);  // SS: segment overrige prefix
+            registers.IP += 1;
             break;
         case 0x37:
             registers.IP += aaa_op();
