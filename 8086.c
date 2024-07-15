@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define elif else if
+
 uint8_t *IO_SPACE = NULL;
 uint8_t *MEMORY = NULL;
 
@@ -102,7 +104,7 @@ uint8_t get_direction(uint8_t byte) {
 
 uint8_t get_width(uint8_t byte) {
     // 1 -> word, 0 -> byte
-    return byte & 0x02;
+    return byte & 0x01;
 }
 
 /*===== J-instructions =====*/
@@ -320,15 +322,163 @@ void push_reg_op(opcode) {
     }
 }
 
-uint8_t pop_reg_op(register_t reg) {
-    return 1;
+uint16_t pop_16b(void) {
+    uint16_t *memory = (uint16_t *)MEMORY;
+    registers.SP += 2;
+    return memory[get_addr(registers.SS, registers.SP)];
+}
+
+void pop_reg_op(opcode) {
+    switch(opcode) {
+        case 0x07:  // POP ES
+            registers.ES = pop_16b();
+            break;
+        case 0x17:  // POP SS
+            registers.SS = pop_16b();
+            break;
+        case 0x1F:  // POP DS
+            registers.DS = pop_16b();
+            break;
+        case 0x58:  // POP AX
+            registers.AX = pop_16b();
+            break;
+        case 0x59:  // POP CX
+            registers.CX = pop_16b();
+            break;
+        case 0x5A:  // POP DX
+            registers.DX = pop_16b();
+            break;
+        case 0x5B:  // POP BX
+            registers.BX = pop_16b();
+            break;
+        case 0x5C:  // POP SP
+            registers.SP = pop_16b();
+            break;
+        case 0x5D:  // POP BP
+            registers.BP = pop_16b();
+            break;
+        case 0x5E:  // POP SI
+            registers.SI = pop_16b();
+            break;
+        case 0x5F:  // POP DI
+            registers.DI = pop_16b();
+            break;
+    }
 }
 
 uint8_t push_val_op(uint16_t val) {
     return 1;
 }
 
+uint16_t get_src(uint8_t *memory) {
+    uint16_t src = 0;
+    uint8_t reg_field = get_register_field(memory[1]);
+    uint8_t mod_field = get_mode_field(memory[1]);
+    uint8_t rm_field = get_reg_mem_field(memory[1]);
+    uint8_t direction = get_direction(memory[0]);   // if 0 -> source in reg_field
+
+    if((direction) && (mod_field == 0)) {    // Memory mode without displacement, source in rm_field
+        ;
+    } elif((direction) && (mod_field == 1)) {    // Memory, 8-bit displacement, source in rm_field
+        ;
+    } elif((direction) && (mod_field == 2)) {    // Memory, 8-bit displacement, source in rm_field
+        ;
+    } else {    // direction == 0 -> Register mode; direction == 1 && mod_field == 3: src in rm_field
+        uint8_t reg_source = 0;
+        if(direction)
+            reg_source = rm_field;      // source in rm_field
+        else
+            reg_source = reg_field;     // source is in reg_field
+        switch(reg_source) {
+        case 0:
+            if(get_width(memory[0]))  // 16-bit
+                src = registers.AX;
+            else
+                src = get_l(registers.AX);
+            break;
+        case 1:
+            if(get_width(memory[0]))  // 16-bit
+                src = registers.CX;
+            else
+                src = get_l(registers.CX);
+            break;
+        case 2:
+            if(get_width(memory[0]))  // 16-bit
+                src = registers.DX;
+            else
+                src = get_l(registers.DX);
+            break;
+        case 3:
+            if(get_width(memory[0]))  // 16-bit
+                src = registers.BX;
+            else
+                src = get_l(registers.BX);
+            break;
+        case 4:
+            if(get_width(memory[0]))  // 16-bit
+                src = registers.SP;
+            else
+                src = get_h(registers.AX);
+            break;
+        case 5:
+            if(get_width(memory[0]))  // 16-bit
+                src = registers.BP;
+            else
+                src = get_h(registers.CX);
+            break;
+        case 6:
+            if(get_width(memory[0]))  // 16-bit
+                src = registers.SI;
+            else
+                src = get_h(registers.DX);
+            break;
+        case 7:
+            if(get_width(memory[0]))  // 16-bit
+                src = registers.DI;
+            else
+                src = get_h(registers.BX);
+            break;
+        }
+    }
+}
+
 uint8_t add_op(uint8_t *memory) {
+    // Updates AF, CF, OF, PF, SF, ZF
+    uint32_t src, dst;
+    switch(memory[0]) {
+        case 0x00:  // ADD REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+         switch(get_register_field(memory[1])) {
+            case 0:
+                src = get_l(registers.AX);
+                break;
+            case 1:
+                src = get_l(registers.CX);
+                break;
+            case 2:
+                src = get_l(registers.DX);
+                break;
+            case 3:
+                src = get_l(registers.BX);
+                break;
+            case 4:
+                src = get_l(registers.SP);
+                break;
+            case 5:
+                src = get_l(registers.SI);
+                break;
+            case 6:
+                src = get_l(registers.DI);
+                break;
+            case 7:
+                src = get_l(registers.AX);
+                break;
+         }
+        case 0x01:  // ADD REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x02:  // ADD REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x03:  // ADD REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x04:  // ADD AL, IMMED8           [DATA-8]
+        case 0x05:  // ADD AX, immed16          [DATA-LO, DATA-HI]
+    }
     return 1;
 }
 
@@ -471,7 +621,7 @@ void process_instruction(void) {
             registers.IP += 1;
             break;
         case 0x07:  // POP ES
-            pop_reg_op(ES);
+            pop_reg_op(MEMORY[registers.IP]);
             registers.IP += 1;
             break;
         case 0x08:  // OR REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -502,7 +652,7 @@ void process_instruction(void) {
             registers.IP += 1;
             break;
         case 0x17:  // POP SS
-            pop_reg_op(SS);
+            pop_reg_op(MEMORY[registers.IP]);
             registers.IP += 1;
             break;
         case 0x18:  // SBB REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -518,7 +668,7 @@ void process_instruction(void) {
             registers.IP += 1;
             break;
         case 0x1F:  // POP DS
-            pop_reg_op(DS);
+            pop_reg_op(MEMORY[registers.IP]);
             registers.IP += 1;
             break;
         case 0x20:  // AND REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -618,29 +768,16 @@ void process_instruction(void) {
             push_reg_op(&MEMORY[registers.IP]);
             registers.IP += 1;
             break;
-        case 0x58:
-            registers.IP += pop_reg_op(AX);
-            break;
-        case 0x59:
-            registers.IP += pop_reg_op(CX);
-            break;
-        case 0x5A:
-            registers.IP += pop_reg_op(DX);
-            break;
-        case 0x5B:
-            registers.IP += pop_reg_op(BX);
-            break;
-        case 0x5C:
-            registers.IP += pop_reg_op(SP);
-            break;
-        case 0x5D:
-            registers.IP += pop_reg_op(BP);
-            break;
-        case 0x5E:
-            registers.IP += pop_reg_op(SI);
-            break;
-        case 0x5F:
-            registers.IP += pop_reg_op(DI);
+        case 0x58:  // POP AX
+        case 0x59:  // POP CX
+        case 0x5A:  // POP DX
+        case 0x5B:  // POP BX
+        case 0x5C:  // POP SP
+        case 0x5D:  // POP BP
+        case 0x5E:  // POP SI
+        case 0x5F:  // POP DI
+            pop_reg_op(MEMORY[registers.IP]);
+            registers.IP += 1;
             break;
         case 0x60:
         case 0x61:
