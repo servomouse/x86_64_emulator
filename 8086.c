@@ -440,6 +440,7 @@ uint16_t get_src(uint8_t *memory) {
             break;
         }
     }
+    return src;
 }
 
 uint8_t add_op(uint8_t *memory) {
