@@ -370,20 +370,19 @@ uint8_t push_val_op(uint16_t val) {
     return 1;
 }
 
+uint32_t get_add_16bit(uint8_t *memory) {
+    return ((uint32_t)memory[1] << 8) + memory[0];
+}
+
 uint16_t get_src(uint8_t *memory) {
     uint16_t src = 0;
     uint8_t reg_field = get_register_field(memory[1]);
     uint8_t mod_field = get_mode_field(memory[1]);
     uint8_t rm_field = get_reg_mem_field(memory[1]);
     uint8_t direction = get_direction(memory[0]);   // if 0 -> source in reg_field
+    uint32_t addr = 0;
 
-    if((direction) && (mod_field == 0)) {    // Memory mode without displacement, source in rm_field
-        ;
-    } elif((direction) && (mod_field == 1)) {    // Memory, 8-bit displacement, source in rm_field
-        ;
-    } elif((direction) && (mod_field == 2)) {    // Memory, 8-bit displacement, source in rm_field
-        ;
-    } else {    // direction == 0 -> Register mode; direction == 1 && mod_field == 3: src in rm_field
+    if((!direction) || (mod_field == 3)) {    // direction == 0 -> Register mode; direction == 1 && mod_field == 3: src in rm_field
         uint8_t reg_source = 0;
         if(direction)
             reg_source = rm_field;      // source in rm_field
@@ -439,6 +438,82 @@ uint16_t get_src(uint8_t *memory) {
                 src = get_h(registers.BX);
             break;
         }
+    } else {    // Memory mode without displacement, source in rm_field
+        switch(rm_field) {
+        case 0:
+            if(mod_field == 0) {    // Memory mode without displacement, source in rm_field
+                addr = get_addr(registers.SI, registers.BX);
+            } elif(mod_field == 1) {    // Memory, 8-bit displacement, source in rm_field
+                addr = get_addr(registers.SI, registers.BX + memory[2]);
+            } elif(mod_field == 2) {    // Memory, 16-bit displacement, source in rm_field
+                addr = get_addr(registers.SI, registers.BX + get_add_16bit(&memory[2]));
+            }
+            break;
+        case 1:
+            if(mod_field == 0) {    // Memory mode without displacement, source in rm_field
+                addr = get_addr(registers.DI, registers.BX);
+            } elif(mod_field == 1) {    // Memory, 8-bit displacement, source in rm_field
+                addr = get_addr(registers.DI, registers.BX + memory[2]);
+            } elif(mod_field == 2) {    // Memory, 16-bit displacement, source in rm_field
+                addr = get_addr(registers.DI, registers.BX + get_add_16bit(&memory[2]));
+            }
+            break;
+        case 2:
+            if(mod_field == 0) {    // Memory mode without displacement, source in rm_field
+                addr = get_addr(registers.SI, registers.BP);
+            } elif(mod_field == 1) {    // Memory, 8-bit displacement, source in rm_field
+                addr = get_addr(registers.SI, registers.BP + memory[2]);
+            } elif(mod_field == 2) {    // Memory, 16-bit displacement, source in rm_field
+                addr = get_addr(registers.SI, registers.BP + get_add_16bit(&memory[2]));
+            }
+            break;
+        case 3:
+            if(mod_field == 0) {    // Memory mode without displacement, source in rm_field
+                addr = get_addr(registers.DI, registers.BP);
+            } elif(mod_field == 1) {    // Memory, 8-bit displacement, source in rm_field
+                addr = get_addr(registers.DI, registers.BP + memory[2]);
+            } elif(mod_field == 2) {    // Memory, 16-bit displacement, source in rm_field
+                addr = get_addr(registers.DI, registers.BP + get_add_16bit(&memory[2]));
+            }
+            break;
+        case 4:
+            if(mod_field == 0) {    // Memory mode without displacement, source in rm_field
+                addr = get_addr(registers.SI, 0);
+            } elif(mod_field == 1) {    // Memory, 8-bit displacement, source in rm_field
+                addr = get_addr(registers.SI,  + memory[2]);
+            } elif(mod_field == 2) {    // Memory, 16-bit displacement, source in rm_field
+                addr = get_addr(registers.SI,  get_add_16bit(&memory[2]));
+            }
+            break;
+        case 5:
+            if(mod_field == 0) {    // Memory mode without displacement, source in rm_field
+                addr = get_addr(registers.DI, 0);
+            } elif(mod_field == 1) {    // Memory, 8-bit displacement, source in rm_field
+                addr = get_addr(registers.DI,  + memory[2]);
+            } elif(mod_field == 2) {    // Memory, 16-bit displacement, source in rm_field
+                addr = get_addr(registers.DI,  + get_add_16bit(&memory[2]));
+            }
+            break;
+        case 6:
+            if(mod_field == 0) {    // Memory mode without displacement, source in rm_field
+                addr = get_add_16bit(&memory[2]);  // Direct address
+            } elif(mod_field == 1) {    // Memory, 8-bit displacement, source in rm_field
+                addr = ((uint32_t)registers.BP) + memory[2];
+            } elif(mod_field == 2) {    // Memory, 16-bit displacement, source in rm_field
+                addr = registers.BP + get_add_16bit(&memory[2]);
+            }
+            break;
+        case 7:
+            if(mod_field == 0) {    // Memory mode without displacement, source in rm_field
+                addr = get_addr(0, registers.BX);
+            } elif(mod_field == 1) {    // Memory, 8-bit displacement, source in rm_field
+                addr = get_addr(0, registers.BX + memory[2]);
+            } elif(mod_field == 2) {    // Memory, 16-bit displacement, source in rm_field
+                addr = get_addr(0, registers.BX + get_add_16bit(&memory[2]));
+            }
+            break;
+        }
+        src = *(uint16_t *)addr;
     }
     return src;
 }
