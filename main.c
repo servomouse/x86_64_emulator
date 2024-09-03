@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <unistd.h> // sleep()
+#include "8086.h"
 
 char *BIOS_FILENAME_0XF0000 = "BIOS/F0000.BIN";
 char *BIOS_FILENAME_0XF8000 = "BIOS/F8000.BIN";
@@ -34,12 +36,19 @@ int copy_bios_into_memory(uint8_t *memory, size_t offset, const char *filename) 
 
 int main(void) {
     uint8_t memory[0x100000] = {0};
-    if ((EXIT_SUCCESS == copy_bios_into_memory(memory, 0xF0000, BIOS_FILENAME_0XF0000)) &&
-        (EXIT_SUCCESS == copy_bios_into_memory(memory, 0xF8000, BIOS_FILENAME_0XF8000))) {
-            for (int i=0; i<16; i++) {
-                printf("0x%02X ", memory[0xFFFF0 + i]);
-            }
-            printf("\n");
-        }
+    if ((EXIT_FAILURE == copy_bios_into_memory(memory, 0xF0000, BIOS_FILENAME_0XF0000)) ||
+        (EXIT_FAILURE == copy_bios_into_memory(memory, 0xF8000, BIOS_FILENAME_0XF8000))) {
+        return  EXIT_FAILURE;
+    }
+    for (int i=0; i<16; i++) {
+        printf("0x%02X ", memory[0xFFFF0 + i]);
+    }
+    printf("\n");
+    if (EXIT_FAILURE == init_cpu(memory)) {
+        return EXIT_FAILURE;
+    }
+    while (EXIT_SUCCESS == cpu_tick()) { // Run CPU
+        sleep(1);
+    }
     return 0;
 }
