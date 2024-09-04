@@ -31,21 +31,22 @@ typedef struct {
     uint16_t ES;    // Extra segment
     uint16_t SS;    // Stack segment
     // Status register
-    struct{
-        unsigned int U3 : 4;    // Unused fields
-        unsigned int OF : 1;    // Overflow flag
-        unsigned int DF : 1;    // Direction flag, used to influence the direction in which string instructions offset pointer registers
-        unsigned int IF : 1;    // Interrupt flag
-        unsigned int TF : 1;    // Trap flag
-        unsigned int SF : 1;    // Sign flag
-        unsigned int ZF : 1;    // Zero flag
-        unsigned int U2 : 1;    // Unused field
-        unsigned int AF : 1;    // Auxiliary (decimal) carry flag
-        unsigned int U1 : 1;    // Unused field
-        unsigned int PF : 1;    // Parity flag
-        unsigned int U0 : 1;    // Unused field
-        unsigned int CF : 1;    // Carry flag
-    } flags;
+    // struct{
+    //     unsigned int U3 : 4;    // Unused fields
+    //     unsigned int OF : 1;    // Overflow flag
+    //     unsigned int DF : 1;    // Direction flag, used to influence the direction in which string instructions offset pointer registers
+    //     unsigned int IF : 1;    // Interrupt flag
+    //     unsigned int TF : 1;    // Trap flag
+    //     unsigned int SF : 1;    // Sign flag
+    //     unsigned int ZF : 1;    // Zero flag
+    //     unsigned int U2 : 1;    // Unused field
+    //     unsigned int AF : 1;    // Auxiliary (decimal) carry flag
+    //     unsigned int U1 : 1;    // Unused field
+    //     unsigned int PF : 1;    // Parity flag
+    //     unsigned int U0 : 1;    // Unused field
+    //     unsigned int CF : 1;    // Carry flag
+    // } flags;
+    uint16_t flags;
 } registers_t;
 registers_t *REGS = NULL;
 
@@ -64,6 +65,35 @@ typedef enum {
     ES,
     SS,
 } register_t;
+
+typedef enum{
+    CF = 0,    // Carry flag
+    U0,    // Unused field
+    PF,    // Parity flag
+    U1,    // Unused field
+    AF,    // Auxiliary (decimal) carry flag
+    U2,    // Unused field
+    ZF,    // Zero flag
+    SF,    // Sign flag
+    TF,    // Trap flag
+    IF,    // Interrupt flag
+    DF,    // Direction flag, used to influence the direction in which string instructions offset pointer registers
+    OF,    // Overflow flag
+    U3,    // Unused fields
+} flag_t;
+
+uint8_t get_flag(flag_t flag) {
+    return (REGS->flags & (1 << flag)) > 0;
+}
+
+void set_flag(flag_t flag, uint16_t value) {
+    uint16_t mask = 1 << flag;
+    if (value > 0) {
+        REGS->flags = REGS->flags | mask;
+    } else {
+        REGS->flags = REGS->flags & ~mask;
+    }
+}
 
 uint32_t get_addr(uint16_t segment_reg, uint16_t addr) {
     uint32_t ret_val = segment_reg;
@@ -110,8 +140,104 @@ uint8_t get_width(uint8_t byte) {
     return byte & 0x01;
 }
 
-void process_instruction(uint8_t * memory) {
+uint16_t set_h(uint16_t reg_value, uint8_t value) {
+    reg_value &= 0xFF;
+    reg_value |= (value << 8);
+    return reg_value;
+}
+
+uint16_t set_l(uint16_t reg_value, uint8_t value) {
+    reg_value &= 0xFF00;
+    reg_value |= value;
+    return reg_value;
+}
+
+uint8_t get_h(uint16_t reg_value) {
+    reg_value >>= 8;
+    return reg_value;
+}
+
+uint8_t get_l(uint16_t reg_value) {
+    return reg_value & 0xFF;
+}
+
+uint8_t jmp_instr(uint8_t opcode, uint8_t *data) {
+    // Conditional Jump instructions table:
+    // Mnemonic Condition tested        Jump if ... (p69, 2-46)
+    // JA/JNBE  (CF OR ZF)=O            above/not below nor equal
+    // JAE/JNB  CF=O                    above or equal/ not below
+    // JB/JNAE  CF=1                    below / not above nor equal
+    // JBE/JNA  (CF OR ZF)=1            below or equal/ not above
+    // JC       CF=1                    carry
+    // JE/JZ    ZF=1                    equal/zero
+    // JG/JNLE  ((SF XOR OF) OR ZF)=O   greater / not less nor equal
+    // JGE/JNL  (SF XOR OF)=O           greater or equal/not less
+    // JLlJNGE  (SF XOR OF)=1           less/not greater nor equal
+    // JLE/JNG  ((SF XOR OF) OR ZF)=1   less or equal/ not greater
+    // JNC      CF=O                    not carry
+    // JNE/JNZ  ZF=O                    not equal/ not zero
+    // JNO      OF=O                    not overflow
+    // JNP/JPO  PF=O                    not parity / parity odd
+    // JNS      SF=O                    not sign
+    // JO       OF=1                    overflow
+    // JP/JPE   PF=1                    parity / parity equal
+    // JS       SF=1                    sign
+    // Relative jump jump relative to the first byte of the next
+    // instruction: JMP 0x00 jumps to the first byte of the next instruction
+    uint8_t ret_val = 0;
+    switch(opcode) {
+        case 0x73: {    // JNB/JAE/SHORT-LABEL JNC: [0x73, IP-INC8] (p269, 4-30)
+            REGS->IP += 2;
+            if (get_flag(CF) == 0) {
+                printf("Relative Jump JNB/JAE 0x%02X", data[0]);
+                REGS->IP += ((int8_t*)data)[0];
+            }
+            break;
+        }
+        case 0xEA: {    // JMP far label: [0xEA, IP-LO, IP-HI, CS-LO, CS-HI]
+            REGS->IP = ((uint16_t*)data)[0];
+            REGS->CS = ((uint16_t*)data)[1];
+            printf("Far jump to IP = 0x%04X, CS = 0x%04X\n", REGS->IP, REGS->CS);
+            break;
+        }
+        default:
+            printf("Error: Unknown JMP instruction: 0x%02X\n", opcode);
+    }
+    return ret_val;
+}
+
+uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
+    uint8_t ret_val = 0;
+    switch(opcode) {
+        case 0xB4: {
+            printf("Instruction 0xB4: MOV AH immed = 0x%02X\n", data[0]);
+            REGS->AX = set_h(REGS->AX, data[0]);
+            ret_val = 2;
+            break;
+        }
+        default:
+            printf("Error: Unknown MOV instruction: 0x%02X\n", opcode);
+    }
+    return ret_val;
+}
+
+uint8_t sahf_instr(void) {
+    // Loads the SF, ZF, AF, PF, and CF flags of the EFLAGS register with
+    // values from the corresponding bits in the AH register (7, 6, 4, 2, 0 respectively)
+    uint8_t AH = get_h(REGS->AX);
+    printf("Set flags from AH register: AH = 0x%02X, flags before: 0x%04X, ", AH, REGS->flags);
+    set_flag(CF, AH & 0x01);
+    set_flag(PF, AH & 0x04);
+    set_flag(AF, AH & 0x10);
+    set_flag(ZF, AH & 0x40);
+    set_flag(SF, AH & 0x80);
+    printf("flags after: 0x%04X\n", REGS->flags);
+    return 1;
+}
+
+uint8_t process_instruction(uint8_t * memory) {
     printf("Current instruction: 0x%02X\n", memory[0]);
+    uint8_t ret_val = 1;
     switch(memory[0]) {
         case 0x00:  // ADD REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x01:  // ADD REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -314,9 +440,8 @@ void process_instruction(uint8_t * memory) {
 //             if(jb_op())
 //                 REGS->IP = memory[1];
             break;
-        case 0x73:
-//             if(!jb_op())
-//                 REGS->IP = memory[1];
+        case 0x73:  // JNB/JAE/SHORT-LABEL JNC: [0x73, IP-INC8]
+            ret_val = jmp_instr(memory[0], &memory[1]);
             break;
         case 0x74:
 //             if(je_op())
@@ -570,7 +695,7 @@ void process_instruction(uint8_t * memory) {
 //                 REGS->IP += popf_op();
             break;
         case 0x9E:  // SAHF
-//                 REGS->IP += sahf_op();
+            ret_val = sahf_instr();
             break;
         case 0x9F:  // LAHF
 //                 REGS->IP += lahf_op();
@@ -640,8 +765,7 @@ void process_instruction(uint8_t * memory) {
 //             REGS->IP += 2;
             break;
         case 0xB4:  // MOV AH, IMMED8
-//             REGS->AX = set_h(REGS->AX, memory[1]); // DATA-8
-//             REGS->IP += 2;
+            ret_val = mov_instr(memory[0], &memory[1]);
             break;
         case 0xB5:  // MOV CH, IMMED8
 //             REGS->CX = set_h(REGS->CX, memory[1]); // DATA-8
@@ -960,15 +1084,8 @@ void process_instruction(uint8_t * memory) {
 //             addr += memory[1];
 //             REGS->IP += addr;   // IP-INC-LO, IP-INC-HI
             break;
-        case 0xEA:  // JMP FAR-LABEL
-//             uint16_t addr = memory[4];
-//             addr <<= 8;
-//             addr += memory[3];
-//             REGS->CS = addr;
-//             addr = memory[2];
-//             addr <<= 8;
-//             addr += memory[1];
-//             REGS->IP += addr;   // IP-LO, IP-HI, CS-LO, CS-HI
+        case 0xEA:  // JMP FAR-LABEL: [0xEA, IP-LO, IP-HI, CS-LO, CS-HI]
+            ret_val = jmp_instr(memory[0], &memory[1]);
             break;
         case 0xEB:  // JMP SHORT-LABEL
 //             REGS->IP += memory[1];
@@ -1096,9 +1213,9 @@ void process_instruction(uint8_t * memory) {
 //             REGS->IP += 1;
             break;
         case 0xFA:  // CLI
-//             // Clear Interrupt Flag, causes the processor to ignore maskable external interrupts
-//             REGS->flags.IF = 0;
-//             REGS->IP += 1;
+            // Clear Interrupt Flag, causes the processor to ignore maskable external interrupts
+            printf("Instruction 0xFA: Clear Interrupt Flag (IF) to disable interrupts\n");
+            set_flag(IF, 0);
             break;
         case 0xFB:  // STI
 //             // Set Interrupt Flag
@@ -1125,18 +1242,20 @@ void process_instruction(uint8_t * memory) {
             printf("Unknown instruction: 0x%02X\n", memory[0]);
             // INVALID_INSTRUCTION;
     }
+    return ret_val;
 }
 
 int init_cpu(uint8_t *memory) {
     MEMORY = memory;
     REGS = calloc(1, sizeof(registers_t));
-    REGS->IP = 0xFFFF0;
+    REGS->IP = 0xFFF0;
+    REGS->CS = 0xF000;
     return EXIT_SUCCESS;
 }
 int cpu_tick(void) {
     if (REGS->ticks < 10) {
         REGS->ticks++;
-        process_instruction(&MEMORY[REGS->IP++]);
+        REGS->IP += process_instruction(&MEMORY[get_addr(REGS->CS, REGS->IP)]);
         return EXIT_SUCCESS;
     }
     return EXIT_FAILURE;
