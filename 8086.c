@@ -13,6 +13,7 @@ uint8_t *MEMORY = NULL;
 typedef struct {
     // Helper registers
     uint32_t ticks;
+    uint32_t invalid_operations;
     // Main registers
     uint16_t AX;    // Accumulator AH=AX>>8; AL=AX&0xFF
     uint16_t BX;    // Base BH=BX>>8; BL=BX&0xFF
@@ -51,19 +52,28 @@ typedef struct {
 registers_t *REGS = NULL;
 
 typedef enum {
-    AX = 0,
-    BX,
-    CX,
-    DX,
-    SI,
-    DI,
-    BP,
-    SP,
-    IP,
-    CS,
-    DS,
-    ES,
-    SS,
+    invalid_register = 0,
+    AX_register,
+    AL_register,
+    AH_register,
+    BX_register,
+    BL_register,
+    BH_register,
+    CX_register,
+    CL_register,
+    CH_register,
+    DX_register,
+    DL_register,
+    DH_register,
+    SI_register,
+    DI_register,
+    BP_register,
+    SP_register,
+    IP_register,
+    CS_register,
+    DS_register,
+    ES_register,
+    SS_register,
 } register_name_t;
 
 typedef enum{
@@ -119,7 +129,7 @@ uint8_t get_register_field(uint8_t byte) {
     // 101 -> CH  BP
     // 110 -> DH  SI
     // 111 -> BH  DI
-    return (byte & 0xC7) >> 3;
+    return (byte & (~0xC7)) >> 3;
 }
 
 uint8_t get_reg_mem_field(uint8_t byte) {
@@ -245,8 +255,14 @@ uint8_t jmp_instr(uint8_t opcode, uint8_t *data) {
 uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 0;
     switch(opcode) {
-        case 0xB4: {
-            printf("Instruction 0xB4: MOV AH immed = 0x%02X\n", data[0]);
+        case 0xB0: {  // MOV AL, IMMED8: [0xB0, immed8]
+            printf("Instruction 0xB0: MOV AL <- immed8 = 0x%02X\n", data[0]);
+            REGS->AX = set_l(REGS->AX, data[0]);
+            ret_val = 2;
+            break;
+        }
+        case 0xB4: {  // MOV AH, IMMED8: [0xB4, immed8]
+            printf("Instruction 0xB4: MOV AH <- immed8 = 0x%02X\n", data[0]);
             REGS->AX = set_h(REGS->AX, data[0]);
             ret_val = 2;
             break;
@@ -272,6 +288,309 @@ uint8_t get_parity(uint8_t byte) {
             counter++;
     }
     return (counter & 0x01)? 0:1;
+}
+
+register_name_t get_reg_name(uint8_t rm_field, uint8_t width) {
+    // Width == 0 for byte and 1 for word
+    switch(rm_field) {
+        case 0:
+            if(width == 0)
+                return AL_register;
+            else
+                return AX_register;
+            break;
+        case 1:
+            if(width == 0)
+                return CL_register;
+            else
+                return CX_register;
+            break;
+        case 2:
+            if(width == 0)
+                return DL_register;
+            else
+                return DX_register;
+            break;
+        case 3:
+            if(width == 0)
+                return BL_register;
+            else
+                return BX_register;
+            break;
+        case 4:
+            if(width == 0)
+                return AH_register;
+            else
+                return SP_register;
+            break;
+        case 5:
+            if(width == 0)
+                return CH_register;
+            else
+                return BP_register;
+            break;
+        case 6:
+            if(width == 0)
+                return DH_register;
+            else
+                return SI_register;
+            break;
+        case 7:
+            if(width == 0)
+                return BH_register;
+            else
+                return DI_register;
+            break;
+        default:
+            return invalid_register;
+    }
+}
+
+uint16_t get_register_value(register_name_t reg_name) {
+    switch(reg_name) {
+        case AX_register:
+            return REGS->AX;
+        case AL_register:
+            return get_l(REGS->AX);
+        case AH_register:
+            return get_h(REGS->AX);
+        case BX_register:
+            return REGS->BX;
+        case BL_register:
+            return get_l(REGS->BX);
+        case BH_register:
+            return get_h(REGS->BX);
+        case CX_register:
+            return REGS->CX;
+        case CL_register:
+            return get_l(REGS->CX);
+        case CH_register:
+            return get_h(REGS->CX);
+        case DX_register:
+            return REGS->DX;
+        case DL_register:
+            return get_l(REGS->DX);
+        case DH_register:
+            return get_h(REGS->DX);
+        case SI_register:
+            return REGS->SI;
+        case DI_register:
+            return REGS->DI;
+        case BP_register:
+            return REGS->BP;
+        case SP_register:
+            return REGS->SP;
+        case IP_register:
+            return REGS->IP;
+        case CS_register:
+            return REGS->CS;
+        case DS_register:
+            return REGS->DS;
+        case ES_register:
+            return REGS->ES;
+        case SS_register:
+            return REGS->SS;
+        default:
+            printf("Invalid register name: 0x%02X\n", reg_name);
+            return 0;
+    }
+}
+
+void set_register_value(register_name_t reg_name, uint16_t value) {
+    switch(reg_name) {
+        case AX_register:
+            REGS->AX = value;
+            break;
+        case AL_register:
+            set_l(REGS->AX, value);
+            break;
+        case AH_register:
+            set_h(REGS->AX, value);
+            break;
+        case BX_register:
+            REGS->BX = value;
+            break;
+        case BL_register:
+            set_l(REGS->BX, value);
+            break;
+        case BH_register:
+            set_h(REGS->BX, value);
+            break;
+        case CX_register:
+            REGS->CX = value;
+            break;
+        case CL_register:
+            set_l(REGS->CX, value);
+            break;
+        case CH_register:
+            set_h(REGS->CX, value);
+            break;
+        case DX_register:
+            REGS->DX = value;
+            break;
+        case DL_register:
+            set_l(REGS->DX, value);
+            break;
+        case DH_register:
+            set_h(REGS->DX, value);
+            break;
+        case SI_register:
+            REGS->SI = value;
+            break;
+        case DI_register:
+            REGS->DI = value;
+            break;
+        case BP_register:
+            REGS->BP = value;
+            break;
+        case SP_register:
+            REGS->SP = value;
+            break;
+        case IP_register:
+            REGS->IP = value;
+            break;
+        case CS_register:
+            REGS->CS = value;
+            break;
+        case DS_register:
+            REGS->DS = value;
+            break;
+        case ES_register:
+            REGS->ES = value;
+            break;
+        case SS_register:
+            REGS->SS = value;
+            break;
+        default:
+            printf("Invalid register name: 0x%02X\n", reg_name);
+    }
+}
+
+uint8_t get_addr_displacement(uint8_t mod_field, uint8_t *data, uint16_t *displacement) {
+    if(mod_field == 0) {
+        *displacement = 0;
+        return 0;
+    } else if(mod_field == 1) {
+        *displacement = data[0];
+        return 1;
+    } else if(mod_field == 3) {
+        *displacement = data[0] + (data[1] << 8);
+        return 2;
+    } else {
+        printf("ERROR: Incorrect mode field: 0x%02X", mod_field);
+    }
+}
+
+uint8_t get_operation_memory(uint8_t rm_field, uint8_t mod_field, uint8_t *data, uint32_t *addr) {
+    // returns how many bytes was used from data (0, 1 or 2)
+    // uint32_t addr = 0;
+    uint16_t displacement = 0;
+    uint8_t ret_val = 0;
+    switch(rm_field) {
+        case 0: {
+            ret_val += get_addr_displacement(mod_field, data, &displacement);
+            *addr = get_register_value(BX_register) + get_register_value(SI_register) + displacement;
+            break;
+        }
+        case 1:
+            ret_val += get_addr_displacement(mod_field, data, &displacement);
+            *addr = get_register_value(BX_register) + get_register_value(DI_register) + displacement;
+            break;
+        case 2:
+            ret_val += get_addr_displacement(mod_field, data, &displacement);
+            *addr = get_register_value(BP_register) + get_register_value(SI_register) + displacement;
+            break;
+        case 3:
+            ret_val += get_addr_displacement(mod_field, data, &displacement);
+            *addr = get_register_value(BP_register) + get_register_value(DI_register) + displacement;
+            break;
+        case 4:
+            ret_val += get_addr_displacement(mod_field, data, &displacement);
+            *addr = get_register_value(SI_register) + displacement;
+            break;
+        case 5:
+            ret_val += get_addr_displacement(mod_field, data, &displacement);
+            *addr = get_register_value(DI_register) + displacement;
+            break;
+        case 6:
+            if(mod_field == 0) {
+                *addr = data[0] + (data[1] << 8);
+                ret_val += 2;
+            } else if (mod_field == 1) {
+                *addr = get_register_value(BP_register) + data[0];
+                ret_val += 1;
+            } else if(mod_field == 3) {
+                *addr = get_register_value(BP_register) + data[0] + (data[1] << 8);
+                ret_val += 2;
+            } else {
+                printf("ERROR: Incorrect MOD field value: 0x%02X\n", mod_field);
+            }
+            break;
+        case 7:
+            ret_val += get_addr_displacement(mod_field, data, &displacement);
+            *addr = get_register_value(BX_register) + displacement;
+            break;
+        default:
+            printf("ERROR: Incorrect R/M field value: 0x%02X\n", mod_field);
+    }
+
+}
+
+uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
+    uint8_t ret_val = 1;
+    switch(opcode) {
+        case 0xD0: {
+            uint8_t mod_field = get_mode_field(data[0]);
+            uint8_t rm_field = get_reg_mem_field(data[0]);
+            register_name_t reg_name = 0;
+            uint32_t addr = 0;
+            if (mod_field == 0x03) {    // Register mode
+                reg_name = get_reg_name(rm_field, 0);
+            } else {    // Memory mode
+                ret_val += get_operation_memory(rm_field, mod_field, &data[1], &addr);
+            }
+            // 8-bit operations
+            switch(get_register_field(data[0])) {
+                case 0:   // ROL REG8/MEM8, 1: [opcode, MOD 000 R/M, DISP-LO, DISP-HI]
+                    printf("ERROR: unimplemented ROL REG8/MEM8, 1 operation\n");
+                    // if(get_mode_field(data[0]))
+                    //     REGS->IP += rol_op(data[1], &data[2]);  // MOD 000 R/M, DISP-LO, DISP-HI
+                    // }
+                    break;
+                case 1: // ROR REG8/MEM8, 1: [opcode, MOD 001 R/M, DISP-LO, DISP-HI]
+                    printf("ERROR: unimplemented ROR REG8/MEM8, 1 operation\n");
+                    // REGS->IP += ror_op(data[1], &data[2]);  // MOD 001 R/M, DISP-LO, DISP-HI
+                    break;
+                case 2: // RCL REG8/MEM8, 1: [opcode, MOD 010 R/M, DISP-LO, DISP-HI]
+                    printf("ERROR: unimplemented RCL REG8/MEM8, 1 operation\n");
+                    // REGS->IP += rcl_op(data[1], &data[2]);  // MOD 010 R/M, DISP-LO, DISP-HI
+                    break;
+                case 3: // RCR REG8/MEM8, 1: [opcode, MOD 011 R/M, DISP-LO, DISP-HI]
+                    printf("ERROR: unimplemented RCR REG8/MEM8, 1 operation\n");
+                    // REGS->IP += rcr_op(data[1], &data[2]);  // MOD 011 R/M, DISP-LO, DISP-HI
+                    break;
+                case 4: // SAL/SHL REG8/MEM8, 1: [opcode, MOD 100 R/M, DISP-LO, DISP-HI]
+                    printf("ERROR: unimplemented SAL/SHL REG8/MEM8, 1 operation\n");
+                    // REGS->IP += shl_op(data[1], &data[2]);  // MOD 100 R/M, DISP-LO, DISP-HI
+                    break;
+                case 5: // SHR REG8/MEM8, 1: [opcode, MOD 101 R/M, DISP-LO, DISP-HI]
+                    printf("ERROR: unimplemented SHR REG8/MEM8, 1 operation\n");
+                    // REGS->IP += shr_op(data[1], &data[2]);  // MOD 101 R/M, DISP-LO, DISP-HI
+                    break;
+                case 6:
+                    // INVALID_INSTRUCTION;    // MOD 110 R/M,
+                    // break;
+                case 7: // SAR REG8/MEM8, 1: [opcode, MOD 111 R/M, DISP-LO, DISP-HI]
+                    printf("ERROR: unimplemented SAR REG8/MEM8, 1 operation\n");
+                    // REGS->IP += sar_op(data[1], &data[2]);  // MOD 111 R/M, DISP-LO, DISP-HI
+                    break;
+            }
+            break;
+        }
+        default:
+            printf("Error: Unknown Shift/Rotate instruction: 0x%02X\n", opcode);
+    }
+    return ret_val;
 }
 
 uint8_t cmp_instr(uint8_t opcode, uint8_t *data) {
@@ -378,9 +697,10 @@ uint8_t process_instruction(uint8_t * memory) {
         //     push_reg_op(memory[0]);
         //     REGS->IP += 1;
         //     break;
-        // case 0x0F:  // NOT USED
-        //     INVALID_INSTRUCTION;
-        //     break;
+        case 0x0F:  // NOT USED
+            // INVALID_INSTRUCTION;
+            REGS->invalid_operations ++;
+            break;
         // case 0x10:  // ADC REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x11:  // ADC REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x12:  // ADC REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -521,24 +841,25 @@ uint8_t process_instruction(uint8_t * memory) {
         //     pop_reg_op(memory[0]);
         //     REGS->IP += 1;
         //     break;
-        // case 0x60:
-        // case 0x61:
-        // case 0x62:
-        // case 0x63:
-        // case 0x64:
-        // case 0x65:
-        // case 0x66:
-        // case 0x67:
-        // case 0x68:
-        // case 0x69:
-        // case 0x6A:
-        // case 0x6B:
-        // case 0x6C:
-        // case 0x6D:
-        // case 0x6E:
-        // case 0x6F:
-        //     INVALID_INSTRUCTION;
-        //     break;
+        case 0x60:
+        case 0x61:
+        case 0x62:
+        case 0x63:
+        case 0x64:
+        case 0x65:
+        case 0x66:
+        case 0x67:
+        case 0x68:
+        case 0x69:
+        case 0x6A:
+        case 0x6B:
+        case 0x6C:
+        case 0x6D:
+        case 0x6E:
+        case 0x6F:
+            // INVALID_INSTRUCTION;
+            REGS->invalid_operations ++;
+            break;
         // case 0x70:
         //     if(jo_op())
         //         REGS->IP = memory[1];
@@ -856,10 +1177,9 @@ uint8_t process_instruction(uint8_t * memory) {
         // case 0xAF:  // SCAS DEST-STR16
         //     REGS->IP += stos_str_op(memory[1], &memory[2]);
         //     break;
-        // case 0xB0:  // MOV AL, IMMED8
-        //     REGS->AX = set_l(REGS->AX, memory[1]); // DATA-8
-        //     REGS->IP += 2;
-        //     break;
+        case 0xB0:  // MOV AL, IMMED8
+            ret_val = mov_instr(memory[0], &memory[1]);
+            break;
         // case 0xB1:  // MOV CL, IMMED8
         //     REGS->CX = set_l(REGS->CX, memory[1]); // DATA-8
         //     REGS->IP += 2;
@@ -919,12 +1239,14 @@ uint8_t process_instruction(uint8_t * memory) {
         //     REGS->DI = (memory[2] << 8) + memory[1]; // DATA-LO, DATA-HI
         //     REGS->IP += 3;
         //     break;
-        // case 0xC0:
-        //     INVALID_INSTRUCTION;
-        //     break;
-        // case 0xC1:
-        //     INVALID_INSTRUCTION;
-        //     break;
+        case 0xC0:
+            // INVALID_INSTRUCTION;
+            REGS->invalid_operations ++;
+            break;
+        case 0xC1:
+            // INVALID_INSTRUCTION;
+            REGS->invalid_operations ++;
+            break;
         // case 0xC2:  // RET IMMED16 (intrasegment)
         //     REGS->IP += ret_op(memory[1], &memory[2]);  // DATA-LO, DATA-HI
         //     break;
@@ -951,12 +1273,14 @@ uint8_t process_instruction(uint8_t * memory) {
         //         INVALID_INSTRUCTION;
         //     }
         //     break;
-        // case 0xC8:
-        //     INVALID_INSTRUCTION;
-        //     break;
-        // case 0xC9:
-        //     INVALID_INSTRUCTION;
-        //     break;
+        case 0xC8:
+            // INVALID_INSTRUCTION;
+            REGS->invalid_operations ++;
+            break;
+        case 0xC9:
+            // INVALID_INSTRUCTION;
+            REGS->invalid_operations ++;
+            break;
         // case 0xCA:  // RET IMMED16 (intersegment)
         //     REGS->IP += ret_op(memory[1], &memory[2]);  // DATA-LO, DATA-HI
         //     break;
@@ -975,35 +1299,10 @@ uint8_t process_instruction(uint8_t * memory) {
         // case 0xCF:  // IRET
         //     REGS->IP += iret_op();
         //     break;
-        // case 0xD0:
-        //     // 8-bit operations
-        //     switch(get_mode_field(memory[1])) {
-        //         case 0: // ROL REG8/MEM8, 1
-        //             REGS->IP += rol_op(memory[1], &memory[2]);  // MOD 000 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 1: // ROR REG8/MEM8, 1
-        //             REGS->IP += ror_op(memory[1], &memory[2]);  // MOD 001 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 2: // RCL REG8/MEM8, 1
-        //             REGS->IP += rcl_op(memory[1], &memory[2]);  // MOD 010 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 3: // RCR REG8/MEM8, 1
-        //             REGS->IP += rcr_op(memory[1], &memory[2]);  // MOD 011 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 4: // SAL/SHL REG8/MEM8, 1
-        //             REGS->IP += shl_op(memory[1], &memory[2]);  // MOD 100 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 5: // SHR REG8/MEM8, 1
-        //             REGS->IP += shr_op(memory[1], &memory[2]);  // MOD 101 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 6:
-        //             INVALID_INSTRUCTION;    // MOD 110 R/M,
-        //             break;
-        //         case 7: // SAR REG8/MEM8, 1
-        //             REGS->IP += sar_op(memory[1], &memory[2]);  // MOD 111 R/M, DISP-LO, DISP-HI
-        //             break;
-        //     }
-        //     break;
+        case 0xD0:
+            // 8-bit operations
+            ret_val = shift_instr(memory[0], &memory[1]);
+            break;
         // case 0xD1:
         //     // 16-bit operations
         //     switch(get_mode_field(memory[1])) {
@@ -1105,9 +1404,10 @@ uint8_t process_instruction(uint8_t * memory) {
         //         INVALID_INSTRUCTION;
         //     }
         //     break;
-        // case 0xD6:
-        //     INVALID_INSTRUCTION;
-        //     break;
+        case 0xD6:
+            // INVALID_INSTRUCTION;
+            REGS->invalid_operations ++;
+            break;
         // case 0xD7:  // XLAT SOURCE-TABLE
         //     REGS->IP += xlat_op();
         //     break;
@@ -1218,9 +1518,10 @@ uint8_t process_instruction(uint8_t * memory) {
         //     assert_LOCK_pin();
         //     REGS->IP += 1;
         //     break;
-        // case 0xF1:
-        //     INVALID_INSTRUCTION;
-        //     break;
+        case 0xF1:
+            REGS->invalid_operations ++;
+            // INVALID_INSTRUCTION;
+            break;
         // case 0xF2:  // REPNE/REPNZ
         //     while(REGS->CX != 0) {
         //         execute_next_command();
@@ -1348,6 +1649,7 @@ uint8_t process_instruction(uint8_t * memory) {
         //     break;
         default:
             printf("Unknown instruction: 0x%02X\n", memory[0]);
+            REGS->invalid_operations ++;
             // INVALID_INSTRUCTION;
     }
     return ret_val;
@@ -1361,7 +1663,7 @@ int init_cpu(uint8_t *memory) {
     return EXIT_SUCCESS;
 }
 int cpu_tick(void) {
-    if (REGS->ticks < 20) {
+    if (REGS->invalid_operations < 3) {
         REGS->ticks++;
         REGS->IP += process_instruction(&MEMORY[get_addr(REGS->CS, REGS->IP)]);
         return EXIT_SUCCESS;
