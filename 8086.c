@@ -105,6 +105,25 @@ void set_flag(flag_t flag, uint16_t value) {
     }
 }
 
+uint8_t get_parity(uint8_t byte) {
+    // Returns 1 if the byte contains an even number of 1-bits, otherwise returns 0
+    uint8_t counter = 0;
+    for(int i=1; i<0x100; i<<=1) {
+        if ((byte & i) > 0)
+            counter++;
+    }
+    return (counter & 0x01)? 0:1;
+}
+
+void update_psz_flags(uint16_t result, uint8_t word) {
+    if(word)
+        set_flag(PF, get_parity(result & 0xFFFF));
+    else
+        set_flag(PF, get_parity(result & 0xFF));
+    set_flag(SF, result & 0x8000 > 0);
+    set_flag(ZF, result == 0);
+}
+
 uint32_t get_addr(uint16_t segment_reg, uint16_t addr) {
     uint32_t ret_val = segment_reg;
     ret_val <<= 4;
@@ -169,125 +188,6 @@ uint8_t get_h(uint16_t reg_value) {
 
 uint8_t get_l(uint16_t reg_value) {
     return reg_value & 0xFF;
-}
-
-uint8_t jmp_instr(uint8_t opcode, uint8_t *data) {
-    // Conditional Jump instructions table:
-    // Mnemonic Condition tested        Jump if ... (p69, 2-46)
-    // JA/JNBE  (CF OR ZF)=O            above/not below nor equal
-    // JAE/JNB  CF=O                    above or equal/ not below       0x73
-    // JB/JNAE  CF=1                    below / not above nor equal
-    // JBE/JNA  (CF OR ZF)=1            below or equal/ not above
-    // JC       CF=1                    carry
-    // JE/JZ    ZF=1                    equal/zero
-    // JG/JNLE  ((SF XOR OF) OR ZF)=O   greater / not less nor equal
-    // JGE/JNL  (SF XOR OF)=O           greater or equal/not less
-    // JLlJNGE  (SF XOR OF)=1           less/not greater nor equal
-    // JLE/JNG  ((SF XOR OF) OR ZF)=1   less or equal/ not greater
-    // JNC      CF=O                    not carry
-    // JNE/JNZ  ZF=O                    not equal/ not zero             0x75
-    // JNO      OF=O                    not overflow
-    // JNP/JPO  PF=O                    not parity / parity odd         0x7B
-    // JNS      SF=O                    not sign                        0x79
-    // JO       OF=1                    overflow
-    // JP/JPE   PF=1                    parity / parity equal
-    // JS       SF=1                    sign
-    // Relative jump jump relative to the first byte of the next
-    // instruction: JMP 0x00 jumps to the first byte of the next instruction
-    uint8_t ret_val = 0;
-    switch(opcode) {
-        case 0x73: {    // JNB/JAE SHORT-LABEL JNC: [0x73, IP-INC8] (p269, 4-30)
-            REGS->IP += 2;
-            printf("Relative Jump JNB/JAE");
-            if (get_flag(CF) == 0) {
-                printf(" to 0x%02X\n", data[0]);
-                REGS->IP += ((int8_t*)data)[0];
-            } else {
-                printf(": condition didn't meet: CF != 0\n");
-            }
-            break;
-        }
-        case 0x75: {    // JNE/JNZ SHORT-LABEL: [0x75, IP-INC8] (p269, 4-30)
-            REGS->IP += 2;
-            printf("Relative Jump JNE/JNZ");
-            if (get_flag(ZF) == 0) {
-                printf(" to 0x%02X\n", data[0]);
-                REGS->IP += ((int8_t*)data)[0];
-            } else {
-                printf(": condition didn't meet: ZF != 0\n");
-            }
-            break;
-        }
-        case 0x79: {    // JNS SHORT-LABEL: [0x79, IP-INC8] (p269, 4-30)
-            REGS->IP += 2;
-            printf("Relative Jump JNS");
-            if (get_flag(SF) == 0) {
-                printf(" to 0x%02X\n", data[0]);
-                REGS->IP += ((int8_t*)data)[0];
-            } else {
-                printf(": condition didn't meet: SF != 0\n");
-            }
-            break;
-        }
-        case 0x7B: {    // JNP/JPO SHORT-LABEL: [0x7B, IP-INC8] (p269, 4-30)
-            REGS->IP += 2;
-            printf("Relative Jump JNP/JPO");
-            if (get_flag(PF) == 0) {
-                printf(" to 0x%02X\n", data[0]);
-                REGS->IP += ((int8_t*)data)[0];
-            } else {
-                printf(": condition didn't meet: PF != 0\n");
-            }
-            break;
-        }
-        case 0xEA: {    // JMP far label: [0xEA, IP-LO, IP-HI, CS-LO, CS-HI]
-            REGS->IP = ((uint16_t*)data)[0];
-            REGS->CS = ((uint16_t*)data)[1];
-            printf("Far jump to IP = 0x%04X, CS = 0x%04X\n", REGS->IP, REGS->CS);
-            break;
-        }
-        default:
-            printf("Error: Unknown JMP instruction: 0x%02X\n", opcode);
-    }
-    return ret_val;
-}
-
-uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
-    uint8_t ret_val = 0;
-    switch(opcode) {
-        case 0xB0: {  // MOV AL, IMMED8: [0xB0, immed8]
-            printf("Instruction 0xB0: MOV AL <- immed8 = 0x%02X\n", data[0]);
-            REGS->AX = set_l(REGS->AX, data[0]);
-            ret_val = 2;
-            break;
-        }
-        case 0xB4: {  // MOV AH, IMMED8: [0xB4, immed8]
-            printf("Instruction 0xB4: MOV AH <- immed8 = 0x%02X\n", data[0]);
-            REGS->AX = set_h(REGS->AX, data[0]);
-            ret_val = 2;
-            break;
-        }
-        default:
-            printf("Error: Unknown MOV instruction: 0x%02X\n", opcode);
-    }
-    return ret_val;
-}
-
-uint8_t calc_of_flag(uint16_t val1, uint16_t val2, uint16_t res, uint16_t bit) {
-    if(((val1 & bit) > 0) && ((val2 & bit) > 0) && (((res) & bit) == 0) ||
-        ((val1 & bit) == 0) && ((val2 & bit) == 0) && (((res) & bit) > 0))
-        return 1;
-    return 0;
-}
-
-uint8_t get_parity(uint8_t byte) {
-    // Returns 1 if the byte contains an even number of 1-bits, otherwise returns 0
-    uint8_t counter = 0;
-    for(int i=1; i<0x100; i<<=1) {
-        if ((byte & i) > 0)
-            counter++;
-    }
-    return (counter & 0x01)? 0:1;
 }
 
 register_name_t get_reg_name(uint8_t rm_field, uint8_t width) {
@@ -466,6 +366,134 @@ void set_register_value(register_name_t reg_name, uint16_t value) {
     }
 }
 
+uint8_t jmp_instr(uint8_t opcode, uint8_t *data) {
+    // Conditional Jump instructions table:
+    // Mnemonic Condition tested        Jump if ... (p69, 2-46)
+    // JA/JNBE  (CF OR ZF)=O            above/not below nor equal
+    // JAE/JNB  CF=O                    above or equal/ not below       0x73
+    // JB/JNAE  CF=1                    below / not above nor equal
+    // JBE/JNA  (CF OR ZF)=1            below or equal/ not above
+    // JC       CF=1                    carry
+    // JE/JZ    ZF=1                    equal/zero
+    // JG/JNLE  ((SF XOR OF) OR ZF)=O   greater / not less nor equal
+    // JGE/JNL  (SF XOR OF)=O           greater or equal/not less
+    // JLlJNGE  (SF XOR OF)=1           less/not greater nor equal
+    // JLE/JNG  ((SF XOR OF) OR ZF)=1   less or equal/ not greater
+    // JNC      CF=O                    not carry
+    // JNE/JNZ  ZF=O                    not equal/ not zero             0x75
+    // JNO      OF=O                    not overflow
+    // JNP/JPO  PF=O                    not parity / parity odd         0x7B
+    // JNS      SF=O                    not sign                        0x79
+    // JO       OF=1                    overflow
+    // JP/JPE   PF=1                    parity / parity equal
+    // JS       SF=1                    sign
+    // Relative jump jump relative to the first byte of the next
+    // instruction: JMP 0x00 jumps to the first byte of the next instruction
+    uint8_t ret_val = 0;
+    switch(opcode) {
+        case 0x73: {    // JNB/JAE SHORT-LABEL JNC: [0x73, IP-INC8] (p269, 4-30)
+            REGS->IP += 2;
+            printf("Relative Jump JNB/JAE");
+            if (get_flag(CF) == 0) {
+                printf(" to 0x%02X\n", data[0]);
+                REGS->IP += ((int8_t*)data)[0];
+            } else {
+                printf(": condition didn't meet: CF != 0\n");
+            }
+            break;
+        }
+        case 0x75: {    // JNE/JNZ SHORT-LABEL: [0x75, IP-INC8] (p269, 4-30)
+            REGS->IP += 2;
+            printf("Relative Jump JNE/JNZ");
+            if (get_flag(ZF) == 0) {
+                printf(" to 0x%02X\n", data[0]);
+                REGS->IP += ((int8_t*)data)[0];
+            } else {
+                printf(": condition didn't meet: ZF != 0\n");
+            }
+            break;
+        }
+        case 0x79: {    // JNS SHORT-LABEL: [0x79, IP-INC8] (p269, 4-30)
+            REGS->IP += 2;
+            printf("Relative Jump JNS");
+            if (get_flag(SF) == 0) {
+                printf(" to 0x%02X\n", data[0]);
+                REGS->IP += ((int8_t*)data)[0];
+            } else {
+                printf(": condition didn't meet: SF != 0\n");
+            }
+            break;
+        }
+        case 0x7B: {    // JNP/JPO SHORT-LABEL: [0x7B, IP-INC8] (p269, 4-30)
+            REGS->IP += 2;
+            printf("Relative Jump JNP/JPO");
+            if (get_flag(PF) == 0) {
+                printf(" to 0x%02X\n", data[0]);
+                REGS->IP += ((int8_t*)data)[0];
+            } else {
+                printf(": condition didn't meet: PF != 0\n");
+            }
+            break;
+        }
+        case 0xE0:  // LOOPNE/LOOPNZ SHORT-LABEL: [0xE0, IP-INC8]
+            // LOOPNE decrements CX and checks that CX is not zero and ZF is clear - if these
+            // conditions are met, it jumps at label, otherwise falls through
+            REGS->IP += 2;
+            printf("Relative Jump LOOPNE/LOOPNZ SHORT-LABEL: ");
+            set_register_value(CX_register, get_register_value(CX_register) - 1);
+            update_psz_flags(get_register_value(CX_register), 1);
+            printf("CX = 0x%04X, ZF = 0x%02X;", get_register_value(CX_register), get_flag(ZF));
+            if(get_register_value(CX_register) != 0 && get_flag(ZF) == 0) {
+                printf(" jump to 0x%02X\n", data[0]);
+                printf("IP before: 0x%04X, ", REGS->IP);
+                set_register_value(IP_register, get_register_value(IP_register) + ((int8_t*)data)[0]);
+                printf("IP after: 0x%04X\n", REGS->IP);
+            } else {
+                printf(": condition didn't meet: CX == 0 or ZF is set\n");
+            }
+            break;
+        case 0xEA: {    // JMP far label: [0xEA, IP-LO, IP-HI, CS-LO, CS-HI]
+            set_register_value(IP_register, data[0] + (data[1] << 8));
+            set_register_value(CS_register, data[2] + (data[3] << 8));
+            // REGS->IP = ((uint16_t*)data)[0];
+            // REGS->CS = ((uint16_t*)data)[1];
+            printf("Far jump to IP = 0x%04X, CS = 0x%04X\n", REGS->IP, REGS->CS);
+            break;
+        }
+        default:
+            printf("Error: Unknown JMP instruction: 0x%02X\n", opcode);
+    }
+    return ret_val;
+}
+
+uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
+    uint8_t ret_val = 0;
+    switch(opcode) {
+        case 0xB0: {  // MOV AL, IMMED8: [0xB0, immed8]
+            printf("Instruction 0xB0: MOV AL <- immed8 = 0x%02X\n", data[0]);
+            REGS->AX = set_l(REGS->AX, data[0]);
+            ret_val = 2;
+            break;
+        }
+        case 0xB4: {  // MOV AH, IMMED8: [0xB4, immed8]
+            printf("Instruction 0xB4: MOV AH <- immed8 = 0x%02X\n", data[0]);
+            REGS->AX = set_h(REGS->AX, data[0]);
+            ret_val = 2;
+            break;
+        }
+        default:
+            printf("Error: Unknown MOV instruction: 0x%02X\n", opcode);
+    }
+    return ret_val;
+}
+
+uint8_t calc_of_flag(uint16_t val1, uint16_t val2, uint16_t res, uint16_t bit) {
+    if(((val1 & bit) > 0) && ((val2 & bit) > 0) && (((res) & bit) == 0) ||
+        ((val1 & bit) == 0) && ((val2 & bit) == 0) && (((res) & bit) > 0))
+        return 1;
+    return 0;
+}
+
 uint8_t get_addr_displacement(uint8_t mod_field, uint8_t *data, uint16_t *displacement) {
     if(mod_field == 0) {
         *displacement = 0;
@@ -477,7 +505,7 @@ uint8_t get_addr_displacement(uint8_t mod_field, uint8_t *data, uint16_t *displa
         *displacement = data[0] + (data[1] << 8);
         return 2;
     } else {
-        printf("ERROR: Incorrect mode field: 0x%02X", mod_field);
+        printf("ERROR: Incorrect mode field: 0x%02X\n", mod_field);
     }
 }
 
@@ -544,10 +572,14 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
             uint8_t rm_field = get_reg_mem_field(data[0]);
             register_name_t reg_name = 0;
             uint32_t addr = 0;
+            uint16_t src_val = 0;
+            uint16_t res_val = 0;
             if (mod_field == 0x03) {    // Register mode
                 reg_name = get_reg_name(rm_field, 0);
+                src_val = get_register_value(reg_name);
             } else {    // Memory mode
                 ret_val += get_operation_memory(rm_field, mod_field, &data[1], &addr);
+                src_val = MEMORY[addr];
             }
             // 8-bit operations
             switch(get_register_field(data[0])) {
@@ -570,7 +602,16 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                     // REGS->IP += rcr_op(data[1], &data[2]);  // MOD 011 R/M, DISP-LO, DISP-HI
                     break;
                 case 4: // SAL/SHL REG8/MEM8, 1: [opcode, MOD 100 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented SAL/SHL REG8/MEM8, 1 operation\n");
+                    res_val = src_val << 1;
+                    if (mod_field == 0x03) {    // Register mode
+                        set_register_value(reg_name, res_val);
+                    } else {    // Memory mode
+                        MEMORY[addr] = res_val;
+                    }
+                    set_flag(CF, src_val & 0x80);
+                    set_flag(OF, ((src_val & 0x80) > 0) != ((res_val & 0x80) > 0));
+                    update_psz_flags(res_val, 0);
+                    printf("Operation SAL/SHL REG8/MEM8, 1: src = 0x%02X, result = 0x%02X\n", src_val, res_val);
                     // REGS->IP += shl_op(data[1], &data[2]);  // MOD 100 R/M, DISP-LO, DISP-HI
                     break;
                 case 5: // SHR REG8/MEM8, 1: [opcode, MOD 101 R/M, DISP-LO, DISP-HI]
@@ -597,18 +638,15 @@ uint8_t cmp_instr(uint8_t opcode, uint8_t *data) {
     // CMP updates AF, CF, OF, PF, SF and ZF
     uint8_t ret_val = 0;
     switch(opcode) {
-        case 0x3D: {
+        case 0x3D: {  // CMP AX, immed16: [0x3D, DATA-LO, DATA-HI]
             uint32_t val = (data[1] << 8) + data[0];
             uint32_t AX = REGS->AX;
-            uint32_t res = val + AX;
+            uint32_t res = AX - val;
             printf("Instruction 0x3D: CMP AX immed16 = 0x%04X\n", val);
             set_flag(AF, ((val & 0x0F) > (AX & 0x0F)));
             set_flag(CF, res > 0xFFFF);
             set_flag(OF, calc_of_flag(val, AX, res, 0x8000));
-            set_flag(PF, get_parity(res & 0xFF));
-            set_flag(SF, res & 0x8000 > 0);
-            set_flag(ZF, res == 0);
-            REGS->AX = set_h(REGS->AX, data[0]);
+            // REGS->AX = set_h(REGS->AX, data[0]);
             ret_val = 3;
             break;
         }
@@ -630,9 +668,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             set_flag(AF, ((val & 0x0F) + (REGS->AX & 0x0F) > 0x0F));
             set_flag(CF, res > 0xFFFF);
             set_flag(OF, calc_of_flag(val, AX, res, 0x8000));
-            set_flag(PF, get_parity(res & 0xFF));
-            set_flag(SF, res & 0x8000 > 0);
-            set_flag(ZF, res == 0);
+            update_psz_flags(res, 1);
             REGS->AX = res;
             ret_val = 3;
             break;
@@ -700,6 +736,7 @@ uint8_t process_instruction(uint8_t * memory) {
         case 0x0F:  // NOT USED
             // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
+            printf("Unknown instruction: 0x%02X\n", memory[0]);
             break;
         // case 0x10:  // ADC REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x11:  // ADC REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -859,6 +896,7 @@ uint8_t process_instruction(uint8_t * memory) {
         case 0x6F:
             // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
+            printf("Unknown instruction: 0x%02X\n", memory[0]);
             break;
         // case 0x70:
         //     if(jo_op())
@@ -1242,10 +1280,12 @@ uint8_t process_instruction(uint8_t * memory) {
         case 0xC0:
             // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
+            printf("Unknown instruction: 0x%02X\n", memory[0]);
             break;
         case 0xC1:
             // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
+            printf("Unknown instruction: 0x%02X\n", memory[0]);
             break;
         // case 0xC2:  // RET IMMED16 (intrasegment)
         //     REGS->IP += ret_op(memory[1], &memory[2]);  // DATA-LO, DATA-HI
@@ -1276,10 +1316,12 @@ uint8_t process_instruction(uint8_t * memory) {
         case 0xC8:
             // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
+            printf("Unknown instruction: 0x%02X\n", memory[0]);
             break;
         case 0xC9:
             // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
+            printf("Unknown instruction: 0x%02X\n", memory[0]);
             break;
         // case 0xCA:  // RET IMMED16 (intersegment)
         //     REGS->IP += ret_op(memory[1], &memory[2]);  // DATA-LO, DATA-HI
@@ -1407,6 +1449,7 @@ uint8_t process_instruction(uint8_t * memory) {
         case 0xD6:
             // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
+            printf("Unknown instruction: 0x%02X\n", memory[0]);
             break;
         // case 0xD7:  // XLAT SOURCE-TABLE
         //     REGS->IP += xlat_op();
@@ -1426,16 +1469,11 @@ uint8_t process_instruction(uint8_t * memory) {
         //         REGS->IP += esc_op(memory[1], &memory[2]);  // MOD 000/111 R/M, DISP-LO, DISP-HI
         //     }
         //     break;
-        // case 0xE0:  // LOOPNE/LOOPNZ SHORT-LABEL
-        //     // LOOPNE decrements ecx and checks that ecx is not zero and ZF is not set - if these
-        //     // conditions are met, it jumps at label, otherwise falls through
-        //     REGS->CX--;
-        //     if(REGS->CX > 0 && REGS->flags.ZF == 0) {
-        //         REGS->IP += memory[1];  // IP-INC-8
-        //     } else {
-        //         REGS->IP += 2;
-        //     }
-        //     break;
+        case 0xE0:  // LOOPNE/LOOPNZ SHORT-LABEL: [0xE0, IP-INC8]
+            // LOOPNE decrements ecx and checks that ecx is not zero and ZF is not set - if these
+            // conditions are met, it jumps at label, otherwise falls through
+            ret_val = jmp_instr(memory[0], &memory[1]);
+            break;
         // case 0xE1:  // LOOPE/LOOPZ SHORT-LABEL
         //     // LOOPE decrements ecx and checks that ecx is not zero and ZF is set - if these
         //     // conditions are met, it jumps at label, otherwise falls through
@@ -1520,6 +1558,7 @@ uint8_t process_instruction(uint8_t * memory) {
         //     break;
         case 0xF1:
             REGS->invalid_operations ++;
+            printf("Unknown instruction: 0x%02X\n", memory[0]);
             // INVALID_INSTRUCTION;
             break;
         // case 0xF2:  // REPNE/REPNZ
