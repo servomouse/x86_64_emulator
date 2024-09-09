@@ -35,7 +35,7 @@ int copy_bios_into_memory(uint8_t *memory, size_t offset, const char *filename) 
 }
 
 int main(void) {
-    uint8_t memory[0x100000] = {0};
+    uint8_t *memory = (uint8_t*)calloc(sizeof(uint8_t), 0x100000);
     if ((EXIT_FAILURE == copy_bios_into_memory(memory, 0xF0000, BIOS_FILENAME_0XF0000)) ||
         (EXIT_FAILURE == copy_bios_into_memory(memory, 0xF8000, BIOS_FILENAME_0XF8000))) {
         return  EXIT_FAILURE;
