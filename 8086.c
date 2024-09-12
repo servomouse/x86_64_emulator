@@ -128,6 +128,14 @@ void mem_write(uint32_t addr, uint16_t value, uint8_t width) {
     } else {
         printf("ERROR: Incorrect width: %d", width);
     }
+    FILE *f;
+    f = fopen("mem_log.txt", "a");
+    if(f == NULL) {
+        printf("Error opening mem_log.txt");
+        return;
+    }
+    fprintf(f,"Addr: 0x%06X; value: 0x%04X; width: %d\n", addr, value, width);
+    fclose(f);
 }
 
 uint16_t mem_read(uint32_t addr, uint8_t width) {
@@ -139,6 +147,14 @@ uint16_t mem_read(uint32_t addr, uint8_t width) {
     } else {
         printf("ERROR: Incorrect width: %d", width);
     }
+    FILE *f;
+    f = fopen("mem_log.txt", "a");
+    if(f == NULL) {
+        printf("Error opening mio_log.txt");
+        return ret_val;
+    }
+    fprintf(f,"Read from addr: 0x%06X; value: 0x%04X; width: %d\n", addr, ret_val, width);
+    fclose(f);
     printf("MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
@@ -810,7 +826,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
-        case 0xE0:  // LOOPNE/LOOPNZ SHORT-LABEL: [0xE0, IP-INC8]
+        case 0xE0: {  // LOOPNE/LOOPNZ SHORT-LABEL: [0xE0, IP-INC8]
             // LOOPNE decrements CX and checks that CX is not zero and ZF is clear - if these
             // conditions are met, it jumps at label, otherwise falls through
             ip_inc += 2;
@@ -826,6 +842,26 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
                 printf(": condition (CX != 0 and ZF == 0) didn't meet: CX = 0x%04X, ZF = %d\n", get_register_value(CX_register), get_flag(ZF));
             }
             break;
+        }
+        case 0xE2: {  // LOOP SHORT-LABEL
+            // LOOP decrements CX by 1 and transfers control
+            // to the target operand if CX is not 0; otherwise the
+            // instruction following LOOP is executed.
+            printf("Instruction 0xE2: Relative Jump LOOP SHORT-LABEL: ");
+            ip_inc += 2;
+            uint16_t dest_val = get_register_value(CX_register);
+            uint16_t res_val = dest_val - 1;
+            set_register_value(CX_register, res_val);
+            update_flags(dest_val, 1, res_val, 1, SUB_OP);
+            printf("CX = 0x%04X;", res_val);
+            if(res_val != 0) {
+                printf(" jump to 0x%02X\n", data[0]);
+                ip_inc += ((int8_t*)data)[0];
+            } else {
+                printf(": condition (CX != 0) didn't meet: CX = 0x%04X\n", res_val);
+            }
+            break;
+        }
         case 0xE9: {  // JMP NEAR-LABEL: [0xE9, IP-INC-LO, IP-INC-HI]
             int16_t offset = data[0] + (data[1] << 8);
             ip_inc += 3;
@@ -995,21 +1031,21 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0xBA: {  // MOV DX, IMMED16: [0xBB, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
-            printf("Instruction 0xB8: MOV DX, IMMED16 = 0x%04X\n", immed_data);;
+            printf("Instruction 0xBA: MOV DX, IMMED16 = 0x%04X\n", immed_data);;
             set_register_value(DX_register, immed_data);
             ret_val = 3;
             break;
         }
         case 0xBB: {  // MOV BX, IMMED16: [0xBB, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
-            printf("Instruction 0xB8: MOV BX, IMMED16 = 0x%04X\n", immed_data);;
+            printf("Instruction 0xBB: MOV BX, IMMED16 = 0x%04X\n", immed_data);;
             set_register_value(BX_register, immed_data);
             ret_val = 3;
             break;
         }
         case 0xBC: {  // MOV SP, IMMED16: [0xBC, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
-            printf("Instruction 0xB8: MOV SP, IMMED16 = 0x%04X\n", immed_data);;
+            printf("Instruction 0xBC: MOV SP, IMMED16 = 0x%04X\n", immed_data);;
             set_register_value(SP_register, immed_data);
             ret_val = 3;
             break;
@@ -1184,7 +1220,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
     switch(opcode) {
         case 0x02: {  // ADD REG8, REG8/MEM8: [0x02, MOD REG R/M, (DISP-LO), (DISP-HI)]
             res_val = src_val + dst_val;
-            printf("Instruction 0x05: ADD %s, %s, res = 0x%04X\n", operands.destination, operands.source, res_val);
+            printf("Instruction 0x02: ADD %s, %s, res = 0x%04X\n", operands.destination, operands.source, res_val);
             update_flags(dst_val, src_val, res_val, 1, ADD_OP);
             // set_flag(AF, ((src_val & 0x0F) + (dst_val & 0x0F) > 0x0F));
             // set_flag(CF, res_val > 0x00FF);
@@ -2181,16 +2217,11 @@ int16_t process_instruction(uint8_t * memory) {
         //         REGS->IP += 2;
         //     }
         //     break;
-        // case 0xE2:  // LOOP SHORT-LABEL
-        //     // LOOP decrements ecx and checks if ecx is not zero, if that 
-        //     // condition is met it jumps at specified label, otherwise falls through
-        //     REGS->CX--;
-        //     if(REGS->CX > 0) {
-        //         REGS->IP += memory[1];  // IP-INC-8
-        //     } else {
-        //         REGS->IP += 2;
-        //     }
-        //     break;
+        case 0xE2:  // LOOP SHORT-LABEL
+            // LOOP decrements ecx and checks if ecx is not zero, if that 
+            // condition is met it jumps at specified label, otherwise falls through
+            ret_val = jmp_instr(memory[0], &memory[1]);
+            break;
         // case 0xE3:  // JPXZ
         //     // JCXZ (Jump if ECX Zero) branches to the label specified in the instruction if it finds a value of zero in ECX
         //     if(REGS->CX == 0) {
@@ -2241,7 +2272,7 @@ int16_t process_instruction(uint8_t * memory) {
         //     break;
         case 0xEE:  // OUT AL, DX
             printf("Instruction 0xEE: OUT AL DX; ");
-            io_write(get_register_value(AL_register), get_register_value(DX_register), 2); // DATA-8
+            io_write(get_register_value(AX_register), get_register_value(DX_register), 2); // DATA-8
             break;
         // case 0xEF:  // OUT AX, DX
         //     set_io_16bit(REGS->DX, REGS->AX); // DATA-8
