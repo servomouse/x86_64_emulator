@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <unistd.h> // sleep()
+#include "utils.h"
 #include "8086.h"
 
 char *BIOS_FILENAME_0XF0000 = "BIOS/F0000.BIN";
@@ -48,7 +48,7 @@ int main(void) {
         return EXIT_FAILURE;
     }
     while (EXIT_SUCCESS == cpu_tick()) { // Run CPU
-        sleep(1);
+        sleep_ms(50);
     }
     return 0;
 }

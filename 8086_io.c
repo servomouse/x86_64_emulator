@@ -33,6 +33,7 @@ uint16_t io_read(uint32_t addr, uint8_t width) {
     }
     fprintf(f,"Read from addr: 0x%06X; value: 0x%04X; width: %d\n", addr, ret_val, width);
     fclose(f);
+    return ret_val;
 }
 
 int io_init(void) {

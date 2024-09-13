@@ -301,7 +301,7 @@ void update_psz_flags(uint16_t result, uint8_t word) {
         set_flag(PF, get_parity(result & 0xFFFF));
     else
         set_flag(PF, get_parity(result & 0xFF));
-    set_flag(SF, result & 0x8000 > 0);
+    set_flag(SF, (result & 0x8000) > 0);
     set_flag(ZF, result == 0);
 }
 
@@ -373,6 +373,8 @@ uint8_t get_l(uint16_t reg_value) {
 
 char * get_reg_name_string(register_name_t reg_name) {
     switch (reg_name) {
+        case invalid_register:
+            return "Invalid Register";
         case AX_register:
             return "AX";
         case AL_register:
@@ -415,6 +417,8 @@ char * get_reg_name_string(register_name_t reg_name) {
             return "ES";
         case SS_register:
             return "SS";
+        default:
+            return "Invalid Register";
     }
 }
 
@@ -707,7 +711,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             ip_inc += 2;
             printf("Instruction 0x70: Relative Jump JO SHORT-LABEL");
             if (get_flag(OF) == 1) {
-                int8_t increment = (int8_t)(data[0]);
+                // int8_t increment = (int8_t)(data[0]);
                 printf(" to 0x%02X\n", data[0]);
                 ip_inc += ((int8_t*)data)[0];
             } else {
@@ -719,7 +723,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             ip_inc += 2;
             printf("Instruction 0x71: Relative Jump JNO");
             if (get_flag(OF) == 0) {
-                int8_t increment = (int8_t)(data[0]);
+                // int8_t increment = (int8_t)(data[0]);
                 printf(" to 0x%02X\n", data[0]);
                 ip_inc += ((int8_t*)data)[0];
             } else {
@@ -931,9 +935,9 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0x8C: {    // MOV REG16/MEM16, SEGREG: [0x8C, MOD OSR R/M, (DISP-LO),(DISP-HI)]
             // reg_field: Segment register code: OO=ES, 01=CS, 10=SS, 11 =DS
-            uint8_t mod_field = get_mode_field(data[0]);
+            // uint8_t mod_field = get_mode_field(data[0]);
             uint8_t reg_field = get_register_field(data[0]);
-            uint8_t rm_field = get_reg_mem_field(data[0]);
+            // uint8_t rm_field = get_reg_mem_field(data[0]);
             operands_t operands = decode_operands(opcode | 0x01, data); // Set width to 16-bit
             ret_val += operands.num_bytes;
             operands.src_type = 0;  // Force set operands src type
@@ -962,9 +966,9 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0x8E: {    // MOV SEGREG, REG16/MEM16: [0x8C, MOD OSR R/M, (DISP-LO),(DISP-HI) ]
             // reg_field: Segment register code: OO=ES, 01=CS, 10=SS, 11 =DS
-            uint8_t mod_field = get_mode_field(data[0]);
+            // uint8_t mod_field = get_mode_field(data[0]);
             uint8_t reg_field = get_register_field(data[0]);
-            uint8_t rm_field = get_reg_mem_field(data[0]);
+            // uint8_t rm_field = get_reg_mem_field(data[0]);
             operands_t operands = decode_operands(opcode | 0x01, data); // Set width to 16-bit
             ret_val += operands.num_bytes;
             operands.dst_type = 0;  // Force set operands src type
@@ -1237,7 +1241,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
         case 0x05: {
             uint32_t src_val = (data[1] << 8) + data[0];
             uint32_t dst_val = get_register_value(AX_register);
-            uint32_t res_res_val = dst_val + src_val;
+            uint32_t res_val = dst_val + src_val;
             printf("Instruction 0x05: ADD AX = 0x%04X immed = 0x%04X, res = 0x%04X\n", dst_val, src_val, res_val);
             update_flags(dst_val, src_val, res_val, 2, ADD_OP);
             // set_flag(AF, ((val & 0x0F) + (REGS->AX & 0x0F) > 0x0F));
@@ -1381,7 +1385,14 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
             break;
         case 0x0A:  // OR REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
             REGS->invalid_operations ++;
-            printf("Error: Invalid OR instruction: 0x%02X\n", opcode);
+            res_val = src_val | dst_val;
+            if(operands.dst_type == 0) {    // Register mode
+                set_register_value(operands.dst.register_name, res_val);
+            } else {    // Memory mode
+                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                mem_write(addr, res_val, 2);
+            }
+            printf("Instruction 0x0A: OR %s, %s: dst = 0x%02X, src = 0x%02X, result = 0x%02X\n", operands.destination, operands.source, dst_val, src_val, res_val);
             break;
         case 0x0B: {  // OR REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
             res_val = src_val | dst_val;
@@ -1395,7 +1406,7 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
             // set_flag(OF, 0);
             // set_flag(CF, 0);
             // update_psz_flags(res_val, operands.width);
-            printf("Instruction 0x0B: OR %s, %s: dst = 0x%02X, src = 0x%02X, result = 0x%02X\n", operands.destination, operands.source, dst_val, src_val, res_val);
+            printf("Instruction 0x0B: OR %s, %s: dst = 0x%04X, src = 0x%04X, result = 0x%04X\n", operands.destination, operands.source, dst_val, src_val, res_val);
             break;
         }
         case 0x0C:  // OR AL, IMMED8           [DATA-8]
@@ -1415,8 +1426,8 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
 
 int16_t inc_dec_instr(uint8_t opcode, uint8_t *data) {
     int16_t ret_val = 1;
-    uint16_t src_val = 0;
-    uint16_t res_val = 0;
+    // uint16_t src_val = 0;
+    // uint16_t res_val = 0;
     switch(opcode) {
         case 0x43: {  // INC BX
             uint16_t val = get_register_value(BX_register);
