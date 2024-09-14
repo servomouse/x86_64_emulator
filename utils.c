@@ -6,7 +6,7 @@
 #endif
 #include <stdarg.h>
 
-#define LOG_LEVEL 4
+#define LOG_LEVEL 3
 #define LOG_FILE_NAME "console.log"
 // #define PRINT_LOGS_TO_FILE
 

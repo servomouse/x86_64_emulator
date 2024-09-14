@@ -48,7 +48,8 @@ int main(void) {
         return EXIT_FAILURE;
     }
     while (EXIT_SUCCESS == cpu_tick()) { // Run CPU
-        sleep_ms(50);
+        sleep_ms(500);
+		// clear_console();
     }
     return 0;
 }
