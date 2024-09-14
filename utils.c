@@ -5,6 +5,7 @@
 #include <unistd.h>
 #endif
 #include <stdarg.h>
+#include <time.h>
 
 #define LOG_LEVEL 3
 #define LOG_FILE_NAME "console.log"
@@ -38,5 +39,15 @@ void sleep_ms(uint32_t ms) {
     #else
     usleep(ms*1000);
     #endif
+}
+
+char *get_time(void) {
+    time_t t;
+    struct tm *tmp;
+    static char buffer[64] = {0};
+    time(&t);
+    tmp = localtime(&t);
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", tmp);
+    return buffer;
 }
 
