@@ -1,7 +1,7 @@
 #include "8086_io.h"
 #include "utils.h"
 
-#define IO_LOG_FILE "io_log.txt"
+#define IO_LOG_FILE "logs/io_log.txt"
 
 uint8_t *IO_SPACE = NULL;
 

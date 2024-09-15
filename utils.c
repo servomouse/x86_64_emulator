@@ -8,7 +8,7 @@
 #include <time.h>
 
 #define LOG_LEVEL 3
-#define LOG_FILE_NAME "console.log"
+#define LOG_FILE_NAME "logs/console.log"
 // #define PRINT_LOGS_TO_FILE
 
 void mylog(uint8_t log_level, const char *format, ...) {

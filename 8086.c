@@ -4,8 +4,8 @@
 #include "utils.h"
 
 
-#define MEMORY_LOG_FILE "mem_log.txt"
-#define COMMON_LOG_FILE "cpu_log.txt"
+#define MEMORY_LOG_FILE "logs/mem_log.txt"
+#define COMMON_LOG_FILE "logs/cpu_log.txt"
 
 uint8_t *MEMORY = NULL;
 
