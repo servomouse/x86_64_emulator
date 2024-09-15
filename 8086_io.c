@@ -17,6 +17,8 @@ void io_write(uint32_t addr, uint16_t value, uint8_t width) {
     fclose(f);
 }
 
+uint8_t counter = 0;
+
 uint16_t io_read(uint32_t addr, uint8_t width) {
     printf("IO_READ addr = 0x%04X, width = %d bytes\n", addr, width);
     uint16_t ret_val = 0;
@@ -27,6 +29,9 @@ uint16_t io_read(uint32_t addr, uint8_t width) {
     } else {
         printf("ERROR: Incorrect width while readiong from IO: %d", width);
         ret_val = 0xFFFF;
+    }
+    if(addr == 0x0041) {
+        ret_val = counter++;
     }
     FILE *f;
     f = fopen(IO_LOG_FILE, "a");

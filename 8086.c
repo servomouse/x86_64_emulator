@@ -5,6 +5,7 @@
 
 
 #define MEMORY_LOG_FILE "mem_log.txt"
+#define COMMON_LOG_FILE "cpu_log.txt"
 
 uint8_t *MEMORY = NULL;
 
@@ -49,6 +50,7 @@ typedef struct {
     //     unsigned int CF : 1;    // Carry flag
     // } flags;
     uint16_t flags;
+    uint16_t prefixes;
 } registers_t;
 registers_t *REGS = NULL;
 
@@ -94,6 +96,10 @@ typedef enum {
 } flag_t;
 
 typedef enum {
+    REPNE = 0,    // REPNE/REPNZ prefix
+} prefix_t;
+
+typedef enum {
     LOGIC_OP = 0,
     SHIFT_R_OP,
     SHIFT_L_OP,
@@ -121,6 +127,8 @@ typedef struct {
     char * source;
     char * destination;
 } operands_t;
+
+uint32_t processed_commands[0xFF];
 
 void mem_write(uint32_t addr, uint16_t value, uint8_t width) {
     mylog(1, "MEM_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
@@ -172,6 +180,19 @@ void set_flag(flag_t flag, uint16_t value) {
         REGS->flags |= mask;
     } else {
         REGS->flags &= ~mask;
+    }
+}
+
+uint8_t get_prefix(prefix_t px) {
+    return (REGS->prefixes & (1 << px)) > 0;
+}
+
+void set_prefix(prefix_t px, uint16_t value) {
+    uint16_t mask = 1 << px;
+    if (value > 0) {
+        REGS->prefixes |= mask;
+    } else {
+        REGS->prefixes &= ~mask;
     }
 }
 
@@ -1296,8 +1317,8 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     operands_t operands = decode_operands(opcode, data);
     ret_val += operands.num_bytes;
-    int16_t src_val = 0;
-    int16_t dst_val = 0;
+    // int16_t src_val = 0;
+    // int16_t dst_val = 0;
     int16_t res_val = 0;
     // if(operands.src_type == 0) {    // Register mode
     //     src_val = get_register_value(operands.src.register_name);
@@ -1312,32 +1333,38 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
     //     dst_val = mem_read(addr, operands.width);
     // }
     switch(opcode) {
-        case 0x80: {  // SBB REG8/MEM8, IMMED8: [0x80, MOD 011 R/M, (DISP-LO), (DISP-HI), DATA-8]
+        case 0x80: {
             if(operands.dst_type == 0) {    // Register mode
-                src_val = ((int8_t*)data)[1];
+                operands.src_val = ((int8_t*)data)[1];
                 ret_val = 3;
             } else {    // Memory mode
-                src_val = ((int8_t*)data)[3];
+                operands.src_val = ((int8_t*)data)[3];
                 ret_val = 5;
             }
-            res_val = dst_val - src_val;
-            if(get_flag(CF)) {
-                res_val -= 1;
+            uint8_t reg_field = get_register_field(data[0]);
+            if(reg_field == 3) {  // SBB REG8/MEM8, IMMED8: [0x80, MOD 011 R/M, (DISP-LO), (DISP-HI), DATA-8]
+                res_val = operands.dst_val - operands.src_val;
+                if(get_flag(CF)) {
+                    res_val -= 1;
+                }
+                printf("Instruction 0x80[3] SBB %s (0x%02X), immed8 (0x%02X), CF = %d; res = 0x%02X\n", operands.destination, operands.dst_val, operands.src_val, get_flag(CF), res_val);
+                if(operands.dst_type == 0) {    // Register mode
+                    set_register_value(operands.dst.register_name, res_val);
+                } else {    // Memory mode
+                    uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                    mem_write(addr, res_val, operands.width);
+                }
+            } else if(reg_field == 7) { // CMP REG8/MEM8, IMMED8: [0x80, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-8]
+                res_val = operands.dst_val - operands.src_val;
+                printf("Instruction 0x80[7]: CMP %s (0x%02X), immed8 (0x%02X); res = 0x%02X\n", operands.destination, operands.dst_val, operands.src_val, res_val);
             }
-            printf("Instruction 0x80: SBB %s (0x%02X), 0x%02X, CF = %d, res = 0x%02X\n", operands.destination, dst_val, src_val, get_flag(CF), res_val);
-            update_flags(dst_val, src_val, res_val, operands.width, SUB_OP);
-            if(operands.dst_type == 0) {    // Register mode
-                set_register_value(operands.dst.register_name, res_val);
-            } else {    // Memory mode
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
-                mem_write(addr, res_val, operands.width);
-            }
+            update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
             break;
         }
         case 0x2B: {  // SUB REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-            res_val = dst_val - src_val;
-            printf("Instruction 0x2B: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", operands.destination, dst_val, operands.destination, src_val, res_val);
-            update_flags(dst_val, src_val, res_val, operands.width, SUB_OP);
+            res_val = operands.dst_val - operands.src_val;
+            printf("Instruction 0x2B: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", operands.destination, operands.dst_val, operands.destination, operands.src_val, res_val);
+            update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
             set_register_value(operands.dst.register_name, res_val);
             break;
         }
@@ -1580,6 +1607,7 @@ int16_t inc_dec_instr(uint8_t opcode, uint8_t *data) {
 void print_registers(void) {
     printf("Registers values:\n");
     printf("\tAX = 0x%04X, BX = 0x%04X, CX = 0x%04X, DX = 0x%04X;\n", REGS->AX, REGS->BX, REGS->CX, REGS->DX);
+    printf("\tSI = 0x%04X, DI = 0x%04X, BP = 0x%04X, SP = 0x%04X;\n", REGS->SI, REGS->DI, REGS->BP, REGS->SP);
     printf("\tCS = 0x%04X, DS = 0x%04X, SS = 0x%04X, ES = 0x%04X;\n", REGS->CS, REGS->DS, REGS->SS, REGS->ES);
     printf("\tIP = 0x%04X, FL = 0x%04X;\n", REGS->IP, REGS->flags);
 }
@@ -1838,7 +1866,7 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x80:
             // 8-bit operations
             printf("Instruction 0x80:");
-            switch(get_mode_field(memory[1])) {
+            switch(get_register_field(memory[1])) {
                 case 0:
                     printf("ERROR: Invalid ADD instruction!\n");
                     REGS->invalid_operations ++;
@@ -1866,9 +1894,8 @@ int16_t process_instruction(uint8_t * memory) {
                     printf("ERROR: Invalid XOR instruction!\n");
                     REGS->invalid_operations ++;
                     break;
-                case 7:
-                    printf("ERROR: Invalid CMP instruction!\n");
-                    REGS->invalid_operations ++;
+                case 7: // CMP REG8/MEM8, IMMED8: [0x80, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-8]
+                    ret_val = sub_instr(memory[0], &memory[1]);
                     break;
             }
             break;
@@ -2404,10 +2431,8 @@ int16_t process_instruction(uint8_t * memory) {
             printf("Invalid instruction: 0x%02X\n", memory[0]);\
             break;
         case 0xF2:  // REPNE/REPNZ
-            while(REGS->CX != 0) {
-                execute_next_command();
-                REGS->CX --;
-            }
+            printf("Instruction 0xF2: REPNE/REPNZ, setting prefix\n");
+            set_prefix(REPNE, 1);
             break;
         // case 0xF3:  // REP/REPE/REPZ
         //     while(REGS->CX != 0) {
@@ -2531,7 +2556,23 @@ int16_t process_instruction(uint8_t * memory) {
             REGS->invalid_operations ++;
             // INVALID_INSTRUCTION;
     }
+    processed_commands[memory[0]] += 1;
     return ret_val;
+}
+
+// Pront list of processed commands to log file
+void print_proc_commands(void) {
+    FILE *f;
+    f = fopen(COMMON_LOG_FILE, "w");
+    if(f == NULL) {
+        printf("ERROR: Failed to open %s", COMMON_LOG_FILE);
+        return;
+    }
+    fprintf(f,"List of processed commands:\n");
+    for(int i=0; i<0xFF; i++) {
+        fprintf(f,"Opcode 0x%02X: was executed %d times\n", i, processed_commands[i]);
+    }
+    fclose(f);
 }
 
 int mem_init(uint8_t *memory) {
@@ -2563,6 +2604,7 @@ int init_cpu(uint8_t *memory) {
 int cpu_tick(void) {
     if ((REGS->halt == 1) && (get_flag(IF) == 0)) {
         printf("ERROR: CPU is halted!\n");
+        print_proc_commands();
         return EXIT_FAILURE;
     }
     if (REGS->invalid_operations < 1) {
@@ -2571,5 +2613,6 @@ int cpu_tick(void) {
         return EXIT_SUCCESS;
     }
     printf("Processed commands: %d\n", REGS->ticks);
+    print_proc_commands();
     return EXIT_FAILURE;
 }
