@@ -9,8 +9,6 @@
 
 uint8_t *MEMORY = NULL;
 
-#define INVALID_INSTRUCTION while(1)
-
 typedef struct {
     // Helper registers
     uint32_t ticks;
@@ -34,21 +32,6 @@ typedef struct {
     uint16_t ES;    // Extra segment
     uint16_t SS;    // Stack segment
     // Status register
-    // struct{
-    //     unsigned int U3 : 4;    // Unused fields
-    //     unsigned int OF : 1;    // Overflow flag
-    //     unsigned int DF : 1;    // Direction flag, used to influence the direction in which string instructions offset pointer registers
-    //     unsigned int IF : 1;    // Interrupt flag
-    //     unsigned int TF : 1;    // Trap flag
-    //     unsigned int SF : 1;    // Sign flag
-    //     unsigned int ZF : 1;    // Zero flag
-    //     unsigned int U2 : 1;    // Unused field
-    //     unsigned int AF : 1;    // Auxiliary (decimal) carry flag
-    //     unsigned int U1 : 1;    // Unused field
-    //     unsigned int PF : 1;    // Parity flag
-    //     unsigned int U0 : 1;    // Unused field
-    //     unsigned int CF : 1;    // Carry flag
-    // } flags;
     uint16_t flags;
     uint16_t prefixes;
 } registers_t;
@@ -154,18 +137,18 @@ uint16_t mem_read(uint32_t addr, uint8_t width) {
     if(width == 1) {
         ret_val = MEMORY[addr];
     } else if (width == 2) {
-        ret_val = ((uint16_t*)&MEMORY[addr])[0];
+        ret_val = MEMORY[addr] + (MEMORY[addr+1] << 8);
     } else {
         mylog(1, "ERROR: Incorrect width: %d", width);
     }
-    FILE *f;
-    f = fopen(MEMORY_LOG_FILE, "a");
-    if(f == NULL) {
-        printf("ERROR: Failed to open %s", MEMORY_LOG_FILE);
-        return ret_val;
-    }
-    fprintf(f,"Read from addr: 0x%06X; value: 0x%04X; width: %d\n", addr, ret_val, width);
-    fclose(f);
+    // FILE *f;
+    // f = fopen(MEMORY_LOG_FILE, "a");
+    // if(f == NULL) {
+    //     printf("ERROR: Failed to open %s", MEMORY_LOG_FILE);
+    //     return ret_val;
+    // }
+    // fprintf(f,"Read from addr: 0x%06X; value: 0x%04X; width: %d\n", addr, ret_val, width);
+    // fclose(f);
     mylog(4, "MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
@@ -209,17 +192,11 @@ uint8_t get_parity(uint16_t byte) {
 void update_flags(uint32_t dst, uint32_t src, uint32_t res, uint8_t width, operation_t op_type) {
     if(width == 1) {
         set_flag(SF, (res & 0x80) > 0);
-    } else if (width == 2) {
-        set_flag(SF, (res & 0x8000) > 0);
-    }
-    if(width == 1) {
         set_flag(ZF, (res & 0xFF) == 0);
-    } else if (width == 2) {
-        set_flag(ZF, (res & 0xFFFF) == 0);
-    }
-    if(width == 1) {
         set_flag(PF, get_parity(res & 0xFF));
     } else if (width == 2) {
+        set_flag(SF, (res & 0x8000) > 0);
+        set_flag(ZF, (res & 0xFFFF) == 0);
         set_flag(PF, get_parity(res & 0xFFFF));
     }
     switch(op_type) {
@@ -318,15 +295,6 @@ void update_flags(uint32_t dst, uint32_t src, uint32_t res, uint8_t width, opera
         default:
             printf("ERROR: Incorrect operation type: %d", op_type);
     }
-}
-
-void update_psz_flags(uint16_t result, uint8_t word) {
-    if(word)
-        set_flag(PF, get_parity(result & 0xFFFF));
-    else
-        set_flag(PF, get_parity(result & 0xFF));
-    set_flag(SF, (result & 0x8000) > 0);
-    set_flag(ZF, result == 0);
 }
 
 uint32_t get_addr(uint16_t segment_reg, uint16_t addr) {
@@ -747,7 +715,6 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             ip_inc += 2;
             printf("Instruction 0x70: Relative Jump JO SHORT-LABEL");
             if (get_flag(OF) == 1) {
-                // int8_t increment = (int8_t)(data[0]);
                 printf(" to 0x%02X\n", data[0]);
                 ip_inc += ((int8_t*)data)[0];
             } else {
@@ -769,7 +736,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0x72: {    // JB/JNAE/SHORT-LABEL JC: [0x72, IP-INC8] (p269, 4-30)
             ip_inc += 2;
-            printf("Instruction 0x73: Relative Jump JB/JNAE/SHORT-LABEL JC");
+            printf("Instruction 0x72: Relative Jump JB/JNAE/SHORT-LABEL JC");
             if (get_flag(CF) == 1) {
                 printf(" to 0x%02X\n", data[0]);
                 ip_inc += ((int8_t*)data)[0];
@@ -791,7 +758,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0x74: {  // JE/JZ SHORT-LABEL: [0x74, IP-INC8]
             ip_inc += 2;
-            printf("Instruction 0x75: Relative Jump JNE/JNZ");
+            printf("Instruction 0x74: Relative Jump JNE/JNZ");
             if (get_flag(ZF) == 1) {
                 printf(" to 0x%02X\n", data[0]);
                 ip_inc += ((int8_t*)data)[0];
@@ -880,9 +847,9 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             // conditions are met, it jumps at label, otherwise falls through
             ip_inc += 2;
             printf("Instruction 0xE0: Relative Jump LOOPNE/LOOPNZ SHORT-LABEL: ");
-            set_register_value(CX_register, get_register_value(CX_register) - 1);
-            update_flags(get_register_value(CX_register), 1, get_register_value(CX_register)-1, 2, SUB_OP);
-            // update_psz_flags(get_register_value(CX_register), 1);
+            uint16_t cx_val = get_register_value(CX_register);
+            set_register_value(CX_register, cx_val - 1);
+            update_flags(cx_val, 1, get_register_value(CX_register), 2, SUB_OP);
             printf("CX = 0x%04X, ZF = 0x%02X;", get_register_value(CX_register), get_flag(ZF));
             if(get_register_value(CX_register) != 0 && get_flag(ZF) == 0) {
                 printf(" jump to 0x%02X\n", data[0]);
@@ -901,7 +868,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             uint16_t dest_val = get_register_value(CX_register);
             uint16_t res_val = dest_val - 1;
             set_register_value(CX_register, res_val);
-            update_flags(dest_val, 1, res_val, 1, SUB_OP);
+            update_flags(dest_val, 1, res_val, 2, SUB_OP);
             printf("CX = 0x%04X;", res_val);
             if(res_val != 0) {
                 printf(" jump to 0x%02X\n", data[0]);
@@ -1245,16 +1212,21 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
 uint8_t cmp_instr(uint8_t opcode, uint8_t *data) {
     // CMP updates AF, CF, OF, PF, SF and ZF
     uint8_t ret_val = 0;
+    operands_t operands = decode_operands(opcode, data);
+    ret_val += operands.num_bytes;
+    int16_t res_val = 0;
     switch(opcode) {
+        case 0x3B: {  // CMP REG16, REG16/MEM16   [0x3B, MOD REG R/M, (DISP-LO), (DISP-HI)]
+            res_val = operands.dst_val - operands.src_val;
+            printf("Instruction 0x%02X: %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
+            break;
+        }
         case 0x3D: {  // CMP AX, immed16: [0x3D, DATA-LO, DATA-HI]
-            int32_t val = (data[1] << 8) + data[0];
-            int32_t AX = get_register_value(AX_register);
-            int32_t res = AX - val;
-            printf("Instruction 0x3D: CMP AX immed16 = 0x%04X\n", val);
-            update_flags(AX, val, res, 2, SUB_OP);
-            // set_flag(AF, ((val & 0x0F) > (AX & 0x0F)));
-            // set_flag(CF, res > 0xFFFF);
-            // set_flag(OF, calc_of_flag(val, AX, res, 0x8000));
+            operands.src_val = (data[1] << 8) + data[0];
+            operands.dst_val = get_register_value(AX_register);
+            res_val = operands.dst_val - operands.src_val;
+            printf("Instruction 0x3D: CMP AX immed16 = 0x%04X\n", operands.src_val);
+            update_flags(operands.dst_val, operands.src_val, res_val, 2, SUB_OP);
             ret_val = 3;
             break;
         }
@@ -1548,6 +1520,27 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
     return ret_val;
 }
 
+uint8_t push_reg_instr(uint8_t opcode, uint8_t *data) {
+    uint8_t ret_val = 1;
+    switch(opcode) {
+        case 0x50: {
+            set_register_value(SP_register, get_register_value(SP_register) - 2);
+            uint32_t addr = get_addr(get_register_value(SS_register), get_register_value(SP_register));
+            mem_write(addr, get_register_value(AX_register), 2);
+            printf("Instruction 0x50: PUSH AX\n");
+            break;
+        }
+        default:
+            REGS->invalid_operations ++;
+            printf("Error: Invalid PUSH instruction: 0x%02X\n", opcode);
+    }
+    return ret_val;
+}
+
+uint8_t esc_instr(uint8_t opcode, uint8_t *data) {
+    return 2;
+}
+
 int16_t inc_dec_instr(uint8_t opcode, uint8_t *data) {
     int16_t ret_val = 1;
     // uint16_t src_val = 0;
@@ -1689,7 +1682,7 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x23:  // AND REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x24:  // AND AL, IMMED8           [DATA-8]
         // case 0x25:  // AND AX, immed16          [DATA-LO, DATA-HI]
-            REGS->IP += and_instr(memory[0], &memory[1]);
+            ret_val = and_instr(memory[0], &memory[1]);
             break;
         // case 0x26:  // ES:
         //     segment_override(ES);  // ES: segment overrige prefix
@@ -1734,7 +1727,7 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x38:  // CMP REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x39:  // CMP REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x3A:  // CMP REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x3B:  // CMP REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x3B:  // CMP REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x3C:  // CMP AL, IMMED8           [DATA-8]
         case 0x3D:  // CMP AX, immed16: [0x3D, DATA-LO, DATA-HI]
             ret_val = cmp_instr(memory[0], &memory[1]);
@@ -1768,7 +1761,7 @@ int16_t process_instruction(uint8_t * memory) {
         //     dec_register(memory);
         //     REGS->IP += 1;
         //     break;
-        // case 0x50:  // PUSH AX
+        case 0x50:  // PUSH AX
         // case 0x51:  // PUSH CX
         // case 0x52:  // PUSH DX
         // case 0x53:  // PUSH BX
@@ -1776,9 +1769,8 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x55:  // PUSH BP
         // case 0x56:  // PUSH SI
         // case 0x57:  // PUSH DI
-        //     push_reg_op(memory);
-        //     REGS->IP += 1;
-        //     break;
+            ret_val = push_reg_instr(memory[0], &memory[1]);
+            break;
         // case 0x58:  // POP AX
         // case 0x59:  // POP CX
         // case 0x5A:  // POP DX
@@ -2330,7 +2322,7 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0xD7:  // XLAT SOURCE-TABLE
         //     REGS->IP += xlat_op();
         //     break;
-        // case 0xD8:  // ESC OPCODE, SOURCE
+        case 0xD8:  // ESC OPCODE, SOURCE
         // case 0xD9:
         // case 0xDA:
         // case 0xDB:
@@ -2338,13 +2330,11 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0xDD:
         // case 0xDE:
         // case 0xDF:
-        //     if((memory[0] == 0xD8 && get_register_field(memory[1]) == 0) ||
-        //        (memory[0] == 0xDF && get_register_field(memory[1]) == 0x07)) {
-        //         REGS->IP += esc_op();   // MOD 000/111 R/M; TODO: Not sure
-        //     } else {
-        //         REGS->IP += esc_op(memory[1], &memory[2]);  // MOD 000/111 R/M, DISP-LO, DISP-HI
-        //     }
-        //     break;
+            //  When the 8086 encounters an ESC instruction with two register operands (i.e. mod = 11),
+            // it performs a nop. When the processor encounters an ESC instruction with a memory operand,
+            // a read cycle is performed from the address indicated by the memory operand and the result is discarded.
+            ret_val = esc_instr(memory[0], &memory[1]);
+            break;
         case 0xE0:  // LOOPNE/LOOPNZ SHORT-LABEL: [0xE0, IP-INC8]
             // LOOPNE decrements ecx and checks that ecx is not zero and ZF is not set - if these
             // conditions are met, it jumps at label, otherwise falls through
@@ -2385,7 +2375,7 @@ int16_t process_instruction(uint8_t * memory) {
         case 0xE6:  // OUT AL, IMMED8
             // Move the content of the AL register to the io port specified in the immed8 field
             printf("Instruction 0xE6: OUT AL IMMED8, immed8 = 0x%02X; ", memory[1]);
-            io_write(get_register_value(AL_register), memory[1], 1); // DATA-8
+            io_write(memory[1], get_register_value(AL_register), 1); // DATA-8
             ret_val += 1;
             break;
         // case 0xE7:  // OUT AX, IMMED8
@@ -2408,15 +2398,15 @@ int16_t process_instruction(uint8_t * memory) {
             ret_val = jmp_instr(memory[0], &memory[1]);
             break;
         case 0xEC:  // IN AL, DX
-            set_register_value(AL_register, io_read(get_register_value(DX_register), 1));
+            set_register_value(AL_register, io_read(get_register_value(DX_register), 2));
             break;
         // case 0xED:  // IN AX, DX
         //     REGS->AX = get_io_16bit(REGS->DX);  // DATA-8
         //     REGS->IP += 1;
         //     break;
         case 0xEE:  // OUT AL, DX
-            printf("Instruction 0xEE: OUT AL DX; ");
-            io_write(get_register_value(AX_register), get_register_value(DX_register), 2); // DATA-8
+            printf("Instruction 0xEE: OUT AL DX\n");
+            io_write(get_register_value(DX_register), get_register_value(AL_register), 1); // DATA-8
             break;
         // case 0xEF:  // OUT AX, DX
         //     set_io_16bit(REGS->DX, REGS->AX); // DATA-8
@@ -2596,6 +2586,8 @@ int init_cpu(uint8_t *memory) {
         return EXIT_FAILURE;
     }
     REGS = calloc(1, sizeof(registers_t));
+    set_flag(ZF, 1);
+    printf("Test: ZF = %d\n", get_flag(ZF));
     REGS->IP = 0xFFF0;
     REGS->CS = 0xF000;
     return EXIT_SUCCESS;
