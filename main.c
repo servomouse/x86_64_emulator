@@ -60,9 +60,9 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     while (EXIT_SUCCESS == cpu_tick()) { // Run CPU
-        sleep_ms(500);
+        sleep_ms(50);
 		// clear_console();
     }
-    cpu_save_state();
+    // cpu_save_state();
     return 0;
 }
