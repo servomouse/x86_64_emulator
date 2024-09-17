@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "utils.h"
 #include "8086.h"
 
@@ -36,7 +37,7 @@ int copy_bios_into_memory(uint8_t *memory, size_t offset, const char *filename) 
     return EXIT_SUCCESS;
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
     uint8_t *memory = (uint8_t*)calloc(sizeof(uint8_t), 0x100000);
     if ((EXIT_FAILURE == copy_bios_into_memory(memory, 0xF0000, BIOS_FILENAME_0XF0000)) ||
         (EXIT_FAILURE == copy_bios_into_memory(memory, 0xF8000, BIOS_FILENAME_0XF8000))) {
@@ -46,12 +47,22 @@ int main(void) {
         printf("0x%02X ", memory[0xFFFF0 + i]);
     }
     printf("\n");
-    if (EXIT_FAILURE == init_cpu(memory)) {
+    printf("argc = %d, argv[1] = %s\n", argc, argv[1]);
+    uint8_t continue_simulation = 0;
+    if(argc > 1) {
+        for(int i=1; i<argc; i++) {
+            if(strcmp(argv[i], "--continue") == 0) {
+                continue_simulation = 1;
+            }
+        }
+    }
+    if (EXIT_FAILURE == init_cpu(memory, continue_simulation)) {
         return EXIT_FAILURE;
     }
     while (EXIT_SUCCESS == cpu_tick()) { // Run CPU
-        sleep_ms(50);
+        sleep_ms(500);
 		// clear_console();
     }
+    cpu_save_state();
     return 0;
 }

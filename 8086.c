@@ -6,6 +6,7 @@
 
 #define MEMORY_LOG_FILE "logs/mem_log.txt"
 #define COMMON_LOG_FILE "logs/cpu_log.txt"
+#define REGISTERS_FILE  "logs/regs.txt"
 
 uint8_t *MEMORY = NULL;
 
@@ -25,7 +26,7 @@ typedef struct {
     uint16_t BP;    // Base pointer
     uint16_t SP;    // Stack pointer
     // Program counter
-    uint32_t IP;    // Instruction pointer
+    uint16_t IP;    // Instruction pointer
     // Segment registers
     uint16_t CS;    // Sode segment
     uint16_t DS;    // Data segment
@@ -2578,7 +2579,97 @@ int mem_init(uint8_t *memory) {
     return EXIT_SUCCESS;
 }
 
-int init_cpu(uint8_t *memory) {
+    // uint32_t ticks;
+    // uint32_t invalid_operations;
+    // uint8_t halt;
+    // uint16_t AX;    // Accumulator AH=AX>>8; AL=AX&0xFF
+    // uint16_t BX;    // Base BH=BX>>8; BL=BX&0xFF
+    // uint16_t CX;    // Count CH=CX>>8; CL=CX&0xFF
+    // uint16_t DX;    // Data DH=DX>>8; DL=DX&0xFF
+    // uint16_t SI;    // Source index
+    // uint16_t DI;    // Destination index
+    // uint16_t BP;    // Base pointer
+    // uint16_t SP;    // Stack pointer
+    // uint16_t IP;    // Instruction pointer
+    // uint16_t CS;    // Sode segment
+    // uint16_t DS;    // Data segment
+    // uint16_t ES;    // Extra segment
+    // uint16_t SS;    // Stack segment
+    // uint16_t flags;
+    // uint16_t prefixes;
+
+int store_registers(char *filename, registers_t *regs) {
+    FILE *f;
+    f = fopen(filename, "w");
+    if(f == NULL) {
+        printf("ERROR: Failed to open %s", filename);
+        return EXIT_FAILURE;
+    }
+    fprintf(f, "0x%08X\n", regs->ticks);
+    fprintf(f, "0x%04X\n", regs->AX);
+    fprintf(f, "0x%04X\n", regs->BX);
+    fprintf(f, "0x%04X\n", regs->CX);
+    fprintf(f, "0x%04X\n", regs->DX);
+    fprintf(f, "0x%04X\n", regs->SI);
+    fprintf(f, "0x%04X\n", regs->DI);
+    fprintf(f, "0x%04X\n", regs->BP);
+    fprintf(f, "0x%04X\n", regs->SP);
+    fprintf(f, "0x%04X\n", regs->IP);
+    fprintf(f, "0x%04X\n", regs->CS);
+    fprintf(f, "0x%04X\n", regs->DS);
+    fprintf(f, "0x%04X\n", regs->ES);
+    fprintf(f, "0x%04X\n", regs->SS);
+    fprintf(f, "0x%04X\n", regs->flags);
+    fprintf(f, "0x%04X\n", regs->prefixes);
+    fclose(f);
+    return EXIT_SUCCESS;
+}
+
+int restore_registers(char *filename, registers_t *regs) {
+    FILE *f;
+    f = fopen(filename, "r");
+    if(f == NULL) {
+        printf("ERROR: Failed to open %s", filename);
+        return EXIT_FAILURE;
+    }
+    uint32_t temp;
+    fscanf(f, "0x%08X\n", &regs->ticks);
+    fscanf(f, "0x%04X\n", &temp);
+    regs->AX = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->BX = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->CX = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->DX = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->SI = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->DI = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->BP = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->SP = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->IP = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->CS = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->DS = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->ES = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->SS = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->flags = (uint16_t)temp;
+    fscanf(f, "0x%04X\n", &temp);
+    regs->prefixes = (uint16_t)temp;
+    fclose(f);
+    printf("Registers restored! ticks = 0x%08X\n", regs->ticks);
+    return EXIT_SUCCESS;
+}
+
+int init_cpu(uint8_t *memory, uint8_t continue_simulation) {
     if(EXIT_FAILURE == mem_init(memory)) {
         return EXIT_FAILURE;
     }
@@ -2586,22 +2677,34 @@ int init_cpu(uint8_t *memory) {
         return EXIT_FAILURE;
     }
     REGS = calloc(1, sizeof(registers_t));
-    set_flag(ZF, 1);
-    printf("Test: ZF = %d\n", get_flag(ZF));
-    REGS->IP = 0xFFF0;
-    REGS->CS = 0xF000;
+    if(continue_simulation) {
+        printf("Restoring registers\n");
+        restore_registers(REGISTERS_FILE, REGS);
+    } else {
+        REGS->IP = 0xFFF0;
+        REGS->CS = 0xF000;
+    }
     return EXIT_SUCCESS;
 }
 
+void cpu_save_state(void) {
+    store_registers(REGISTERS_FILE, REGS);
+}
+
+uint8_t cpu_is_halted(void) {
+    return (REGS->halt == 1) && (get_flag(IF) == 0);
+}
+
 int cpu_tick(void) {
-    if ((REGS->halt == 1) && (get_flag(IF) == 0)) {
+    uint8_t inc = process_instruction(&MEMORY[get_addr(REGS->CS, REGS->IP)]);
+    if (cpu_is_halted()) {
         printf("ERROR: CPU is halted!\n");
         print_proc_commands();
         return EXIT_FAILURE;
     }
     if (REGS->invalid_operations < 1) {
         REGS->ticks++;
-        REGS->IP += process_instruction(&MEMORY[get_addr(REGS->CS, REGS->IP)]);
+        REGS->IP += inc;
         return EXIT_SUCCESS;
     }
     printf("Processed commands: %d\n", REGS->ticks);
