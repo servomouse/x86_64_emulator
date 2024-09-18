@@ -80,7 +80,8 @@ typedef enum {
 } flag_t;
 
 typedef enum {
-    REPNE = 0,    // REPNE/REPNZ prefix
+    REPE = 0,   // REPE/REPZ prefix
+    REPNE,      // REPNE/REPNZ prefix
 } prefix_t;
 
 typedef enum {
@@ -115,13 +116,13 @@ typedef struct {
 uint32_t processed_commands[0xFF];
 
 void mem_write(uint32_t addr, uint16_t value, uint8_t width) {
-    mylog(1, "MEM_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    printf("MEM_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     if(width == 1) {
         MEMORY[addr] = value;
     } else if (width == 2) {
         *((uint16_t*)&MEMORY[addr]) = value;
     } else {
-        mylog(1, "ERROR: Incorrect width: %d", width);
+        printf("ERROR: Incorrect width: %d", width);
     }
     FILE *f;
     f = fopen(MEMORY_LOG_FILE, "a");
@@ -1280,6 +1281,16 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
+        case 0x04: {  // ADD AL, IMMED8, [0x04, DATA-8]
+            int16_t src_val = data[0];
+            int16_t dst_val = get_register_value(AL_register);
+            res_val = dst_val + src_val;
+            printf("Instruction 0x%02X: ADD AX (0x%04X), immed (0x%04X); res = 0x%04X\n", opcode, dst_val, src_val, res_val);
+            update_flags(dst_val, src_val, res_val, 2, ADD_OP);
+            set_register_value(AL_register, res_val);
+            ret_val = 2;
+            break;
+        }
         case 0x05: {    // ADD AX, IMMED16: [0x05, DATA-LO, DATA-HI]
             int16_t src_val = (data[1] << 8) + data[0];
             int16_t dst_val = get_register_value(AX_register);
@@ -1288,6 +1299,21 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             update_flags(dst_val, src_val, res_val, 2, ADD_OP);
             set_register_value(AX_register, res_val);
             ret_val = 3;
+            break;
+        }
+        case 0x10: {  // ADC REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]]
+            res_val = operands.src_val + operands.dst_val;
+            if(get_flag(CF)) {
+                res_val += 1;
+            }
+            printf("Instruction 0x%02X: ADC %s (0x%02X), %s (0x%02X), CF = %d; res = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, get_flag(CF), res_val);
+            update_flags(operands.dst_val, operands.src_val, res_val, operands.width, ADD_OP);
+            if(operands.dst_type == 0) {    // Register mode
+                set_register_value(operands.dst.register_name, res_val);
+            } else {                        // Memory mode
+                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                mem_write(addr, res_val, operands.width);
+            }
             break;
         }
         default:
@@ -1526,6 +1552,15 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             printf("Instruction 0x22: AND %s (0x%02X), %s (0x%02X); result = 0x%04X\n", operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             break;
         }
+        case 0x24: {  // AND AL, IMMED8: [0x24, DATA-8]
+            operands.dst_val = get_register_value(AL_register);
+            operands.src_val = data[0];
+            res_val = operands.src_val & operands.dst_val;
+            set_register_value(AL_register, res_val);
+            update_flags(operands.dst_val, operands.src_val, res_val, 1, LOGIC_OP);
+            printf("Instruction 0x%02X: AND AL (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
+            break;
+        }
         default:
             REGS->invalid_operations ++;
             printf("Error: Invalid AND instruction: 0x%02X\n", opcode);
@@ -1636,6 +1671,78 @@ void print_registers(void) {
     printf("\tIP = 0x%04X, FL = 0x%04X;\n", REGS->IP, REGS->flags);
 }
 
+uint8_t xchg_instr(uint8_t opcode, uint8_t *data) {
+    uint8_t ret_val = 1;
+    switch(opcode) {
+        case 0x96: {  // XCHG AX, SI
+            uint16_t ax = get_register_value(AX_register);
+            uint16_t si = get_register_value(SI_register);
+            set_register_value(AX_register, si);
+            set_register_value(SI_register, ax);
+            printf("Instruction 0x%02X: XCHG AX, SI\n", opcode);
+            break;
+        }
+        default:
+            REGS->invalid_operations ++;
+            printf("Error: Invalid INC/DEC instruction: 0x%02X\n", opcode);
+    }
+    return ret_val;
+}
+
+uint8_t string_instr(uint8_t opcode, uint8_t *data) {
+    uint8_t opcode_len = 1;
+    switch(opcode) {
+        case 0xAB: {  // STOS DEST-STR16
+            opcode_len = 1;
+            break;
+        }
+        case 0xAD: {  // LODS SRC-STR16
+            opcode_len = 1;
+            break;
+        }
+    }
+    if(get_prefix(REPE) || get_prefix(REPNE)) {
+        uint16_t cx = get_register_value(CX_register);
+        if(cx == 0) {
+            return opcode_len;
+        }
+        set_register_value(CX_register, cx - 1);
+    }
+    switch(opcode) {
+        case 0xAB: {  // STOS DEST-STR16
+            uint32_t addr = get_addr(get_register_value(DS_register), get_register_value(DI_register));
+            uint16_t ax = get_register_value(AX_register);
+            mem_write(addr, ax, 2);
+            if(get_flag(DF)) {
+                set_register_value(DI_register, get_register_value(DI_register) - 2);
+            } else {
+                set_register_value(DI_register, get_register_value(DI_register) + 2);
+            }
+            printf("Instruction 0x%02X: STOS DEST-STR16 (0x%08X)\n", opcode, addr);
+            break;
+        }
+        case 0xAD: {  // LODS SRC-STR16
+            uint32_t addr = get_addr(get_register_value(DS_register), get_register_value(SI_register));
+            set_register_value(AX_register, mem_read(addr, 2));
+            if(get_flag(DF)) {
+                set_register_value(SI_register, get_register_value(SI_register) - 2);
+            } else {
+                set_register_value(SI_register, get_register_value(SI_register) + 2);
+            }
+            printf("Instruction 0x%02X: LODS SRC-STR16 (0x%08X)\n", opcode, addr);
+            break;
+        }
+        default:
+            REGS->invalid_operations ++;
+            printf("Error: Invalid string operation: 0x%02X\n", opcode);
+    }
+    if(get_prefix(REPE) || get_prefix(REPNE)) {
+        return 0;
+    } else {
+        return opcode_len;
+    }
+}
+
 int16_t process_instruction(uint8_t * memory) {
     printf("===============================================================\n");
     printf("Step %d, processing bytes: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X:\n", REGS->ticks, memory[0], memory[1], memory[2], memory[3], memory[4], memory[5]);
@@ -1646,7 +1753,7 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x01:  // ADD REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x02:  // ADD REG8, REG8/MEM8: [0x02, MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x03:  // ADD REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x04:  // ADD AL, IMMED8           [DATA-8]
+        case 0x04:  // ADD AL, IMMED8           [DATA-8]
         case 0x05:  // ADD AX, immed16          [0x05, DATA-LO, DATA-HI]
             ret_val = add_instr(memory[0], &memory[1]);
             break;
@@ -1675,14 +1782,14 @@ int16_t process_instruction(uint8_t * memory) {
             REGS->invalid_operations ++;
             printf("Invalid instruction: 0x%02X\n", memory[0]);
             break;
-        // case 0x10:  // ADC REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x10:  // ADC REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x11:  // ADC REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x12:  // ADC REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x13:  // ADC REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x14:  // ADC AL, IMMED8           [DATA-8]
         // case 0x15:  // ADC AX, immed16          [DATA-LO, DATA-HI]
-        //     REGS->IP += adc_op(memory);
-        //     break;
+            ret_val = add_instr(memory[0], &memory[1]);
+            break;
         // case 0x16:  // PUSH SS
         //     push_reg_op(memory[0]);
         //     REGS->IP += 1;
@@ -1711,7 +1818,7 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x21:  // AND REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x22:  // AND REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x23:  // AND REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x24:  // AND AL, IMMED8           [DATA-8]
+        case 0x24:  // AND AL, IMMED8           [DATA-8]
         // case 0x25:  // AND AX, immed16          [DATA-LO, DATA-HI]
             ret_val = and_instr(memory[0], &memory[1]);
             break;
@@ -2068,9 +2175,9 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x95:  // XCHG AX, BP
         //         REGS->IP += xchg_reg_op(AX, BP);
         //     break;
-        // case 0x96:  // XCHG AX, SI
-        //         REGS->IP += xchg_reg_op(AX, SI);
-        //     break;
+        case 0x96:  // XCHG AX, SI
+                ret_val = xchg_instr(memory[0], &memory[1]);
+            break;
         // case 0x97:  // XCHG AX, DI
         //         REGS->IP += xchg_reg_op(AX, DI);
         //     break;
@@ -2131,15 +2238,15 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0xAA:  // STOS DEST-STR8
         //     REGS->IP += stos_str_op(memory[1], &memory[2]);
         //     break;
-        // case 0xAB:  // STOS DEST-STR16
-        //     REGS->IP += stos_str_op(memory[1], &memory[2]);
-        //     break;
+        case 0xAB:  // STOS DEST-STR16
+            ret_val = string_instr(memory[0], &memory[1]);
+            break;
         // case 0xAC:  // LODS DEST-STR8
         //     REGS->IP += stos_str_op(memory[1], &memory[2]);
         //     break;
-        // case 0xAD:  // LODS DEST-STR16
-        //     REGS->IP += stos_str_op(memory[1], &memory[2]);
-        //     break;
+        case 0xAD:  // LODS DEST-STR16
+            ret_val = string_instr(memory[0], &memory[1]);
+            break;
         // case 0xAE:  // SCAS DEST-STR8
         //     REGS->IP += stos_str_op(memory[1], &memory[2]);
         //     break;
@@ -2455,12 +2562,10 @@ int16_t process_instruction(uint8_t * memory) {
             printf("Instruction 0xF2: REPNE/REPNZ, setting prefix\n");
             set_prefix(REPNE, 1);
             break;
-        // case 0xF3:  // REP/REPE/REPZ
-        //     while(REGS->CX != 0) {
-        //         execute_next_command();
-        //         REGS->CX --;
-        //     }
-        //     break;
+        case 0xF3:  // REP/REPE/REPZ
+            printf("Instruction 0xF3: REP/REPE/REPZ, setting prefix\n");
+            set_prefix(REPE, 1);
+            break;
         case 0xF4:  // HLT
             // halts the CPU until the next external interrupt is fired
             REGS->halt = 1;
@@ -2561,11 +2666,10 @@ int16_t process_instruction(uint8_t * memory) {
             printf("Instruction 0xFC: Clear Direction Flag (DF)\n");
             set_flag(DF, 0);
             break;
-        // case 0xFD:  // CLD
-        //     // Set Direction Flag
-        //     REGS->flags.DF = 1;
-        //     REGS->IP += 1;
-        //     break;
+        case 0xFD:  // STD: [0xFD]: Set Direction Flag
+            printf("Instruction 0xFD: Set Direction Flag (DF)\n");
+            set_flag(DF, 1);
+            break;
         case 0xFE:
             ret_val = inc_dec_instr(memory[0], &memory[1]);
             break;
@@ -2608,25 +2712,6 @@ int mem_init(uint8_t *memory) {
     fclose(f);
     return EXIT_SUCCESS;
 }
-
-    // uint32_t ticks;
-    // uint32_t invalid_operations;
-    // uint8_t halt;
-    // uint16_t AX;    // Accumulator AH=AX>>8; AL=AX&0xFF
-    // uint16_t BX;    // Base BH=BX>>8; BL=BX&0xFF
-    // uint16_t CX;    // Count CH=CX>>8; CL=CX&0xFF
-    // uint16_t DX;    // Data DH=DX>>8; DL=DX&0xFF
-    // uint16_t SI;    // Source index
-    // uint16_t DI;    // Destination index
-    // uint16_t BP;    // Base pointer
-    // uint16_t SP;    // Stack pointer
-    // uint16_t IP;    // Instruction pointer
-    // uint16_t CS;    // Sode segment
-    // uint16_t DS;    // Data segment
-    // uint16_t ES;    // Extra segment
-    // uint16_t SS;    // Stack segment
-    // uint16_t flags;
-    // uint16_t prefixes;
 
 int store_registers(char *filename, registers_t *regs) {
     FILE *f;
