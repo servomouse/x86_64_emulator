@@ -5,10 +5,10 @@
 #include "utils.h"
 #include "8086.h"
 
-// char *BIOS_FILENAME_0XF0000 = "BIOS/BIOS_5160_09MAY86_F0000.BIN";
-// char *BIOS_FILENAME_0XF8000 = "BIOS/BIOS_5160_09MAY86_F8000.BIN";
-char *BIOS_FILENAME_0XF0000 = "BIOS/F0000.BIN";
-char *BIOS_FILENAME_0XF8000 = "BIOS/F8000.BIN";
+char *BIOS_FILENAME_0XF0000 = "BIOS/BIOS_5160_09MAY86_F0000.BIN";
+char *BIOS_FILENAME_0XF8000 = "BIOS/BIOS_5160_09MAY86_F8000.BIN";
+// char *BIOS_FILENAME_0XF0000 = "BIOS/F0000.BIN";
+// char *BIOS_FILENAME_0XF8000 = "BIOS/F8000.BIN";
 
 size_t get_file_size(FILE *file) {
     size_t init_location = ftell(file);
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     while (EXIT_SUCCESS == cpu_tick()) { // Run CPU
-        sleep_ms(500);
+        sleep_ms(5);
 		// clear_console();
     }
     // cpu_save_state();

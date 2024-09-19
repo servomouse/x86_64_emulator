@@ -910,21 +910,39 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
 uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     switch(opcode) {
-        case 0x89: {  // MOV REG16/MEM16, REG16: [0x89, MOD REG R/M, (DISP-LO),(DISP-HI)]
+       case 0x88: {  // MOV REG8/MEM8, REG8: 0x88, MOD REG R/M (DISP-LO), (DISP-HI)]
             operands_t operands = decode_operands(opcode, data);
-            printf("Instruction 0x89: MOV %s, %s\n", operands.destination, operands.source);
+            printf("Instruction 0x%02X: MOV %s (0x%04X), %s (0x%04X)\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val);
             ret_val += operands.num_bytes;
-            uint16_t src_val = 0;
-            if (operands.src_type == 0) {
-                src_val = get_register_value(operands.src.register_name);
-            } else {
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.src.address);
-                src_val = mem_read(addr, 2);
-            }
+            // uint16_t src_val = 0;
+            // if (operands.src_type == 0) {
+            //     src_val = get_register_value(operands.src.register_name);
+            // } else {
+            //     uint32_t addr = get_addr(get_register_value(DS_register), operands.src.address);
+            //     src_val = mem_read(addr, 2);
+            // }
             if (operands.dst_type == 0) {   // Register_mode
-                set_register_value(operands.dst.register_name, src_val);
+                set_register_value(operands.dst.register_name, operands.src_val);
             } else {    // Memory mode
-                mem_write(get_addr(get_register_value(DS_register), operands.dst.address), src_val, 2);
+                mem_write(get_addr(get_register_value(DS_register), operands.dst.address), operands.src_val, operands.width);
+            }
+            break;
+        }
+        case 0x89: {  // MOV REG16 REG16/MEM16: [0x89, MOD REG R/M, (DISP-LO),(DISP-HI)]
+            operands_t operands = decode_operands(opcode, data);
+            printf("Instruction 0x%02X: MOV %s (0x%04X), %s (0x%04X)\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val);
+            ret_val += operands.num_bytes;
+            // uint16_t src_val = 0;
+            // if (operands.src_type == 0) {
+            //     src_val = get_register_value(operands.src.register_name);
+            // } else {
+            //     uint32_t addr = get_addr(get_register_value(DS_register), operands.src.address);
+            //     src_val = mem_read(addr, 2);
+            // }
+            if (operands.dst_type == 0) {   // Register_mode
+                set_register_value(operands.dst.register_name, operands.src_val);
+            } else {    // Memory mode
+                mem_write(get_addr(get_register_value(DS_register), operands.dst.address), operands.src_val, operands.width);
             }
             break;
         }
@@ -1344,7 +1362,7 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
     //     dst_val = mem_read(addr, operands.width);
     // }
     switch(opcode) {
-        case 0x80: {
+        case 0x80: {    // INSTR REG8/MEM8, IMMED8: [0x80, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-8]
             if(operands.dst_type == 0) {    // Register mode
                 operands.src_val = ((int8_t*)data)[1];
                 ret_val = 3;
@@ -1368,6 +1386,34 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
             } else if(reg_field == 7) { // CMP REG8/MEM8, IMMED8: [0x80, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-8]
                 res_val = operands.dst_val - operands.src_val;
                 printf("Instruction 0x80[7]: CMP %s (0x%02X), immed8 (0x%02X); res = 0x%02X\n", operands.destination, operands.dst_val, operands.src_val, res_val);
+            }
+            update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
+            break;
+        }
+        case 0x81: { // INSTR REG16/MEM16,IMMED16: [0x81, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+            if(operands.dst_type == 0) {    // Register mode
+                operands.src_val = (data[2] << 8) + data[1];
+                ret_val = 4;
+            } else {    // Memory mode
+                operands.src_val = (data[4] << 8) + data[3];
+                ret_val = 6;
+            }
+            uint8_t reg_field = get_register_field(data[0]);
+            if(reg_field == 3) {  // SBB REG16/MEM16,IMMED16: [0x81, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+                res_val = operands.dst_val - operands.src_val;
+                if(get_flag(CF)) {
+                    res_val -= 1;
+                }
+                printf("Instruction 0x81[3] SBB %s (0x%04X), immed16 (0x%04X), CF = %d; res = 0x%02X\n", operands.destination, operands.dst_val, operands.src_val, get_flag(CF), res_val);
+                if(operands.dst_type == 0) {    // Register mode
+                    set_register_value(operands.dst.register_name, res_val);
+                } else {    // Memory mode
+                    uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                    mem_write(addr, res_val, operands.width);
+                }
+            } else if(reg_field == 7) { // CMP REG16/MEM16,IMMED16: [0x81, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+                res_val = operands.dst_val - operands.src_val;
+                printf("Instruction 0x81[7]: CMP %s (0x%04X), immed16 (0x%04X); res = 0x%04X\n", operands.destination, operands.dst_val, operands.src_val, res_val);
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
             break;
@@ -1516,14 +1562,18 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
                 mem_write(addr, res_val, 2);
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
-            printf("Instruction 0x0B: OR %s (0x%04X), %s (0x%04X); result = 0x%04X\n", operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
+            printf("Instruction 0x%02X: OR %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             break;
         }
-        case 0x0C:  // OR AL, IMMED8           [DATA-8]
-            REGS->invalid_operations ++;
-            printf("Error: Invalid OR instruction: 0x%02X\n", opcode);
+        case 0x0C:  // OR AL, IMMED8 [DATA-8]
+            operands.src_val = data[0];
+            operands.dst_val = get_register_value(AL_register);
+            uint8_t res_val = operands.dst_val | operands.src_val;
+            set_register_value(AL_register, res_val);
+            update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
+            printf("Instruction 0x%02X: OR %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             break;
-        case 0x0D:  // OR AX, immed16          [DATA-LO, DATA-HI]
+        case 0x0D:  // OR AX, immed16 [DATA-LO, DATA-HI]
             REGS->invalid_operations ++;
             printf("Error: Invalid OR instruction: 0x%02X\n", opcode);
             break;
@@ -1610,6 +1660,23 @@ int16_t inc_instr(uint8_t opcode, uint8_t *data) {
         default:
             REGS->invalid_operations ++;
             printf("Error: Invalid INC instruction: 0x%02X\n", opcode);
+    }
+    return ret_val;
+}
+
+int16_t dec_instr(uint8_t opcode, uint8_t *data) {
+    int16_t ret_val = 1;
+    switch(opcode) {
+        case 0x4F: {  // DEC DI
+            uint16_t val = get_register_value(DI_register);
+            printf("Instruction 0x%02X: DEC DI: 0x%04X => 0x%04X\n", opcode, val, val-1);
+            set_register_value(DI_register, val - 1);
+            update_flags(val, 1, val-1, 2, SUB_OP);
+            break;
+        }
+        default:
+            REGS->invalid_operations ++;
+            printf("Error: Invalid DEC instruction: 0x%02X\n", opcode);
     }
     return ret_val;
 }
@@ -1895,10 +1962,9 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x4C:  // DEC SP
         // case 0x4D:  // DEC BP
         // case 0x4E:  // DEC SI
-        // case 0x4F:  // DEC DI
-        //     dec_register(memory);
-        //     REGS->IP += 1;
-        //     break;
+        case 0x4F:  // DEC DI
+            ret_val = dec_instr(memory[0], &memory[1]);
+            break;
         case 0x50:  // PUSH AX
         // case 0x51:  // PUSH CX
         // case 0x52:  // PUSH DX
@@ -1995,33 +2061,32 @@ int16_t process_instruction(uint8_t * memory) {
         //     break;
         case 0x80:
             // 8-bit operations
-            printf("Instruction 0x80:");
             switch(get_register_field(memory[1])) {
-                case 0:
-                    printf("ERROR: Invalid ADD instruction!\n");
+                case 0: // ADD REG8/MEM8, IMMED8: [0x80, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-8]
+                    printf("ERROR: Unimplemented ADD (0x80) instruction!\n");
                     REGS->invalid_operations ++;
                     break;
-                case 1:
-                    printf("ERROR: Invalid OR instruction!\n");
+                case 1: // OR REG8/MEM8, IMMED8: [0x80, MOD 001 R/M, (DISP-LO), (DISP-HI), DATA-8]
+                    printf("ERROR: Unimplemented OR (0x80) instruction!\n");
                     REGS->invalid_operations ++;
                     break;
-                case 2:
-                    printf("ERROR: Invalid ADC instruction!\n");
+                case 2: // ADC REG8/MEM8, IMMED8: [0x80, MOD 010 R/M, (DISP-LO), (DISP-HI), DATA-8]
+                    printf("ERROR: Unimplemented ADC (0x80) instruction!\n");
                     REGS->invalid_operations ++;
                     break;
                 case 3: // SBB REG8/MEM8, IMMED8: [0x80, MOD 011 R/M, (DISP-LO), (DISP-HI), DATA-8]
                     ret_val = sub_instr(memory[0], &memory[1]);
                     break;
-                case 4:
-                    printf("ERROR: Invalid AND instruction!\n");
+                case 4: // AND REG8/MEM8, IMMED8: [0x80, MOD 100 R/M, (DISP-LO), (DISP-HI), DATA-8]
+                    printf("ERROR: Unimplemented AND (0x80) instruction!\n");
                     REGS->invalid_operations ++;
                     break;
-                case 5:
-                    printf("ERROR: Invalid SUB instruction!\n");
+                case 5: // SUB REG8/MEM8, IMMED8: [0x80, MOD 101 R/M, (DISP-LO), (DISP-HI), DATA-8]
+                    printf("ERROR: Unimplemented SUB (0x80) instruction!\n");
                     REGS->invalid_operations ++;
                     break;
-                case 6:
-                    printf("ERROR: Invalid XOR instruction!\n");
+                case 6: // XOR REG8/MEM8, IMMED8: [0x80, MOD 110 R/M, (DISP-LO), (DISP-HI), DATA-8]
+                    printf("ERROR: Unimplemented XOR (0x80) instruction!\n");
                     REGS->invalid_operations ++;
                     break;
                 case 7: // CMP REG8/MEM8, IMMED8: [0x80, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-8]
@@ -2029,35 +2094,41 @@ int16_t process_instruction(uint8_t * memory) {
                     break;
             }
             break;
-        // case 0x81:
-        //     // 16-bit operations
-        //     switch(get_mode_field(memory[1])) {
-        //         case 0:
-        //             REGS->IP += add_op(memory);
-        //             break;
-        //         case 1:
-        //             REGS->IP += or_op(memory);
-        //             break;
-        //         case 2:
-        //             REGS->IP += adc_op(memory);
-        //             break;
-        //         case 3:
-        //             REGS->IP += sbb_op(memory);
-        //             break;
-        //         case 4:
-        //             REGS->IP += and_op(memory[1], &memory[2]);
-        //             break;
-        //         case 5:
-        //             REGS->IP += sub_op(memory[1], &memory[2]);
-        //             break;
-        //         case 6:
-        //             REGS->IP += xor_op(memory);
-        //             break;
-        //         case 7:
-        //             REGS->IP += cmp_op(memory);
-        //             break;
-        //     }
-        //     break;
+        case 0x81:
+            // 16-bit operations
+            switch(get_register_field(memory[1])) {
+                case 0: // ADD REG16/MEM16,IMMED16: [0x81, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+                    printf("ERROR: Unimplemented ADD (0x81) instruction!\n");
+                    REGS->invalid_operations ++;
+                    break;
+                case 1: // OR REG16/MEM16,IMMED16: [0x81, MOD 001 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+                    printf("ERROR: Unimplemented OR (0x81) instruction!\n");
+                    REGS->invalid_operations ++;
+                    break;
+                case 2: // ADC REG16/MEM16,IMMED16: [0x81, MOD 010 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+                    printf("ERROR: Unimplemented ADC (0x81) instruction!\n");
+                    REGS->invalid_operations ++;
+                    break;
+                case 3: // SBB REG16/MEM16,IMMED16: [0x81, MOD 011 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+                    ret_val = sub_instr(memory[0], &memory[1]);
+                    break;
+                case 4: // AND REG16/MEM16,IMMED16: [0x81, MOD 100 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+                    printf("ERROR: Unimplemented AND (0x81) instruction!\n");
+                    REGS->invalid_operations ++;
+                    break;
+                case 5: // SUB REG16/MEM16,IMMED16: [0x81, MOD 101 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+                    printf("ERROR: Unimplemented SUB (0x81) instruction!\n");
+                    REGS->invalid_operations ++;
+                    break;
+                case 6: // XOR REG16/MEM16,IMMED16: [0x81, MOD 110 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+                    printf("ERROR: Unimplemented XOR (0x81) instruction!\n");
+                    REGS->invalid_operations ++;
+                    break;
+                case 7: // CMP REG16/MEM16,IMMED16: [0x81, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+                    ret_val = sub_instr(memory[0], &memory[1]);
+                    break;
+            }
+            break;
         // case 0x82:
         //     // 8-bit operations
         //     switch(get_mode_field(memory[1])) {
@@ -2128,9 +2199,9 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x87:
         //     REGS->IP += xchg_16b_op(memory[1], &memory[2]);
         //     break;
-        // case 0x88:
-        //     REGS->IP += mov_16b_op(memory[1], &memory[2]);
-        //     break;
+        case 0x88:  // MOV REG8/MEM8, REG8: 0x88, MOD REG R/M (DISP-LO), (DISP-HI)]
+            ret_val = mov_instr(memory[0], &memory[1]);
+            break;
         case 0x89:  // MOV REG16/MEM16, REG16: [0x89, MOD REG R/M, (DISP-LO),(DISP-HI)]
             ret_val = mov_instr(memory[0], &memory[1]);
             break;
