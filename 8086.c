@@ -1,14 +1,11 @@
 // https://en.wikipedia.org/wiki/Intel_8086
 #include "8086.h"
 #include "8086_io.h"
+#include "8086_mem.h"
 #include "utils.h"
 
-
-#define MEMORY_LOG_FILE "logs/mem_log.txt"
 #define COMMON_LOG_FILE "logs/cpu_log.txt"
 #define REGISTERS_FILE  "logs/regs.txt"
-
-uint8_t *MEMORY = NULL;
 
 typedef struct {
     // Helper registers
@@ -114,46 +111,6 @@ typedef struct {
 } operands_t;
 
 uint32_t processed_commands[0xFF];
-
-void mem_write(uint32_t addr, uint16_t value, uint8_t width) {
-    printf("MEM_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
-    if(width == 1) {
-        MEMORY[addr] = value;
-    } else if (width == 2) {
-        *((uint16_t*)&MEMORY[addr]) = value;
-    } else {
-        printf("ERROR: Incorrect width: %d", width);
-    }
-    FILE *f;
-    f = fopen(MEMORY_LOG_FILE, "a");
-    if(f == NULL) {
-        printf("ERROR: Failed to open  %s", MEMORY_LOG_FILE);
-        return;
-    }
-    fprintf(f,"Addr: 0x%06X; value: 0x%04X; width: %d\n", addr, value, width);
-    fclose(f);
-}
-
-uint16_t mem_read(uint32_t addr, uint8_t width) {
-    uint16_t ret_val = 0;
-    if(width == 1) {
-        ret_val = MEMORY[addr];
-    } else if (width == 2) {
-        ret_val = MEMORY[addr] + (MEMORY[addr+1] << 8);
-    } else {
-        mylog(1, "ERROR: Incorrect width: %d", width);
-    }
-    // FILE *f;
-    // f = fopen(MEMORY_LOG_FILE, "a");
-    // if(f == NULL) {
-    //     printf("ERROR: Failed to open %s", MEMORY_LOG_FILE);
-    //     return ret_val;
-    // }
-    // fprintf(f,"Read from addr: 0x%06X; value: 0x%04X; width: %d\n", addr, ret_val, width);
-    // fclose(f);
-    mylog(4, "MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
-    return ret_val;
-}
 
 uint8_t get_flag(flag_t flag) {
     return (REGS->flags & (1 << flag)) > 0;
@@ -2771,19 +2728,6 @@ void print_proc_commands(void) {
     fclose(f);
 }
 
-int mem_init(uint8_t *memory) {
-    MEMORY = memory;
-    FILE *f;
-    f = fopen(MEMORY_LOG_FILE, "a");
-    if(f == NULL) {
-        printf("ERROR: Failed to open %s", MEMORY_LOG_FILE);
-        return EXIT_FAILURE;
-    }
-    fprintf(f,"%s Memory log start\n", get_time());
-    fclose(f);
-    return EXIT_SUCCESS;
-}
-
 int store_registers(char *filename, registers_t *regs) {
     FILE *f;
     f = fopen(filename, "w");
@@ -2855,8 +2799,11 @@ int restore_registers(char *filename, registers_t *regs) {
     return EXIT_SUCCESS;
 }
 
-int init_cpu(uint8_t *memory, uint8_t continue_simulation) {
-    if(EXIT_FAILURE == mem_init(memory)) {
+uint8_t *MEMORY = NULL;
+
+int init_cpu(uint8_t continue_simulation) {
+    MEMORY = mem_init(continue_simulation);
+    if(MEMORY == NULL) {
         return EXIT_FAILURE;
     }
     if(EXIT_FAILURE == io_init()) {
