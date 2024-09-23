@@ -1728,6 +1728,8 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
     if(get_prefix(REPE) || get_prefix(REPNE)) {
         uint16_t cx = get_register_value(CX_register);
         if(cx == 0) {
+            set_prefix(REPE, 0);
+            set_prefix(REPNE, 0);
             return opcode_len;
         }
         set_register_value(CX_register, cx - 1);
@@ -2799,7 +2801,7 @@ int restore_registers(char *filename, registers_t *regs) {
     return EXIT_SUCCESS;
 }
 
-uint8_t *MEMORY = NULL;
+static uint8_t *MEMORY = NULL;
 
 int init_cpu(uint8_t continue_simulation) {
     MEMORY = mem_init(continue_simulation);

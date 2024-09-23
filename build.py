@@ -3,7 +3,7 @@ import os
 import sys
 
 
-files_to_build = ["main.c", "8086.c", "8086_io.c", "utils.c"]
+files_to_build = ["main.c", "8086.c", "8086_io.c", "8086_mem.c", "utils.c"]
 output_file_name = "main"
 flags = ["-lm", "-g", "-Wall"]
 

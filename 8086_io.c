@@ -46,7 +46,7 @@ uint16_t io_read(uint32_t addr, uint8_t width) {
         mylog(1, "ERROR: Incorrect width: %d", width);
     }
     if(addr == 0x0041) {
-        ret_val = counter--;
+        IO_SPACE[addr] = 0xFF & (ret_val + 1);
     }
     FILE *f;
     f = fopen(IO_LOG_FILE, "a");

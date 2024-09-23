@@ -1,4 +1,5 @@
 #include "8086_mem.h"
+#include "utils.h"
 
 char *BIOS_FILENAME_0XF0000 = "BIOS/BIOS_5160_09MAY86_F0000.BIN";
 char *BIOS_FILENAME_0XF8000 = "BIOS/BIOS_5160_09MAY86_F8000.BIN";
@@ -7,7 +8,7 @@ char *BIOS_FILENAME_0XF8000 = "BIOS/BIOS_5160_09MAY86_F8000.BIN";
 #define MEMORY_LOG_FILE "logs/mem_log.txt"
 #define MEMORY_DUMP_FILE "logs/mem_dump.bin"
 
-uint8_t *MEMORY = NULL;
+static uint8_t *MEMORY = NULL;
 
 size_t get_file_size(FILE *file) {
     size_t init_location = ftell(file);
@@ -88,7 +89,7 @@ void mem_write(uint32_t addr, uint16_t value, uint8_t width) {
         printf("ERROR: Failed to open  %s", MEMORY_LOG_FILE);
         return;
     }
-    fprintf(f,"Addr: 0x%06X; value: 0x%04X; width: %d\n", addr, value, width);
+    fprintf(f,"MEM_WRITE Addr: 0x%06X; value: 0x%04X; width: %d\n", addr, value, width);
     fclose(f);
 }
 
