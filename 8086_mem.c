@@ -1,12 +1,14 @@
 #include "8086_mem.h"
 #include "utils.h"
 
-char *BIOS_FILENAME_0XF0000 = "BIOS/BIOS_5160_09MAY86_F0000.BIN";
-char *BIOS_FILENAME_0XF8000 = "BIOS/BIOS_5160_09MAY86_F8000.BIN";
-// char *BIOS_FILENAME_0XF0000 = "BIOS/F0000.BIN";
-// char *BIOS_FILENAME_0XF8000 = "BIOS/F8000.BIN";
+// char *BIOS_FILENAME_0XF0000 = "BIOS/BIOS_5160_09MAY86_F0000.BIN";
+// char *BIOS_FILENAME_0XF8000 = "BIOS/BIOS_5160_09MAY86_F8000.BIN";
+char *BIOS_FILENAME_0XF0000 = "BIOS/F0000.BIN";
+char *BIOS_FILENAME_0XF8000 = "BIOS/F8000.BIN";
 #define MEMORY_LOG_FILE "logs/mem_log.txt"
 #define MEMORY_DUMP_FILE "logs/mem_dump.bin"
+
+#define MEMORY_SIZE 0x100000
 
 static uint8_t *MEMORY = NULL;
 
@@ -37,6 +39,17 @@ int copy_bios_into_memory(uint8_t *memory, size_t offset, const char *filename) 
     return EXIT_SUCCESS;
 }
 
+int store_memory(void) {
+    FILE *file = fopen(MEMORY_DUMP_FILE, "wb");
+    if (file == NULL) {
+        perror("Failed to open file");
+        return  EXIT_FAILURE;
+    }
+    fwrite(MEMORY, MEMORY_SIZE, 1, file);
+    fclose(file);
+    return EXIT_SUCCESS;
+}
+
 int restore_memory(uint8_t *memory, const char *filename) {
     FILE *file = fopen(filename, "rb");
     if (file == NULL) {
@@ -53,7 +66,7 @@ int restore_memory(uint8_t *memory, const char *filename) {
 }
 
 uint8_t * mem_init(uint8_t continue_simulation) {
-    uint8_t *memory = (uint8_t*)calloc(sizeof(uint8_t), 0x100000);
+    uint8_t *memory = (uint8_t*)calloc(sizeof(uint8_t), MEMORY_SIZE);
     if(continue_simulation) {
         restore_memory(memory, MEMORY_DUMP_FILE);
     } else {
@@ -75,7 +88,7 @@ uint8_t * mem_init(uint8_t continue_simulation) {
 }
 
 void mem_write(uint32_t addr, uint16_t value, uint8_t width) {
-    printf("MEM_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    printf("MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     if(width == 1) {
         MEMORY[addr] = value;
     } else if (width == 2) {
@@ -83,14 +96,14 @@ void mem_write(uint32_t addr, uint16_t value, uint8_t width) {
     } else {
         printf("ERROR: Incorrect width: %d", width);
     }
-    FILE *f;
-    f = fopen(MEMORY_LOG_FILE, "a");
-    if(f == NULL) {
-        printf("ERROR: Failed to open  %s", MEMORY_LOG_FILE);
-        return;
-    }
-    fprintf(f,"MEM_WRITE Addr: 0x%06X; value: 0x%04X; width: %d\n", addr, value, width);
-    fclose(f);
+    // FILE *f;
+    // f = fopen(MEMORY_LOG_FILE, "a");
+    // if(f == NULL) {
+    //     printf("ERROR: Failed to open  %s", MEMORY_LOG_FILE);
+    //     return;
+    // }
+    // fprintf(f,"MEM_WRITE Addr: 0x%06X; value: 0x%04X; width: %d\n", addr, value, width);
+    // fclose(f);
 }
 
 uint16_t mem_read(uint32_t addr, uint8_t width) {

@@ -2,6 +2,8 @@
 #include "utils.h"
 
 #define IO_LOG_FILE "logs/io_log.txt"
+#define IO_DUMP_FILE "logs/io_dump.bin"
+#define IO_SPACE_SIZE 0x100000
 
 uint8_t *IO_SPACE = NULL;
 
@@ -59,10 +61,39 @@ uint16_t io_read(uint32_t addr, uint8_t width) {
     return ret_val;
 }
 
-int io_init(void) {
-    IO_SPACE = (uint8_t*)calloc(sizeof(uint8_t), 0x100000);
+int store_io(void) {
+    FILE *file = fopen(IO_DUMP_FILE, "wb");
+    if (file == NULL) {
+        perror("Failed to open file");
+        return  EXIT_FAILURE;
+    }
+    fwrite(IO_SPACE, IO_SPACE_SIZE, 1, file);
+    fclose(file);
+    return EXIT_SUCCESS;
+}
+
+int restore_io(uint8_t *io_space, const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (file == NULL) {
+        perror("Failed to open file");
+        return  EXIT_FAILURE;
+    }
+    uint8_t *ptr = io_space;
+    size_t bytes_read = 0;
+    while((bytes_read = fread(ptr, 1, 1, file)) > 0) {
+        ptr++;
+    }
+    fclose(file);
+    return EXIT_SUCCESS;
+}
+
+int io_init(uint8_t continue_simulation) {
+    IO_SPACE = (uint8_t*)calloc(sizeof(uint8_t), IO_SPACE_SIZE);
     if(IO_SPACE == NULL) {
         return EXIT_FAILURE;
+    }
+    if(continue_simulation) {
+        restore_io(IO_SPACE, IO_DUMP_FILE);
     }
     FILE *f;
     f = fopen(IO_LOG_FILE, "a");

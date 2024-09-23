@@ -1614,6 +1614,13 @@ int16_t inc_instr(uint8_t opcode, uint8_t *data) {
             update_flags(val, 1, val+1, 2, ADD_OP);
             break;
         }
+        case 0x47: {  // INC DI
+            uint16_t val = get_register_value(DI_register);
+            printf("Instruction 0x%02X: INC DI: 0x%04X => 0x%04X\n", opcode, val, val+1);
+            set_register_value(DI_register, val + 1);
+            update_flags(val, 1, val+1, 2, ADD_OP);
+            break;
+        }
         default:
             REGS->invalid_operations ++;
             printf("Error: Invalid INC instruction: 0x%02X\n", opcode);
@@ -1911,7 +1918,7 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x44:  // INC SP
         // case 0x45:  // INC BP
         // case 0x46:  // INC SI
-        // case 0x47:  // INC DI
+        case 0x47:  // INC DI
             ret_val = inc_instr(memory[0], &memory[1]);
             break;
         // case 0x48:  // DEC AX
@@ -2808,7 +2815,7 @@ int init_cpu(uint8_t continue_simulation) {
     if(MEMORY == NULL) {
         return EXIT_FAILURE;
     }
-    if(EXIT_FAILURE == io_init()) {
+    if(EXIT_FAILURE == io_init(continue_simulation)) {
         return EXIT_FAILURE;
     }
     REGS = calloc(1, sizeof(registers_t));
@@ -2824,6 +2831,8 @@ int init_cpu(uint8_t continue_simulation) {
 
 void cpu_save_state(void) {
     store_registers(REGISTERS_FILE, REGS);
+    store_memory();
+    store_io();
 }
 
 uint8_t cpu_is_halted(void) {
@@ -2842,7 +2851,8 @@ int cpu_tick(void) {
         REGS->IP += inc;
         return EXIT_SUCCESS;
     }
-    store_registers(REGISTERS_FILE, REGS);
+    // store_registers(REGISTERS_FILE, REGS);
+    cpu_save_state();
     printf("Processed commands: %d\n", REGS->ticks);
     print_proc_commands();
     return EXIT_FAILURE;
