@@ -817,6 +817,22 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
+        case 0xE1: {  // LOOPE/LOOPZ SHORT-LABEL: [0xE1, IP-INC8]
+            // LOOPE decrements ecx and checks that ecx is not zero and ZF is set - if these
+            // conditions are met, it jumps at label, otherwise falls through
+            ip_inc += 2;
+            printf("Instruction 0xE1: Relative Jump LOOPE/LOOPZ SHORT-LABEL: ");
+            uint16_t cx_val = get_register_value(CX_register);
+            set_register_value(CX_register, cx_val - 1);
+            printf("CX = 0x%04X, ZF = 0x%02X;", get_register_value(CX_register), get_flag(ZF));
+            if(get_register_value(CX_register) != 0 && get_flag(ZF) == 1) {
+                printf(" jump to 0x%02X\n", data[0]);
+                ip_inc += ((int8_t*)data)[0];
+            } else {
+                printf(": condition (CX != 0 and ZF == 1) didn't meet: CX = 0x%04X, ZF = %d\n", get_register_value(CX_register), get_flag(ZF));
+            }
+            break;
+        }
         case 0xE2: {  // LOOP SHORT-LABEL
             // LOOP decrements CX by 1 and transfers control
             // to the target operand if CX is not 0; otherwise the
@@ -1631,6 +1647,13 @@ int16_t inc_instr(uint8_t opcode, uint8_t *data) {
 int16_t dec_instr(uint8_t opcode, uint8_t *data) {
     int16_t ret_val = 1;
     switch(opcode) {
+        case 0x48: {  // DEC AX
+            uint16_t val = get_register_value(AX_register);
+            printf("Instruction 0x%02X: DEC AX: 0x%04X => 0x%04X\n", opcode, val, val-1);
+            set_register_value(AX_register, val - 1);
+            update_flags(val, 1, val-1, 2, SUB_OP);
+            break;
+        }
         case 0x4F: {  // DEC DI
             uint16_t val = get_register_value(DI_register);
             printf("Instruction 0x%02X: DEC DI: 0x%04X => 0x%04X\n", opcode, val, val-1);
@@ -1921,7 +1944,7 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x47:  // INC DI
             ret_val = inc_instr(memory[0], &memory[1]);
             break;
-        // case 0x48:  // DEC AX
+        case 0x48:  // DEC AX
         // case 0x49:  // DEC CX
         // case 0x4A:  // DEC DX
         // case 0x4B:  // DEC BX
@@ -2515,16 +2538,11 @@ int16_t process_instruction(uint8_t * memory) {
             // conditions are met, it jumps at label, otherwise falls through
             ret_val = jmp_instr(memory[0], &memory[1]);
             break;
-        // case 0xE1:  // LOOPE/LOOPZ SHORT-LABEL
-        //     // LOOPE decrements ecx and checks that ecx is not zero and ZF is set - if these
-        //     // conditions are met, it jumps at label, otherwise falls through
-        //     REGS->CX--;
-        //     if(REGS->CX > 0 && REGS->flags.ZF) {
-        //         REGS->IP += memory[1];  // IP-INC-8
-        //     } else {
-        //         REGS->IP += 2;
-        //     }
-        //     break;
+        case 0xE1:  // LOOPE/LOOPZ SHORT-LABEL
+            // LOOPE decrements ecx and checks that ecx is not zero and ZF is set - if these
+            // conditions are met, it jumps at label, otherwise falls through
+            ret_val = jmp_instr(memory[0], &memory[1]);
+            break;
         case 0xE2:  // LOOP SHORT-LABEL
             // LOOP decrements ecx and checks if ecx is not zero, if that 
             // condition is met it jumps at specified label, otherwise falls through
@@ -2573,12 +2591,11 @@ int16_t process_instruction(uint8_t * memory) {
             ret_val = jmp_instr(memory[0], &memory[1]);
             break;
         case 0xEC:  // IN AL, DX
-            set_register_value(AL_register, io_read(get_register_value(DX_register), 2));
+            set_register_value(AL_register, io_read(get_register_value(DX_register), 1));
             break;
-        // case 0xED:  // IN AX, DX
-        //     REGS->AX = get_io_16bit(REGS->DX);  // DATA-8
-        //     REGS->IP += 1;
-        //     break;
+        case 0xED:  // IN AX, DX
+            set_register_value(AX_register, io_read(get_register_value(DX_register), 2));
+            break;
         case 0xEE:  // OUT AL, DX
             printf("Instruction 0xEE: OUT AL DX\n");
             io_write(get_register_value(DX_register), get_register_value(AL_register), 1); // DATA-8
