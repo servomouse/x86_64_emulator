@@ -59,6 +59,7 @@ typedef enum {
     ES_register,
     SS_register,
 } register_name_t;
+register_name_t override_segment = invalid_register;
 
 typedef enum {
     CF = 0,    // Carry flag
@@ -254,12 +255,6 @@ void update_flags(uint32_t dst, uint32_t src, uint32_t res, uint8_t width, opera
         default:
             printf("ERROR: Incorrect operation type: %d", op_type);
     }
-}
-
-uint32_t get_addr(uint16_t segment_reg, uint16_t addr) {
-    uint32_t ret_val = segment_reg;
-    ret_val <<= 4;
-    return ret_val + addr;
 }
 
 uint8_t get_mode_field(uint8_t byte) {
@@ -552,6 +547,19 @@ void set_register_value(register_name_t reg_name, uint16_t value) {
     }
 }
 
+uint32_t get_addr(register_name_t segment_reg, uint16_t addr) {
+    // override_segment
+    uint32_t ret_val = 0;
+    if(override_segment != invalid_register) {
+        ret_val = get_register_value(override_segment);
+        override_segment = invalid_register;
+    } else {
+        ret_val = get_register_value(segment_reg);
+    }
+    ret_val <<= 4;
+    return ret_val + addr;
+}
+
 operands_t decode_operands(uint8_t opcode, uint8_t *data) {
     uint8_t mod_field = get_mode_field(data[0]);
     uint8_t rm_field = get_reg_mem_field(data[0]);
@@ -633,13 +641,13 @@ operands_t decode_operands(uint8_t opcode, uint8_t *data) {
     if(operands.src_type == 0) {    // Register mode
         operands.src_val = get_register_value(operands.src.register_name);
     } else {                        // Memory mode
-        uint32_t addr = get_addr(get_register_value(DS_register), operands.src.address);
+        uint32_t addr = get_addr(DS_register, operands.src.address);
         operands.src_val = mem_read(addr, operands.width);
     }
     if(operands.dst_type == 0) {    // Register mode
         operands.dst_val = get_register_value(operands.dst.register_name);
     } else {                        // Memory mode
-        uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+        uint32_t addr = get_addr(DS_register, operands.dst.address);
         operands.dst_val = mem_read(addr, operands.width);
     }
     return operands;
@@ -794,7 +802,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0xC3: {  // RET (intrasegment)
             uint16_t sp_reg = get_register_value(SP_register);
-            uint32_t addr = get_addr(get_register_value(SS_register), sp_reg);
+            uint32_t addr = get_addr(SS_register, sp_reg);
             uint16_t temp = mem_read(addr, 2);
             set_register_value(SP_register, sp_reg + 2);
             set_register_value(IP_register, temp);
@@ -897,7 +905,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if (operands.dst_type == 0) {   // Register_mode
                 set_register_value(operands.dst.register_name, operands.src_val);
             } else {    // Memory mode
-                mem_write(get_addr(get_register_value(DS_register), operands.dst.address), operands.src_val, operands.width);
+                mem_write(get_addr(DS_register, operands.dst.address), operands.src_val, operands.width);
             }
             break;
         }
@@ -915,7 +923,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if (operands.dst_type == 0) {   // Register_mode
                 set_register_value(operands.dst.register_name, operands.src_val);
             } else {    // Memory mode
-                mem_write(get_addr(get_register_value(DS_register), operands.dst.address), operands.src_val, operands.width);
+                mem_write(get_addr(DS_register, operands.dst.address), operands.src_val, operands.width);
             }
             break;
         }
@@ -927,13 +935,13 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if (operands.src_type == 0) {
                 src_val = get_register_value(operands.src.register_name);
             } else {
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.src.address);
+                uint32_t addr = get_addr(DS_register, operands.src.address);
                 src_val = mem_read(addr, operands.width);
             }
             if (operands.dst_type == 0) {   // Register_mode
                 set_register_value(operands.dst.register_name, src_val);
             } else {    // Memory mode
-                mem_write(get_addr(get_register_value(DS_register), operands.dst.address), src_val, operands.width);
+                mem_write(get_addr(DS_register, operands.dst.address), src_val, operands.width);
             }
             break;
         }
@@ -945,13 +953,13 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if (operands.src_type == 0) {
                 src_val = get_register_value(operands.src.register_name);
             } else {
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.src.address);
+                uint32_t addr = get_addr(DS_register, operands.src.address);
                 src_val = mem_read(addr, operands.width);
             }
             if (operands.dst_type == 0) {   // Register_mode
                 set_register_value(operands.dst.register_name, src_val);
             } else {    // Memory mode
-                mem_write(get_addr(get_register_value(DS_register), operands.dst.address), src_val, operands.width);
+                mem_write(get_addr(DS_register, operands.dst.address), src_val, operands.width);
             }
             break;
         }
@@ -980,7 +988,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if (operands.dst_type == 0) {
                 set_register_value(operands.dst.register_name, get_register_value(operands.src.register_name));
             } else {
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                uint32_t addr = get_addr(DS_register, operands.dst.address);
                 uint16_t value = get_register_value(operands.src.register_name);
                 mem_write(addr, value, 2);
             }
@@ -1011,7 +1019,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if (operands.src_type == 0) {
                 set_register_value(operands.dst.register_name, get_register_value(operands.src.register_name));
             } else {
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.src.address);
+                uint32_t addr = get_addr(DS_register, operands.src.address);
                 set_register_value(operands.dst.register_name, mem_read(addr, 2));
             }
             break;
@@ -1098,13 +1106,13 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
     if(operands.src_type == 0) {    // Register mode
         src_val = get_register_value(operands.src.register_name);
     } else {    // Memory mode
-        uint32_t addr = get_addr(get_register_value(DS_register), operands.src.address);
+        uint32_t addr = get_addr(DS_register, operands.src.address);
         src_val = mem_read(addr, operands.width);
     }
     if(operands.dst_type == 0) {    // Register mode
         dst_val = get_register_value(operands.dst.register_name);
     } else {    // Memory mode
-        uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+        uint32_t addr = get_addr(DS_register, operands.dst.address);
         src_val = mem_read(addr, operands.width);
     }
     ret_val += operands.num_bytes;
@@ -1129,7 +1137,7 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                     if(operands.dst_type == 0) {    // Register mode
                         set_register_value(operands.dst.register_name, res_val);
                     } else {    // Memory mode
-                        uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                        uint32_t addr = get_addr(DS_register, operands.dst.address);
                         mem_write(addr, res_val, 1);
                     }
                     update_flags(dst_val, 1, res_val, 1, SHIFT_L_OP);
@@ -1176,7 +1184,7 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                     if(operands.src_type == 0) {    // Register mode
                         set_register_value(operands.src.register_name, res_val);
                     } else {    // Memory mode
-                        uint32_t addr = get_addr(get_register_value(DS_register), operands.src.address);
+                        uint32_t addr = get_addr(DS_register, operands.src.address);
                         mem_write(addr, res_val, 1);
                     }
                     update_flags(dst_val, src_val, res_val, 2, SHIFT_R_OP);
@@ -1243,7 +1251,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                uint32_t addr = get_addr(DS_register, operands.dst.address);
                 mem_write(addr, res_val, operands.width);
             }
             break;
@@ -1255,7 +1263,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {                        // Memory mode
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                uint32_t addr = get_addr(DS_register, operands.dst.address);
                 mem_write(addr, res_val, operands.width);
             }
             break;
@@ -1267,7 +1275,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                uint32_t addr = get_addr(DS_register, operands.dst.address);
                 mem_write(addr, res_val, operands.width);
             }
             break;
@@ -1302,7 +1310,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {                        // Memory mode
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                uint32_t addr = get_addr(DS_register, operands.dst.address);
                 mem_write(addr, res_val, operands.width);
             }
             break;
@@ -1353,7 +1361,7 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
                 if(operands.dst_type == 0) {    // Register mode
                     set_register_value(operands.dst.register_name, res_val);
                 } else {    // Memory mode
-                    uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                    uint32_t addr = get_addr(DS_register, operands.dst.address);
                     mem_write(addr, res_val, operands.width);
                 }
             } else if(reg_field == 7) { // CMP REG8/MEM8, IMMED8: [0x80, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-8]
@@ -1381,7 +1389,7 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
                 if(operands.dst_type == 0) {    // Register mode
                     set_register_value(operands.dst.register_name, res_val);
                 } else {    // Memory mode
-                    uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                    uint32_t addr = get_addr(DS_register, operands.dst.address);
                     mem_write(addr, res_val, operands.width);
                 }
             } else if(reg_field == 7) { // CMP REG16/MEM16,IMMED16: [0x81, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
@@ -1436,13 +1444,13 @@ uint8_t xor_instr(uint8_t opcode, uint8_t *data) {
     if(operands.src_type == 0) {    // Register mode
         src_val = get_register_value(operands.src.register_name);
     } else {    // Memory mode
-        uint32_t addr = get_addr(get_register_value(DS_register), operands.src.address);
+        uint32_t addr = get_addr(DS_register, operands.src.address);
         src_val = mem_read(addr, operands.width);
     }
     if(operands.dst_type == 0) {    // Register mode
         dst_val = get_register_value(operands.dst.register_name);
     } else {    // Memory mode
-        uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+        uint32_t addr = get_addr(DS_register, operands.dst.address);
         dst_val = mem_read(addr, operands.width);
     }
     ret_val += operands.num_bytes;
@@ -1461,7 +1469,7 @@ uint8_t xor_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                uint32_t addr = get_addr(DS_register, operands.dst.address);
                 mem_write(addr, res_val, 1);
             }
             update_flags(dst_val, src_val, res_val, 1, LOGIC_OP);
@@ -1477,7 +1485,7 @@ uint8_t xor_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                uint32_t addr = get_addr(DS_register, operands.dst.address);
                 mem_write(addr, res_val, 2);
             }
             update_flags(dst_val, src_val, res_val, 2, LOGIC_OP);
@@ -1520,7 +1528,7 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                uint32_t addr = get_addr(DS_register, operands.dst.address);
                 mem_write(addr, res_val, 2);
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
@@ -1531,7 +1539,7 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                uint32_t addr = get_addr(DS_register, operands.dst.address);
                 mem_write(addr, res_val, 2);
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
@@ -1568,7 +1576,7 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(get_register_value(DS_register), operands.dst.address);
+                uint32_t addr = get_addr(DS_register, operands.dst.address);
                 mem_write(addr, res_val, 2);
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
@@ -1596,7 +1604,7 @@ uint8_t push_reg_instr(uint8_t opcode, uint8_t *data) {
     switch(opcode) {
         case 0x50: {
             set_register_value(SP_register, get_register_value(SP_register) - 2);
-            uint32_t addr = get_addr(get_register_value(SS_register), get_register_value(SP_register));
+            uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
             mem_write(addr, get_register_value(AX_register), 2);
             printf("Instruction 0x50: PUSH AX\n");
             break;
@@ -1766,7 +1774,7 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
     }
     switch(opcode) {
         case 0xAB: {  // STOS DEST-STR16
-            uint32_t addr = get_addr(get_register_value(DS_register), get_register_value(DI_register));
+            uint32_t addr = get_addr(DS_register, get_register_value(DI_register));
             uint16_t ax = get_register_value(AX_register);
             mem_write(addr, ax, 2);
             if(get_flag(DF)) {
@@ -1778,7 +1786,7 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
             break;
         }
         case 0xAD: {  // LODS SRC-STR16
-            uint32_t addr = get_addr(get_register_value(DS_register), get_register_value(SI_register));
+            uint32_t addr = get_addr(DS_register, get_register_value(SI_register));
             set_register_value(AX_register, mem_read(addr, 2));
             if(get_flag(DF)) {
                 set_register_value(SI_register, get_register_value(SI_register) - 2);
@@ -1878,10 +1886,9 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x25:  // AND AX, immed16          [DATA-LO, DATA-HI]
             ret_val = and_instr(memory[0], &memory[1]);
             break;
-        // case 0x26:  // ES:
-        //     segment_override(ES);  // ES: segment overrige prefix
-        //     REGS->IP += 1;
-        //     break;
+        case 0x26:  // ES:
+            override_segment = ES_register;
+            break;
         // case 0x27:  // DAA
         //     daa_op();
         //     REGS->IP += 1;
@@ -2857,7 +2864,8 @@ uint8_t cpu_is_halted(void) {
 }
 
 int cpu_tick(void) {
-    uint8_t inc = process_instruction(&MEMORY[get_addr(REGS->CS, REGS->IP)]);
+    uint32_t addr = REGS->CS;
+    uint8_t inc = process_instruction(&MEMORY[(addr<<4) + REGS->IP]);
     if (cpu_is_halted()) {
         printf("ERROR: CPU is halted!\n");
         print_proc_commands();
