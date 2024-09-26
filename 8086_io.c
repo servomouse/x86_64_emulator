@@ -1,4 +1,6 @@
 #include "8086_io.h"
+#include "8086_mda.h"
+#include "8086_ppi.h"
 #include "utils.h"
 
 #define IO_LOG_FILE "logs/io_log.txt"
@@ -39,17 +41,24 @@ uint16_t io_read(uint32_t addr, uint8_t width) {
     //     printf("ERROR: Incorrect width while readiong from IO: %d", width);
     //     ret_val = 0xFFFF;
     // }
-    
-    if(width == 1) {
-        ret_val = IO_SPACE[addr];
-    } else if (width == 2) {
-        ret_val = IO_SPACE[addr] + (IO_SPACE[addr+1] << 8);
+
+    if ((addr >= 0x3B0) && (addr <= 0x3BF)) {
+        ret_val = mda_read(addr, width);
+    } else if ((addr >= 0x60) && (addr <= 0x63)) {
+        ret_val = ppi_read(addr, width);
     } else {
-        mylog(1, "ERROR: Incorrect width: %d", width);
+        if(width == 1) {
+            ret_val = IO_SPACE[addr];
+        } else if (width == 2) {
+            ret_val = IO_SPACE[addr] + (IO_SPACE[addr+1] << 8);
+        } else {
+            mylog(1, "ERROR: Incorrect width: %d", width);
+        }
+        if(addr == 0x0041) {
+            IO_SPACE[addr] = 0xFF & (ret_val + 1);
+        }
     }
-    if(addr == 0x0041) {
-        IO_SPACE[addr] = 0xFF & (ret_val + 1);
-    }
+    
     FILE *f;
     f = fopen(IO_LOG_FILE, "a");
     if(f == NULL) {
@@ -89,6 +98,8 @@ int restore_io(uint8_t *io_space, const char *filename) {
 
 int io_init(uint8_t continue_simulation) {
     IO_SPACE = (uint8_t*)calloc(sizeof(uint8_t), IO_SPACE_SIZE);
+    mda_init();
+    ppi_init();
     if(IO_SPACE == NULL) {
         return EXIT_FAILURE;
     }
@@ -101,7 +112,7 @@ int io_init(uint8_t continue_simulation) {
         printf("ERROR: Failed to open %s", IO_LOG_FILE);
         return EXIT_FAILURE;
     }
-    fprintf(f, "%s Memory log start\n", get_time());
+    fprintf(f, "%s I/O log start\n", get_time());
     fclose(f);
     return EXIT_SUCCESS;
 }

@@ -1244,6 +1244,30 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
     ret_val += operands.num_bytes;
     int16_t res_val = 0;
     switch(opcode) {
+        case 0x81: {  // // ADD REG16/MEM16,IMMED16: [0x81, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+            uint8_t reg_field = get_register_field(data[0]);
+            if(reg_field == 0) {
+                if(operands.dst_type == 0) {    // Register mode
+                    ret_val = 4;
+                    operands.src_val = data[1] + (data[2] << 8);
+                } else {
+                    ret_val = 6;
+                    operands.src_val = data[3] + (data[4] << 8);
+                }
+                res_val = operands.src_val + operands.dst_val;
+                printf("Instruction 0x%02X: ADD %s (0x%04X), immed16 (0x%04X); res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+                update_flags(operands.dst_val, operands.src_val, res_val, operands.width, ADD_OP);
+                if(operands.dst_type == 0) {    // Register mode
+                    set_register_value(operands.dst.register_name, res_val);
+                } else {    // Memory mode
+                    uint32_t addr = get_addr(DS_register, operands.dst.address);
+                    mem_write(addr, res_val, operands.width);
+                }
+            } else {
+                REGS->invalid_operations ++;
+                printf("Error: Invalid ADD instruction: 0x%02X\n", opcode);}
+            break;
+        }
         case 0x01: {  // ADD REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
             res_val = operands.src_val + operands.dst_val;
             printf("Instruction 0x%02X: ADD %s (0x%04X), %s (0x%04X); res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
@@ -2094,8 +2118,7 @@ int16_t process_instruction(uint8_t * memory) {
             // 16-bit operations
             switch(get_register_field(memory[1])) {
                 case 0: // ADD REG16/MEM16,IMMED16: [0x81, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
-                    printf("ERROR: Unimplemented ADD (0x81) instruction!\n");
-                    REGS->invalid_operations ++;
+                    ret_val = add_instr(memory[0], &memory[1]);
                     break;
                 case 1: // OR REG16/MEM16,IMMED16: [0x81, MOD 001 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
                     printf("ERROR: Unimplemented OR (0x81) instruction!\n");
