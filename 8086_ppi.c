@@ -28,12 +28,12 @@ void update_portc(void) {
     }
 }
 
-uint8_t mda_init(void) {
+uint8_t ppi_init(void) {
     update_portc();
     return 0;
 }
 
-uint8_t mda_write(uint32_t addr, uint16_t value, uint8_t width) {
+uint8_t ppi_write(uint32_t addr, uint16_t value, uint8_t width) {
     printf("MDA_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     switch(addr) {
         case 0x60:
@@ -55,7 +55,7 @@ uint8_t mda_write(uint32_t addr, uint16_t value, uint8_t width) {
     return 0;
 }
 
-uint16_t mda_read(uint32_t addr, uint8_t width) {
+uint16_t ppi_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
     switch(addr) {
         case 0x60:
@@ -73,6 +73,6 @@ uint16_t mda_read(uint32_t addr, uint8_t width) {
         default:
             printf("PPI ERROR: attempt to read from incorrect port 0x%04x\n", addr);
     }
-    mylog(4, "MDA_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    printf( "MDA_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }

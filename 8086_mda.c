@@ -35,6 +35,6 @@ uint8_t mda_write(uint32_t addr, uint16_t value, uint8_t width) {
 
 uint16_t mda_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
-    mylog(4, "MDA_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    printf("MDA_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
