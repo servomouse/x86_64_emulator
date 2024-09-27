@@ -1042,6 +1042,12 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             ret_val = 2;
             break;
         }
+        case 0xB3: {  // MOV BL, IMMED8: [0xB3, immed8]
+            printf("Instruction 0xB3: MOV BL immed8 = 0x%02X\n", data[0]);
+            set_register_value(BL_register, data[0]);
+            ret_val = 2;
+            break;
+        }
         case 0xB4: {  // MOV AH, IMMED8: [0xB4, immed8]
             printf("Instruction 0xB4: MOV AH immed8 = 0x%02X\n", data[0]);
             REGS->AX = set_h(REGS->AX, data[0]);
@@ -2352,10 +2358,9 @@ int16_t process_instruction(uint8_t * memory) {
         case 0xB2:  // MOV DL, IMMED8: [0xB2, immed8]
             ret_val = mov_instr(memory[0], &memory[1]);
             break;
-        // case 0xB3:  // MOV BL, IMMED8
-        //     REGS->BX = set_l(REGS->BX, memory[1]); // DATA-8
-        //     REGS->IP += 2;
-        //     break;
+        case 0xB3:  // MOV BL, IMMED8
+            ret_val = mov_instr(memory[0], &memory[1]);
+            break;
         case 0xB4:  // MOV AH, IMMED8
             ret_val = mov_instr(memory[0], &memory[1]);
             break;

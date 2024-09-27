@@ -10,13 +10,20 @@
 uint8_t *IO_SPACE = NULL;
 
 void io_write(uint32_t addr, uint16_t value, uint8_t width) {
-    printf("IO_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
-    if(width == 1) {
-        IO_SPACE[addr] = value;
-    } else if (width == 2) {
-        *((uint16_t*)&IO_SPACE[addr]) = value;
+    
+    if ((addr >= 0x3B0) && (addr <= 0x3BF)) {
+        mda_write(addr, value, width);
+    } else if ((addr >= 0x60) && (addr <= 0x63)) {
+        ppi_write(addr, value, width);
     } else {
-        mylog(1, "ERROR: Incorrect width: %d", width);
+        printf("IO_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+        if(width == 1) {
+            IO_SPACE[addr] = value;
+        } else if (width == 2) {
+            *((uint16_t*)&IO_SPACE[addr]) = value;
+        } else {
+            printf("ERROR: Incorrect width: %d", width);
+        }
     }
     FILE *f;
     f = fopen(IO_LOG_FILE, "a");
@@ -31,7 +38,6 @@ void io_write(uint32_t addr, uint16_t value, uint8_t width) {
 uint8_t counter = 0xFF;
 
 uint16_t io_read(uint32_t addr, uint8_t width) {
-    printf("IO_READ addr = 0x%04X, width = %d bytes\n", addr, width);
     uint16_t ret_val = 0;
     // if(width == 1) {
     //     ret_val = 0xFF;
@@ -47,12 +53,13 @@ uint16_t io_read(uint32_t addr, uint8_t width) {
     } else if ((addr >= 0x60) && (addr <= 0x63)) {
         ret_val = ppi_read(addr, width);
     } else {
+        printf("IO_READ addr = 0x%04X, width = %d bytes\n", addr, width);
         if(width == 1) {
             ret_val = IO_SPACE[addr];
         } else if (width == 2) {
             ret_val = IO_SPACE[addr] + (IO_SPACE[addr+1] << 8);
         } else {
-            mylog(1, "ERROR: Incorrect width: %d", width);
+            printf("ERROR: Incorrect width: %d", width);
         }
         if(addr == 0x0041) {
             IO_SPACE[addr] = 0xFF & (ret_val + 1);
