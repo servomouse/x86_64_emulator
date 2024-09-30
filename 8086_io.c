@@ -1,6 +1,7 @@
 #include "8086_io.h"
 #include "8086_mda.h"
 #include "8086_ppi.h"
+#include "8086_timer.h"
 #include "utils.h"
 
 #define IO_LOG_FILE "logs/io_log.txt"
@@ -13,17 +14,19 @@ void io_write(uint32_t addr, uint16_t value, uint8_t width) {
     
     if ((addr >= 0x3B0) && (addr <= 0x3BF)) {
         mda_write(addr, value, width);
+    } else if ((addr >= 0x40) && (addr <= 0x43)) {
+        timer_write(addr, value, width);
     } else if ((addr >= 0x60) && (addr <= 0x63)) {
         ppi_write(addr, value, width);
     } else {
         printf("IO_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
-        if(width == 1) {
-            IO_SPACE[addr] = value;
-        } else if (width == 2) {
-            *((uint16_t*)&IO_SPACE[addr]) = value;
-        } else {
-            printf("ERROR: Incorrect width: %d", width);
-        }
+    }
+    if(width == 1) {
+        IO_SPACE[addr] = value;
+    } else if (width == 2) {
+        *((uint16_t*)&IO_SPACE[addr]) = value;
+    } else {
+        printf("ERROR: Incorrect width: %d", width);
     }
     FILE *f;
     f = fopen(IO_LOG_FILE, "a");
@@ -50,6 +53,8 @@ uint16_t io_read(uint32_t addr, uint8_t width) {
 
     if ((addr >= 0x3B0) && (addr <= 0x3BF)) {
         ret_val = mda_read(addr, width);
+    } else if ((addr >= 0x40) && (addr <= 0x43)) {
+        ret_val = timer_read(addr, width);
     } else if ((addr >= 0x60) && (addr <= 0x63)) {
         ret_val = ppi_read(addr, width);
     } else {
@@ -61,9 +66,9 @@ uint16_t io_read(uint32_t addr, uint8_t width) {
         } else {
             printf("ERROR: Incorrect width: %d", width);
         }
-        if(addr == 0x0041) {
-            IO_SPACE[addr] = 0xFF & (ret_val + 1);
-        }
+        // if(addr == 0x0041) {
+        //     IO_SPACE[addr] = 0xFF & (ret_val + 1);
+        // }
     }
     
     FILE *f;
@@ -107,6 +112,7 @@ int io_init(uint8_t continue_simulation) {
     IO_SPACE = (uint8_t*)calloc(sizeof(uint8_t), IO_SPACE_SIZE);
     mda_init();
     ppi_init();
+    timer_init();
     if(IO_SPACE == NULL) {
         return EXIT_FAILURE;
     }

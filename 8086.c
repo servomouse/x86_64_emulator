@@ -2,6 +2,7 @@
 #include "8086.h"
 #include "8086_io.h"
 #include "8086_mem.h"
+#include "8086_timer.h"
 #include "utils.h"
 
 #define COMMON_LOG_FILE "logs/cpu_log.txt"
@@ -2902,6 +2903,9 @@ int cpu_tick(void) {
     if (REGS->invalid_operations < 1) {
         REGS->ticks++;
         REGS->IP += inc;
+        if(REGS->ticks & 0x0001) {
+            timer_tick();
+        }
         return EXIT_SUCCESS;
     }
     // store_registers(REGISTERS_FILE, REGS);
