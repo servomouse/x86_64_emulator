@@ -850,6 +850,9 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             ip_inc += 2;
             uint16_t dest_val = get_register_value(CX_register);
             uint16_t res_val = dest_val - 1;
+            if((data[0] == 0xFE) && (res_val != 0)) {
+                res_val = 0;    // shortcut useless long waiting
+            }
             set_register_value(CX_register, res_val);
             // update_flags(dest_val, 1, res_val, 2, SUB_OP);
             printf("CX = 0x%04X;", res_val);
@@ -1767,6 +1770,14 @@ void print_registers(void) {
 uint8_t xchg_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     switch(opcode) {
+        case 0x93: {  // XCHG AX, BX
+            uint16_t ax = get_register_value(AX_register);
+            uint16_t bx = get_register_value(BX_register);
+            set_register_value(AX_register, bx);
+            set_register_value(BX_register, ax);
+            printf("Instruction 0x%02X: XCHG AX, BX\n", opcode);
+            break;
+        }
         case 0x96: {  // XCHG AX, SI
             uint16_t ax = get_register_value(AX_register);
             uint16_t si = get_register_value(SI_register);
@@ -1840,8 +1851,11 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
 
 int16_t process_instruction(uint8_t * memory) {
     printf("===============================================================\n");
-    printf("Step %d, processing bytes: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X:\n", REGS->ticks, memory[0], memory[1], memory[2], memory[3], memory[4], memory[5]);
+    printf("Step %d, processing bytes: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X:\n",
+           REGS->ticks, memory[0], memory[1], memory[2], memory[3], memory[4], memory[5]);
     print_registers();
+    mylog("logs/main.log", "Step: %d, IP: 0x%04X, data: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X",
+          REGS->ticks, REGS->IP, memory[0], memory[1], memory[2], memory[3], memory[4], memory[5]);
     int16_t ret_val = 1;
     switch(memory[0]) {
         // case 0x00:  // ADD REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -2263,9 +2277,9 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x92:  // XCHG AX, DX
         //         REGS->IP += xchg_reg_op(AX, DX);
         //     break;
-        // case 0x93:  // XCHG AX, BX
-        //         REGS->IP += xchg_reg_op(AX, BX);
-        //     break;
+        case 0x93:  // XCHG AX, BX
+                ret_val = xchg_instr(memory[0], &memory[1]);
+            break;
         // case 0x94:  // XCHG AX, SP
         //         REGS->IP += xchg_reg_op(AX, SP);
         //     break;

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 
-void mylog(uint8_t log_level, const char *format, ...);
+void mylog(const char *log_file, const char *format, ...);
 void clear_console(void);
 void sleep_ms(uint32_t ms);
 char *get_time(void);

@@ -24,10 +24,10 @@ counter_t counter2;
 
 static void process_event(counter_t *timer, timer_event_t event) {
     uint8_t mode = (timer->mode >> 1) & 0x07;
-    printf( "Timer %d mode = %d\n", timer->idx, mode);
+    // printf( "Timer %d mode = %d\n", timer->idx, mode);
     if(event == TIMER_WRITE_EVENT) {
         if((mode != 1) && (mode != 5)) {
-            printf( "Timer %d start counting\n", timer->idx);
+            // printf( "Timer %d start counting\n", timer->idx);
             timer->is_counting = 1;
         }
         if(mode == 0) {
@@ -36,12 +36,12 @@ static void process_event(counter_t *timer, timer_event_t event) {
         }
     } else if(event == TIMER_GATE_FALLING) {
         if((mode == 0) || (mode == 1) || (mode == 4) || (mode == 5)) {
-            printf( "Timer %d stop counting\n", timer->idx);
+            // printf( "Timer %d stop counting\n", timer->idx);
             timer->is_counting = 0;
         }
     } else if(event == TIMER_GATE_RISING) {
         if((mode == 0) || (mode == 1) || (mode == 4) || (mode == 5)) {
-            printf( "Timer %d start counting\n", timer->idx);
+            // printf( "Timer %d start counting\n", timer->idx);
             timer->is_counting = 1;
         }
     } else {
@@ -85,25 +85,25 @@ static void set_value(counter_t *timer, uint16_t value) {
         timer->value &= 0xFF00;
         timer->value |= value & 0xFF;
         timer->write_counter = 0;
-        printf("Set timer %d value to 0x%04X\n", timer->idx, timer->value);
+        // printf("Set timer %d value to 0x%04X\n", timer->idx, timer->value);
         process_event(timer, TIMER_WRITE_EVENT);
     } else if(submode == 2) {
         timer->value &= 0x00FF;
         timer->value |= value << 8;
         timer->write_counter = 0;
-        printf("Set timer %d value to 0x%04X\n", timer->idx, timer->value);
+        // printf("Set timer %d value to 0x%04X\n", timer->idx, timer->value);
         process_event(timer, TIMER_WRITE_EVENT);
     } else {
         if(timer->write_counter == 0) {
             timer->value &= 0xFF00;
             timer->value |= value & 0xFF;
             timer->write_counter += 1;
-            printf("Set timer %d value to 0x%04X\n", timer->idx, timer->value);
+            // printf("Set timer %d value to 0x%04X\n", timer->idx, timer->value);
         } else {
             timer->value &= 0x00FF;
             timer->value |= value << 8;
             timer->write_counter = 0;
-            printf("Set timer %d value to 0x%04X\n", timer->idx, timer->value);
+            // printf("Set timer %d value to 0x%04X\n", timer->idx, timer->value);
             process_event(timer, TIMER_WRITE_EVENT);
         }
     }
@@ -125,13 +125,13 @@ uint8_t timer_write(uint32_t addr, uint16_t value, uint8_t width) {
         case 0x43: {
             uint8_t counter = (value & 0xFF) >> 6;
             if(counter == 0) {
-                printf("Set timer 0 mode to 0x%02X\n", value);
+                // printf("Set timer 0 mode to 0x%02X\n", value);
                 counter0.mode = value;
             } else if(counter == 1) {
-                printf("Set timer 1 mode to 0x%02X\n", value);
+                // printf("Set timer 1 mode to 0x%02X\n", value);
                 counter1.mode = value;
             } else if(counter == 2) {
-                printf("Set timer 2 mode to 0x%02X\n", value);
+                // printf("Set timer 2 mode to 0x%02X\n", value);
                 counter2.mode = value;
             } else {
                 printf("TIMER ERROR: attempt to write to incorrect counter 0x%02X\n", value);
@@ -227,11 +227,11 @@ static void counter_tick(counter_t *timer) {
     } else if((timer->inner_value == (timer->value - 1)) && ((mode == 4) || (mode == 5))) {
         (*(timer->output_cb))(1);
     }
-    printf("Timer %d tick: inner_value = 0x%04X\n", timer->idx, timer->inner_value);
+    // printf("Timer %d tick: inner_value = 0x%04X\n", timer->idx, timer->inner_value);
 }
 
 void timer_tick(void) {
-    printf("Timer tick function");
+    // printf("Timer tick function");
     if(counter0.is_counting == 1) {
         counter_tick(&counter0);
     }

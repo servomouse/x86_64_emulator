@@ -4,6 +4,7 @@
 #include <string.h>
 #include "utils.h"
 #include "8086.h"
+#include "log_server_iface/logs_win.h"
 
 int main(int argc, char *argv[]) {
     uint8_t continue_simulation = 0;
@@ -14,13 +15,15 @@ int main(int argc, char *argv[]) {
             }
         }
     }
+    log_server_init(8765);
     if (EXIT_FAILURE == init_cpu(continue_simulation)) {
         return EXIT_FAILURE;
     }
     while (EXIT_SUCCESS == cpu_tick()) { // Run CPU
-        sleep_ms(500);
+        sleep_ms(5);
 		// clear_console();
     }
+    log_server_close();
     // cpu_save_state();
     return 0;
 }

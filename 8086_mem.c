@@ -3,8 +3,10 @@
 
 // char *BIOS_FILENAME_0XF0000 = "BIOS/BIOS_5160_09MAY86_F0000.BIN";
 // char *BIOS_FILENAME_0XF8000 = "BIOS/BIOS_5160_09MAY86_F8000.BIN";
-char *BIOS_FILENAME_0XF0000 = "BIOS/F0000.BIN";
-char *BIOS_FILENAME_0XF8000 = "BIOS/F8000.BIN";
+char *BIOS_FILENAME_0XF0000 = "BIOS/08NOV82_F0000.BIN";
+char *BIOS_FILENAME_0XF8000 = "BIOS/08NOV82_F8000.BIN";
+// char *BIOS_FILENAME_0XF0000 = "BIOS/F0000.BIN";
+// char *BIOS_FILENAME_0XF8000 = "BIOS/F8000.BIN";
 #define MEMORY_LOG_FILE "logs/mem_log.txt"
 #define MEMORY_DUMP_FILE "logs/mem_dump.bin"
 
@@ -113,7 +115,7 @@ uint16_t mem_read(uint32_t addr, uint8_t width) {
     } else if (width == 2) {
         ret_val = MEMORY[addr] + (MEMORY[addr+1] << 8);
     } else {
-        mylog(1, "ERROR: Incorrect width: %d", width);
+        printf("ERROR: Incorrect width: %d", width);
     }
     // FILE *f;
     // f = fopen(MEMORY_LOG_FILE, "a");
@@ -123,6 +125,6 @@ uint16_t mem_read(uint32_t addr, uint8_t width) {
     // }
     // fprintf(f,"Read from addr: 0x%06X; value: 0x%04X; width: %d\n", addr, ret_val, width);
     // fclose(f);
-    mylog(4, "MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    printf("MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }

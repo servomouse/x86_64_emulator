@@ -6,17 +6,18 @@
 #endif
 #include <stdarg.h>
 #include <time.h>
+#include "log_server_iface/logs_win.h"
 
-#define LOG_LEVEL 3
-#define LOG_FILE_NAME "logs/console.log"
-// #define PRINT_LOGS_TO_FILE
+#define BUFFER_SIZE 1024
 
-void mylog(uint8_t log_level, const char *format, ...) {
-    if(log_level < LOG_LEVEL)
-        return;
+void mylog(const char *log_file, const char *format, ...) {
     va_list args;
     va_start(args, format);
-    vprintf(format, args);
+    char buffer[BUFFER_SIZE] = {0};
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    // vprintf(format, args);
+    // printf("Processing string %s\n", buffer);
+    log_server_send(log_file, buffer);
     #ifdef PRINT_LOGS_TO_FILE
     FILE *file = fopen(LOG_FILE_NAME, "a");
     if(file) {
