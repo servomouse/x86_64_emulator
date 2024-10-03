@@ -1,4 +1,7 @@
 #include "8086_ppi.h"
+#include "utils.h"
+
+#define PPI_LOG_FILE "logs/ppi.log"
 
 #define SW1 1
 #define SW2 0
@@ -34,10 +37,11 @@ uint8_t ppi_init(void) {
 }
 
 uint8_t ppi_write(uint32_t addr, uint16_t value, uint8_t width) {
-    printf("MDA_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(PPI_LOG_FILE, "MDA_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     switch(addr) {
         case 0x60:
             porta_reg = value;
+            printf("BIOS STAGE: %d\n", value);
             break;
         case 0x61:
             portb_reg = value;
@@ -73,6 +77,6 @@ uint16_t ppi_read(uint32_t addr, uint8_t width) {
         default:
             printf("PPI ERROR: attempt to read from incorrect port 0x%04x\n", addr);
     }
-    printf( "MDA_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    mylog(PPI_LOG_FILE, "MDA_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }

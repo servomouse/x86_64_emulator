@@ -1,4 +1,7 @@
 #include "8086_mda.h"
+#include "utils.h"
+
+#define MDA_LOG_FILE "logs/mda.log"
 
 typedef struct {    // | Type                       | I/O | 40x25 | 80x25 | Graphic Modes
     uint8_t R0;     // | Horizontal total           | WO  | 0x38  | 0x71  | 0x38
@@ -29,12 +32,12 @@ uint8_t mda_init(void) {
 }
 
 uint8_t mda_write(uint32_t addr, uint16_t value, uint8_t width) {
-    printf("MDA_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(MDA_LOG_FILE, "MDA_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     return 0;
 }
 
 uint16_t mda_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
-    printf("MDA_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    mylog(MDA_LOG_FILE, "MDA_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }

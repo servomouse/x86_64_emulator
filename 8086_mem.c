@@ -25,11 +25,11 @@ size_t get_file_size(FILE *file) {
 int copy_bios_into_memory(uint8_t *memory, size_t offset, const char *filename) {
     FILE *file = fopen(filename, "rb");
     if (file == NULL) {
-        perror("Failed to open file");
+        printf("MEMORY ERROR: Failed to open file %s\n", filename);
         return  EXIT_FAILURE;
     }
     if (0x8000 < get_file_size(file)) {  // Check file size
-        perror("File is too large!");
+        printf("MEMORY ERROR: File %s is too large!", filename);
         return  EXIT_FAILURE;
     }
     uint8_t *ptr = memory + offset; // Move the memory pointer to the specified offset
@@ -44,7 +44,7 @@ int copy_bios_into_memory(uint8_t *memory, size_t offset, const char *filename) 
 int store_memory(void) {
     FILE *file = fopen(MEMORY_DUMP_FILE, "wb");
     if (file == NULL) {
-        perror("Failed to open file");
+        printf("MEMORY ERROR: Failed to open file %s\n", MEMORY_DUMP_FILE);
         return  EXIT_FAILURE;
     }
     fwrite(MEMORY, MEMORY_SIZE, 1, file);
@@ -55,7 +55,7 @@ int store_memory(void) {
 int restore_memory(uint8_t *memory, const char *filename) {
     FILE *file = fopen(filename, "rb");
     if (file == NULL) {
-        perror("Failed to open file");
+        printf("MEMORY ERROR: Failed to open file %s\n", filename);
         return  EXIT_FAILURE;
     }
     uint8_t *ptr = memory;
@@ -78,34 +78,18 @@ uint8_t * mem_init(uint8_t continue_simulation) {
         }
     }
     MEMORY = memory;
-    FILE *f;
-    f = fopen(MEMORY_LOG_FILE, "a");
-    if(f == NULL) {
-        printf("ERROR: Failed to open %s", MEMORY_LOG_FILE);
-        return NULL;
-    }
-    fprintf(f,"%s Memory log start\n", get_time());
-    fclose(f);
     return memory;
 }
 
 void mem_write(uint32_t addr, uint16_t value, uint8_t width) {
-    printf("MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(MEMORY_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     if(width == 1) {
         MEMORY[addr] = value;
     } else if (width == 2) {
         *((uint16_t*)&MEMORY[addr]) = value;
     } else {
-        printf("ERROR: Incorrect width: %d", width);
+        printf("MEM WRITE ERROR: Incorrect width: %d", width);
     }
-    // FILE *f;
-    // f = fopen(MEMORY_LOG_FILE, "a");
-    // if(f == NULL) {
-    //     printf("ERROR: Failed to open  %s", MEMORY_LOG_FILE);
-    //     return;
-    // }
-    // fprintf(f,"MEM_WRITE Addr: 0x%06X; value: 0x%04X; width: %d\n", addr, value, width);
-    // fclose(f);
 }
 
 uint16_t mem_read(uint32_t addr, uint8_t width) {
@@ -115,7 +99,7 @@ uint16_t mem_read(uint32_t addr, uint8_t width) {
     } else if (width == 2) {
         ret_val = MEMORY[addr] + (MEMORY[addr+1] << 8);
     } else {
-        printf("ERROR: Incorrect width: %d", width);
+        printf("MEM READ ERROR: Incorrect width: %d", width);
     }
     // FILE *f;
     // f = fopen(MEMORY_LOG_FILE, "a");
@@ -125,6 +109,6 @@ uint16_t mem_read(uint32_t addr, uint8_t width) {
     // }
     // fprintf(f,"Read from addr: 0x%06X; value: 0x%04X; width: %d\n", addr, ret_val, width);
     // fclose(f);
-    printf("MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    mylog(MEMORY_LOG_FILE, "MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
