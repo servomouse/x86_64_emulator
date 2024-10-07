@@ -20,10 +20,11 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     while (EXIT_SUCCESS == cpu_tick()) { // Run CPU
-        sleep_ms(5);
+        // sleep_ms(5);
 		// clear_console();
     }
     log_server_close();
+    sleep_ms(10000);
     // cpu_save_state();
     return 0;
 }

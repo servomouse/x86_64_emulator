@@ -32,12 +32,15 @@ void update_portc(void) {
 }
 
 uint8_t ppi_init(void) {
+    porta_reg = 0;
+    portb_reg = 0;
+    portc_reg = 0;
     update_portc();
     return 0;
 }
 
 uint8_t ppi_write(uint32_t addr, uint16_t value, uint8_t width) {
-    mylog(PPI_LOG_FILE, "MDA_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(PPI_LOG_FILE, "PPI_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     switch(addr) {
         case 0x60:
             porta_reg = value;
@@ -77,6 +80,6 @@ uint16_t ppi_read(uint32_t addr, uint8_t width) {
         default:
             printf("PPI ERROR: attempt to read from incorrect port 0x%04x\n", addr);
     }
-    mylog(PPI_LOG_FILE, "MDA_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    mylog(PPI_LOG_FILE, "PPI_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
