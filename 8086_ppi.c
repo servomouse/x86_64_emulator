@@ -18,6 +18,7 @@ uint8_t portc_reg;
 uint8_t cmd_reg;
 
 void update_portc(void) {
+    portc_reg = 0;
     if((portb_reg & 0x08) > 0) {
         portc_reg |= SW1;
         portc_reg |= SW2 << 1;
@@ -51,7 +52,7 @@ uint8_t ppi_write(uint32_t addr, uint16_t value, uint8_t width) {
             update_portc();
             break;
         case 0x62:
-            portb_reg = value;
+            portc_reg = value;
             break;
         case 0x63:
             cmd_reg = value;
@@ -72,7 +73,7 @@ uint16_t ppi_read(uint32_t addr, uint8_t width) {
             ret_val = portb_reg;
             break;
         case 0x62:
-            ret_val = portb_reg;
+            ret_val = portc_reg;
             break;
         case 0x63:
             ret_val = cmd_reg;
