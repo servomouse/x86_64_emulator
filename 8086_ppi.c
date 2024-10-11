@@ -1,4 +1,5 @@
 #include "8086_ppi.h"
+#include "8086.h"
 #include "utils.h"
 
 #define PPI_LOG_FILE "logs/ppi.log"
@@ -33,7 +34,7 @@ void update_portc(void) {
 }
 
 uint8_t ppi_init(void) {
-    porta_reg = 0;
+    porta_reg = 0xAA;
     portb_reg = 0;
     portc_reg = 0;
     update_portc();
@@ -44,10 +45,13 @@ uint8_t ppi_write(uint32_t addr, uint16_t value, uint8_t width) {
     mylog(PPI_LOG_FILE, "PPI_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     switch(addr) {
         case 0x60:
-            porta_reg = value;
+            // porta_reg = value;
             printf("BIOS STAGE: %d\n", value);
             break;
         case 0x61:
+            if(((portb_reg & 0x40) == 0) && ((value & 0x40) > 0)) {
+                set_int_vector(2);
+            }
             portb_reg = value;
             update_portc();
             break;

@@ -32,6 +32,7 @@ typedef struct {
     uint16_t SS;    // Stack segment
     // Status register
     uint16_t flags;
+    uint16_t int_vector;    // 0xFFFF is invalid value
     uint16_t prefixes;
 } registers_t;
 registers_t *REGS = NULL;
@@ -565,6 +566,12 @@ void push_register(uint16_t value) {
     set_register_value(SP_register, get_register_value(SP_register) - 2);
     uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
     mem_write(addr, value, 2);
+}
+
+uint16_t pop_register(uint16_t value) {
+    set_register_value(SP_register, get_register_value(SP_register) + 2);
+    uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
+    return mem_read(addr, 2);
 }
 
 operands_t decode_operands(uint8_t opcode, uint8_t *data) {
@@ -1267,7 +1274,7 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
         case 0xD2: {
             // 8-bit operations
             switch(get_register_field(data[0])) {
-                case 0: // ROL REG8/MEM8, CL: [0xD2, MOD 000 R/M, DISP-LO, DISP-HI]
+                case 0: // ROL REG8/MEM8, CL: [0xD2, MOD 000 R/M, (DISP-LO), (DISP-HI)]
                     // printf("ERROR: unimplemented ROL REG8/MEM8, CL operation\n");
                     // rotr32(x, n) (( x>>n  ) | (x<<(64-n)))
                     operands = decode_operands(opcode & 0xD0, data);    // Get DST from R/M field
@@ -1276,7 +1283,15 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                         operands.src_val = operands.src_val % 16;
                     }
                     operands.dst_val = (operands.dst_val << operands.src_val) | (operands.dst_val >> (16 - operands.src_val));
-                    REGS->invalid_operations ++;
+                    update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SHIFT_L_OP);
+                    if(operands.dst_type == 0) {
+                        set_register_value(operands.dst.register_name, res_val);
+                        ret_val = 2;
+                    } else {
+                        mem_write(operands.dst.address, res_val, operands.width);
+                        ret_val = 4;
+                    }
+                    mylog("logs/main.log", "Instruction 0x%02X: ROL %s (0x%04X), CL (0x%04X): result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     break;
                 case 1: // ROR REG8/MEM8, CL: [0xD2, MOD 001 R/M, DISP-LO, DISP-HI]
                     printf("ERROR: unimplemented ROR REG8/MEM8, CL operation\n");
@@ -3048,6 +3063,12 @@ int16_t process_instruction(uint8_t * memory) {
     return ret_val;
 }
 
+void set_int_vector(uint8_t vector) {
+    if(get_flag(IF)) {
+        REGS->int_vector = vector;
+    }
+}
+
 // Pront list of processed commands to log file
 void print_proc_commands(void) {
     FILE *f;
@@ -3145,6 +3166,7 @@ int init_cpu(uint8_t continue_simulation) {
         return EXIT_FAILURE;
     }
     REGS = calloc(1, sizeof(registers_t));
+    REGS->int_vector = 0xFFFF;
     if(continue_simulation) {
         mylog("logs/main.log", "Restoring registers\n");
         restore_registers(REGISTERS_FILE, REGS);
@@ -3166,6 +3188,17 @@ uint8_t cpu_is_halted(void) {
 }
 
 int cpu_tick(void) {
+    if(REGS->int_vector != 0xFFFF) {
+        printf("CPU interrupt %d\n", REGS->int_vector);
+        push_register(REGS->flags);
+        push_register(REGS->CS);
+        push_register(REGS->IP);
+        set_register_value(IP_register, mem_read(4 * REGS->int_vector, 2));
+        set_register_value(CS_register, mem_read((4 * REGS->int_vector) + 2, 2));
+        REGS->int_vector = 0xFFFF;
+        set_flag(IF, 0);
+        set_flag(TF, 0);
+    }
     uint32_t addr = REGS->CS;
     uint8_t inc = process_instruction(&MEMORY[(addr<<4) + REGS->IP]);
     if (cpu_is_halted()) {
