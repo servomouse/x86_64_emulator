@@ -1050,10 +1050,18 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
+        case 0xA1: {  // MOV AX, MEM16: [0xA1, DISP-LO, DISP-HI]
+            uint16_t addr = get_addr(DS_register, data[0] + (data[1] << 8));
+            uint16_t value = mem_read(addr, 2);
+            mylog("logs/main.log", "Instruction 0x%02X: MOV AX, MEM16 (0x%04X @0x%08X)\n", opcode, value, addr);
+            set_register_value(AX_register, value);
+            break;
+        }
         case 0xA3: {  // MOV MEM16, AX: [0xA3, ADDR-LO, ADDR-HI]
-            uint16_t addr = data[0] + (data[1] << 8);
+            uint16_t addr = get_addr(DS_register, data[0] + (data[1] << 8));
             mem_write(addr, get_register_value(AX_register), 2);
             ret_val = 3;
+            mylog("logs/main.log", "Instruction 0x%02X: MOV MEM16 (@0x%08X), AX (0x%04X)\n", opcode, addr, get_register_value(AX_register));
             break;
         }
         case 0xB0: {  // MOV AL, IMMED8: [0xB0, immed8]
@@ -2637,16 +2645,16 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x9F:  // LAHF
             ret_val = lahf_instr();
             break;
-        // case 0xA0:  // MOV AL, MEM8
+        // case 0xA0:  // MOV AL, MEM8: [0xA0, DISP-LO, DISP-HI]
         //     REGS->IP += mov_op(memory[1], &memory[2]); // ADDR-LO, ADDR-HI
         //     break;
-        // case 0xA1:  // MOV AX, MEM16
+        case 0xA1:  // MOV AX, MEM16: [0xA1, DISP-LO, DISP-HI]
         //     REGS->IP += mov_op(memory[1], &memory[2]); // ADDR-LO, ADDR-HI
         //     break;
-        // case 0xA2:  // MOV MEM8, AL
+        // case 0xA2:  // MOV MEM8, AL: [0xA2, DISP-LO, DISP-HI]
         //     REGS->IP += mov_op(memory[1], &memory[2]); // ADDR-LO, ADDR-HI
         //     break;
-        case 0xA3:  // MOV MEM8, AX
+        case 0xA3:  // MOV MEM8, AX: [0xA3, DISP-LO, DISP-HI]
             ret_val = mov_instr(memory[0], &memory[1]);
             break;
         // case 0xA4:  // MOVS DEST-STR8, SRC-STR8
@@ -2766,9 +2774,10 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0xCC:  // INT 3
         //     REGS->IP += int_op(3);
         //     break;
-        // case 0xCD:  // INT IMMED8
-        //     REGS->IP += int_op(memory[1]);  // DATA-8
-        //     break;
+        case 0xCD:  // INT IMMED8
+            set_int_vector(memory[1]);
+            ret_val = 2;
+            break;
         // case 0xCE:  // INTO
         //     REGS->IP += into_op();
         //     break;
@@ -3065,7 +3074,10 @@ int16_t process_instruction(uint8_t * memory) {
 
 void set_int_vector(uint8_t vector) {
     if(get_flag(IF)) {
+        printf("Triggering interrupt %d\n", vector);
         REGS->int_vector = vector;
+    } else {
+        printf("Triggering interrupt %d failed: IF == 0\n", vector);
     }
 }
 
