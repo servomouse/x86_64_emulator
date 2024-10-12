@@ -568,10 +568,10 @@ void push_register(uint16_t value) {
     mem_write(addr, value, 2);
 }
 
-uint16_t pop_register(uint16_t value) {
-    set_register_value(SP_register, get_register_value(SP_register) + 2);
+void pop_register(register_name_t reg_name) {
     uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
-    return mem_read(addr, 2);
+    set_register_value(reg_name, mem_read(addr, 2));
+    set_register_value(SP_register, get_register_value(SP_register) + 2);
 }
 
 operands_t decode_operands(uint8_t opcode, uint8_t *data) {
@@ -917,7 +917,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
 uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     switch(opcode) {
-       case 0x88: {  // MOV REG8/MEM8, REG8: 0x88, MOD REG R/M (DISP-LO), (DISP-HI)]
+       case 0x88: {  // MOV REG8/MEM8, REG8: 0x88, MOD REG R/M, (DISP-LO), (DISP-HI)]
             operands_t operands = decode_operands(opcode, data);
             mylog("logs/main.log", "Instruction 0x%02X: MOV %s (0x%04X), %s (0x%04X)\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val);
             ret_val += operands.num_bytes;
@@ -930,8 +930,10 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             // }
             if (operands.dst_type == 0) {   // Register_mode
                 set_register_value(operands.dst.register_name, operands.src_val);
+                ret_val = 2;
             } else {    // Memory mode
                 mem_write(get_addr(DS_register, operands.dst.address), operands.src_val, operands.width);
+                ret_val = 4;
             }
             break;
         }
@@ -1065,81 +1067,105 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             break;
         }
         case 0xB0: {  // MOV AL, IMMED8: [0xB0, immed8]
-            mylog("logs/main.log", "Instruction 0xB0: MOV AL immed8 = 0x%02X\n", data[0]);
+            mylog("logs/main.log", "Instruction 0x%02X: MOV AL immed8 = 0x%02X\n", opcode, data[0]);
             set_register_value(AL_register, data[0]);
             ret_val = 2;
             break;
         }
         case 0xB1: {  // MOV CL, IMMED8: [0xB1, immed8]
-            mylog("logs/main.log", "Instruction 0xB1: MOV CL immed8 = 0x%02X\n", data[0]);
+            mylog("logs/main.log", "Instruction 0x%02X: MOV CL immed8 = 0x%02X\n", opcode, data[0]);
             set_register_value(CL_register, data[0]);
             ret_val = 2;
             break;
         }
         case 0xB2: {  // MOV DL, IMMED8: [0xB2, immed8]
-            mylog("logs/main.log", "Instruction 0xB2: MOV DL immed8 = 0x%02X\n", data[0]);
+            mylog("logs/main.log", "Instruction 0x%02X: MOV DL immed8 = 0x%02X\n", opcode, data[0]);
             set_register_value(DL_register, data[0]);
             ret_val = 2;
             break;
         }
         case 0xB3: {  // MOV BL, IMMED8: [0xB3, immed8]
-            mylog("logs/main.log", "Instruction 0xB3: MOV BL immed8 = 0x%02X\n", data[0]);
+            mylog("logs/main.log", "Instruction 0x%02X: MOV BL immed8 = 0x%02X\n", opcode, data[0]);
             set_register_value(BL_register, data[0]);
             ret_val = 2;
             break;
         }
         case 0xB4: {  // MOV AH, IMMED8: [0xB4, immed8]
-            mylog("logs/main.log", "Instruction 0xB4: MOV AH immed8 = 0x%02X\n", data[0]);
-            REGS->AX = set_h(REGS->AX, data[0]);
+            mylog("logs/main.log", "Instruction 0x%02X: MOV AH immed8 = 0x%02X\n", opcode, data[0]);
             set_register_value(AH_register, data[0]);
+            ret_val = 2;
+            break;
+        }
+        case 0xB5: {  // MOV CH, IMMED8: [0xB5, immed8]
+            mylog("logs/main.log", "Instruction 0x%02X: MOV CH immed8 = 0x%02X\n", opcode, data[0]);
+            set_register_value(CH_register, data[0]);
+            ret_val = 2;
+            break;
+        }
+        case 0xB6: {  // MOV DH, IMMED8: [0xB6, immed8]
+            mylog("logs/main.log", "Instruction 0x%02X: MOV DH immed8 = 0x%02X\n", opcode, data[0]);
+            set_register_value(DH_register, data[0]);
+            ret_val = 2;
+            break;
+        }
+        case 0xB7: {  // MOV BH, IMMED8: [0xB7, immed8]
+            mylog("logs/main.log", "Instruction 0x%02X: MOV BH immed8 = 0x%02X\n", opcode, data[0]);
+            set_register_value(BH_register, data[0]);
             ret_val = 2;
             break;
         }
         case 0xB8: {  // MOV AX, IMMED16: [0xB8, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
-            mylog("logs/main.log", "Instruction 0xB8: MOV AX, IMMED16 = 0x%04X\n", immed_data);;
+            mylog("logs/main.log", "Instruction 0x%02X: MOV AX, IMMED16 = 0x%04X\n", opcode, immed_data);;
             set_register_value(AX_register, immed_data);
             ret_val = 3;
             break;
         }
         case 0xB9: {  // MOV CX, IMMED16: [0xB9, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
-            mylog("logs/main.log", "Instruction 0xB9: MOV CX, IMMED16 = 0x%04X\n", immed_data);;
+            mylog("logs/main.log", "Instruction 0x%02X: MOV CX, IMMED16 = 0x%04X\n", opcode, immed_data);;
             set_register_value(CX_register, immed_data);
             ret_val = 3;
             break;
         }
         case 0xBA: {  // MOV DX, IMMED16: [0xBB, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
-            mylog("logs/main.log", "Instruction 0xBA: MOV DX, IMMED16 = 0x%04X\n", immed_data);;
+            mylog("logs/main.log", "Instruction 0x%02X: MOV DX, IMMED16 = 0x%04X\n", opcode, immed_data);;
             set_register_value(DX_register, immed_data);
             ret_val = 3;
             break;
         }
         case 0xBB: {  // MOV BX, IMMED16: [0xBB, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
-            mylog("logs/main.log", "Instruction 0xBB: MOV BX, IMMED16 = 0x%04X\n", immed_data);;
+            mylog("logs/main.log", "Instruction 0x%02X: MOV BX, IMMED16 = 0x%04X\n", opcode, immed_data);;
             set_register_value(BX_register, immed_data);
             ret_val = 3;
             break;
         }
         case 0xBC: {  // MOV SP, IMMED16: [0xBC, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
-            mylog("logs/main.log", "Instruction 0xBC: MOV SP, IMMED16 = 0x%04X\n", immed_data);;
+            mylog("logs/main.log", "Instruction 0x%02X: MOV SP, IMMED16 = 0x%04X\n", opcode, immed_data);;
             set_register_value(SP_register, immed_data);
+            ret_val = 3;
+            break;
+        }
+        case 0xBD: {  // MOV BP, IMMED16: [0xBD, DATA-LO, DATA-HI]
+            uint16_t immed_data = data[0] + (data[1] << 8);
+            mylog("logs/main.log", "Instruction 0x%02X: MOV BP, IMMED16 = 0x%04X\n", opcode, immed_data);;
+            set_register_value(BP_register, immed_data);
             ret_val = 3;
             break;
         }
         case 0xBE: {  // MOV SI, IMMED16: [0xBC, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
-            mylog("logs/main.log", "Instruction 0xBC: MOV SI, IMMED16 = 0x%04X\n", immed_data);;
+            mylog("logs/main.log", "Instruction 0x%02X: MOV SI, IMMED16 = 0x%04X\n", opcode, immed_data);;
             set_register_value(SI_register, immed_data);
             ret_val = 3;
             break;
         }
         case 0xBF: {  // MOV DI, IMMED16: [0xBC, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
-            mylog("logs/main.log", "Instruction 0xBF: MOV DI, IMMED16 = 0x%04X\n", immed_data);
+            mylog("logs/main.log", "Instruction 0x%02X: MOV DI, IMMED16 = 0x%04X\n", opcode, immed_data);
             set_register_value(DI_register, immed_data);
             ret_val = 3;
             break;
@@ -1862,28 +1888,110 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
     return ret_val;
 }
 
+uint8_t pop_reg_instr(uint8_t opcode, uint8_t *data) {
+    uint8_t ret_val = 1;
+    switch(opcode) {
+        case 0x1F: {  // POP DS
+            pop_register(DS_register);
+            break;
+        }
+        case 0x58: {  // POP AX
+            pop_register(AX_register);
+            break;
+        }
+        case 0x59: {  // POP CX
+            pop_register(CX_register);
+            break;
+        }
+        case 0x5A: {  // POP DX
+            pop_register(DX_register);
+            break;
+        }
+        case 0x5B: {  // POP BX
+            pop_register(BX_register);
+            break;
+        }
+        case 0x5C: {  // POP SP
+            pop_register(SP_register);
+            break;
+        }
+        case 0x5D: {  // POP BP
+            pop_register(BP_register);
+            break;
+        }
+        case 0x5E: {  // POP SI
+            pop_register(SI_register);
+            break;
+        }
+        case 0x5F: {  // POP DI
+            pop_register(DI_register);
+            break;
+        }
+        default:
+            REGS->invalid_operations ++;
+            printf("Error: Invalid POP instruction: 0x%02X\n", opcode);
+    }
+    return ret_val;
+}
+
 uint8_t push_reg_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     switch(opcode) {
         case 0x0E: {  // PUSH CS
-            set_register_value(SP_register, get_register_value(SP_register) - 2);
-            uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
-            mem_write(addr, get_register_value(CS_register), 2);
-            mylog("logs/main.log", "Instruction 0x0E: PUSH CS\n");
+            // set_register_value(SP_register, get_register_value(SP_register) - 2);
+            // uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
+            // mem_write(addr, get_register_value(CS_register), 2);
+            // mylog("logs/main.log", "Instruction 0x0E: PUSH CS\n");
+            push_register(get_register_value(CS_register));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSH CS\n", opcode);
             break;
         }
         case 0x1E: {  // PUSH DS
-            set_register_value(SP_register, get_register_value(SP_register) - 2);
-            uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
-            mem_write(addr, get_register_value(DS_register), 2);
-            mylog("logs/main.log", "Instruction 0x1E: PUSH DS\n");
+            // set_register_value(SP_register, get_register_value(SP_register) - 2);
+            // uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
+            // mem_write(addr, get_register_value(DS_register), 2);
+            // mylog("logs/main.log", "Instruction 0x1E: PUSH DS\n");
+            push_register(get_register_value(DS_register));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSH DS\n", opcode);
             break;
         }
-        case 0x50: {
-            set_register_value(SP_register, get_register_value(SP_register) - 2);
-            uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
-            mem_write(addr, get_register_value(AX_register), 2);
-            mylog("logs/main.log", "Instruction 0x50: PUSH AX\n");
+        case 0x50: {    // PUSH AX
+            // set_register_value(SP_register, get_register_value(SP_register) - 2);
+            // uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
+            // mem_write(addr, get_register_value(AX_register), 2);
+            // mylog("logs/main.log", "Instruction 0x50: PUSH AX\n");
+            push_register(get_register_value(AX_register));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSH AX\n", opcode);
+            break;
+        }
+        case 0x52: {  // PUSH DX
+            push_register(get_register_value(DX_register));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSH DX\n", opcode);
+            break;
+        }
+        case 0x53: {  // PUSH BX
+            push_register(get_register_value(BX_register));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSH BX\n", opcode);
+            break;
+        }
+        case 0x54: {  // PUSH SP
+            push_register(get_register_value(SP_register));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSH SP\n", opcode);
+            break;
+        }
+        case 0x55: {  // PUSH BP
+            push_register(get_register_value(BP_register));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSH BP\n", opcode);
+            break;
+        }
+        case 0x56: {  // PUSH SI
+            push_register(get_register_value(SI_register));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSH SI\n", opcode);
+            break;
+        }
+        case 0x57: {  // PUSH DI
+            push_register(get_register_value(DI_register));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSH DI\n", opcode);
             break;
         }
         default:
@@ -1893,22 +2001,22 @@ uint8_t push_reg_instr(uint8_t opcode, uint8_t *data) {
     return ret_val;
 }
 
-uint8_t pop_reg_instr(uint8_t opcode, uint8_t *data) {
-    uint8_t ret_val = 1;
-    switch(opcode) {
-        case 0x1F: {  // POP DS
-            uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
-            set_register_value(SP_register, get_register_value(SP_register) + 2);
-            set_register_value(DS_register, mem_read(addr, 2));
-            mylog("logs/main.log", "Instruction 0x1E: POP DS\n");
-            break;
-        }
-        default:
-            REGS->invalid_operations ++;
-            printf("Error: Invalid PUSH instruction: 0x%02X\n", opcode);
-    }
-    return ret_val;
-}
+// uint8_t pop_reg_instr(uint8_t opcode, uint8_t *data) {
+//     uint8_t ret_val = 1;
+//     switch(opcode) {
+//         case 0x1F: {  // POP DS
+//             uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
+//             set_register_value(SP_register, get_register_value(SP_register) + 2);
+//             set_register_value(DS_register, mem_read(addr, 2));
+//             mylog("logs/main.log", "Instruction 0x1E: POP DS\n");
+//             break;
+//         }
+//         default:
+//             REGS->invalid_operations ++;
+//             printf("Error: Invalid PUSH instruction: 0x%02X\n", opcode);
+//     }
+//     return ret_val;
+// }
 
 uint8_t esc_instr(uint8_t opcode, uint8_t *data) {
     mylog("logs/main.log", "Instruction 0xD8: ESC\n");
@@ -2329,25 +2437,24 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0x50:  // PUSH AX
         // case 0x51:  // PUSH CX
-        // case 0x52:  // PUSH DX
-        // case 0x53:  // PUSH BX
-        // case 0x54:  // PUSH SP
-        // case 0x55:  // PUSH BP
-        // case 0x56:  // PUSH SI
-        // case 0x57:  // PUSH DI
+        case 0x52:  // PUSH DX
+        case 0x53:  // PUSH BX
+        case 0x54:  // PUSH SP
+        case 0x55:  // PUSH BP
+        case 0x56:  // PUSH SI
+        case 0x57:  // PUSH DI
             ret_val = push_reg_instr(memory[0], &memory[1]);
             break;
-        // case 0x58:  // POP AX
-        // case 0x59:  // POP CX
-        // case 0x5A:  // POP DX
-        // case 0x5B:  // POP BX
-        // case 0x5C:  // POP SP
-        // case 0x5D:  // POP BP
-        // case 0x5E:  // POP SI
-        // case 0x5F:  // POP DI
-        //     pop_reg_op(memory[0]);
-        //     REGS->IP += 1;
-        //     break;
+        case 0x58:  // POP AX
+        case 0x59:  // POP CX
+        case 0x5A:  // POP DX
+        case 0x5B:  // POP BX
+        case 0x5C:  // POP SP
+        case 0x5D:  // POP BP
+        case 0x5E:  // POP SI
+        case 0x5F:  // POP DI
+            ret_val = pop_reg_instr(memory[0], &memory[1]);
+            break;
         case 0x60:
         case 0x61:
         case 0x62:
@@ -2696,31 +2803,19 @@ int16_t process_instruction(uint8_t * memory) {
         case 0xB0:  // MOV AL, IMMED8: [0xB0, immed8]
         case 0xB1:  // MOV CL, IMMED8: [0xB1, immed8]
         case 0xB2:  // MOV DL, IMMED8: [0xB2, immed8]
-        case 0xB3:  // MOV BL, IMMED8
-        case 0xB4:  // MOV AH, IMMED8
-        // case 0xB5:  // MOV CH, IMMED8
-        //     REGS->CX = set_h(REGS->CX, memory[1]); // DATA-8
-        //     REGS->IP += 2;
-        //     break;
-        // case 0xB6:  // MOV DH, IMMED8
-        //     REGS->DX = set_h(REGS->DX, memory[1]); // DATA-8
-        //     REGS->IP += 2;
-        //     break;
-        // case 0xB7:  // MOV BH, IMMED8
-        //     REGS->BX = set_h(REGS->BX, memory[1]); // DATA-8
-        //     REGS->IP += 2;
-        //     break;
-        case 0xB8:  // MOV AX, IMMED16
+        case 0xB3:  // MOV BL, IMMED8: [0xB3, immed8]
+        case 0xB4:  // MOV AH, IMMED8: [0xB4, immed8]
+        case 0xB5:  // MOV CH, IMMED8: [0xB5, immed8]
+        case 0xB6:  // MOV DH, IMMED8: [0xB6, immed8]
+        case 0xB7:  // MOV BH, IMMED8: [0xB7, immed8]
+        case 0xB8:  // MOV AX, IMMED16 [0xB8, DATA-LO, DATA-HI]
         case 0xB9:  // MOV CX, IMMED16: [0xB9, DATA-LO, DATA-HI]
         case 0xBA:  // MOV DX, IMMED16: [0xBA, DATA-HI, DATA-LO]
         case 0xBB:  // MOV BX, IMMED16: [0xBB, DATA-LO, DATA-HI]
         case 0xBC:  // MOV SP, IMMED16: [0xBC, DATA-LO, DATA-HI]
-        // case 0xBD:  // MOV BP, IMMED16
-        //     REGS->BP = (memory[2] << 8) + memory[1]; // DATA-LO, DATA-HI
-        //     REGS->IP += 3;
-        //     break;
-        case 0xBE:  // MOV SI, IMMED16
-        case 0xBF:  // MOV DI, IMMED16
+        case 0xBD:  // MOV BP, IMMED16: [0xBD, DATA-LO, DATA-HI]
+        case 0xBE:  // MOV SI, IMMED16: [0xBE, DATA-LO, DATA-HI]
+        case 0xBF:  // MOV DI, IMMED16: [0xBF, DATA-LO, DATA-HI]
             ret_val = mov_instr(memory[0], &memory[1]);
             break;
         case 0xC0:
@@ -3041,11 +3136,13 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0xFA:  // CLI
             // Clear Interrupt Flag, causes the processor to ignore maskable external interrupts
+            printf("Disabling interrupts\n");
             mylog("logs/main.log", "Instruction 0xFA: Clear Interrupt Flag (IF) to disable interrupts\n");
             set_flag(IF, 0);
             break;
         case 0xFB:  // STI
             // Set Interrupt Flag
+            printf("Enabling interrupts\n");
             mylog("logs/main.log", "Instruction 0xFB: Set Interrupt Flag (IF) to enable interrupts\n");
             set_flag(IF, 1);
             break;
@@ -3075,10 +3172,10 @@ int16_t process_instruction(uint8_t * memory) {
 void set_int_vector(uint8_t vector) {
     if(get_flag(IF)) {
         printf("Triggering interrupt %d\n", vector);
-        REGS->int_vector = vector;
     } else {
-        printf("Triggering interrupt %d failed: IF == 0\n", vector);
+        printf("Setting interrupt %d with IF = 0\n", vector);
     }
+    REGS->int_vector = vector;
 }
 
 // Pront list of processed commands to log file
@@ -3201,16 +3298,17 @@ uint8_t cpu_is_halted(void) {
 
 int cpu_tick(void) {
     if(REGS->int_vector != 0xFFFF) {
-        printf("CPU interrupt %d\n", REGS->int_vector);
-        push_register(REGS->flags);
-        push_register(REGS->CS);
-        push_register(REGS->IP);
-        set_register_value(IP_register, mem_read(4 * REGS->int_vector, 2));
-        set_register_value(CS_register, mem_read((4 * REGS->int_vector) + 2, 2));
-        REGS->int_vector = 0xFFFF;
-        set_flag(IF, 0);
-        set_flag(TF, 0);
-    }
+        if(get_flag(IF)) {
+            printf("CPU interrupt %d\n", REGS->int_vector);
+            push_register(REGS->flags);
+            push_register(REGS->CS);
+            push_register(REGS->IP);
+            set_register_value(IP_register, mem_read(4 * REGS->int_vector, 2));
+            set_register_value(CS_register, mem_read((4 * REGS->int_vector) + 2, 2));
+            REGS->int_vector = 0xFFFF;
+            set_flag(IF, 0);
+            set_flag(TF, 0);}
+        }
     uint32_t addr = REGS->CS;
     uint8_t inc = process_instruction(&MEMORY[(addr<<4) + REGS->IP]);
     if (cpu_is_halted()) {
