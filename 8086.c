@@ -60,6 +60,7 @@ typedef enum {
     DS_register,
     ES_register,
     SS_register,
+    FLAGS_register,
 } register_name_t;
 register_name_t override_segment = invalid_register;
 
@@ -544,6 +545,9 @@ void set_register_value(register_name_t reg_name, uint16_t value) {
         case SS_register:
             REGS->SS = value;
             break;
+        case FLAGS_register:
+            REGS->flags = value;
+            break;
         default:
             mylog("logs/main.log", "Invalid register name: 0x%02X\n", reg_name);
     }
@@ -572,6 +576,13 @@ void pop_register(register_name_t reg_name) {
     uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
     set_register_value(reg_name, mem_read(addr, 2));
     set_register_value(SP_register, get_register_value(SP_register) + 2);
+}
+
+uint16_t pop_value(void) {
+    uint32_t addr = get_addr(SS_register, get_register_value(SP_register));
+    uint16_t value = mem_read(addr, 2);
+    set_register_value(SP_register, get_register_value(SP_register) + 2);
+    return value;
 }
 
 operands_t decode_operands(uint8_t opcode, uint8_t *data) {
@@ -607,7 +618,7 @@ operands_t decode_operands(uint8_t opcode, uint8_t *data) {
             break;
         case 6:
             if(mod_field == 0) {
-                addr = data[0] + (data[1] << 8);
+                addr = data[1] + (data[2] << 8);
             } else {
                 addr = get_register_value(BP_register);
             }
@@ -617,10 +628,10 @@ operands_t decode_operands(uint8_t opcode, uint8_t *data) {
             break;
     }
     if(mod_field == 1) {
-        addr += data[0];
+        addr += data[1];
         operands.num_bytes += 1;
     } else if(mod_field == 2) {
-        addr += data[0] + (data[1] << 8);
+        addr += data[1] + (data[2] << 8);
         operands.num_bytes += 2;
     }
     if((opcode & 0x02) == 0) {
@@ -821,6 +832,12 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             set_register_value(SP_register, sp_reg + 2);
             set_register_value(IP_register, temp);
             mylog("logs/main.log", "Instruction 0xC3: Intrasegment RET to IP = 0x%04X\n", get_register_value(IP_register));
+            break;
+        }
+        case 0xCF: {  // IRET
+            pop_register(IP_register);
+            pop_register(CS_register);
+            pop_register(FLAGS_register);
             break;
         }
         case 0xE0: {  // LOOPNE/LOOPNZ SHORT-LABEL: [0xE0, IP-INC8]
@@ -1052,11 +1069,26 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
+        case 0xA0: {  // MOV AL, MEM8: [0xA0, DISP-LO, DISP-HI]
+            uint16_t addr = get_addr(DS_register, data[0] + (data[1] << 8));
+            uint16_t value = mem_read(addr, 2);
+            mylog("logs/main.log", "Instruction 0x%02X: MOV AL, MEM8 (0x%04X @0x%08X)\n", opcode, value, addr);
+            set_register_value(AL_register, value);
+            ret_val = 3;
+            break;
+        }
         case 0xA1: {  // MOV AX, MEM16: [0xA1, DISP-LO, DISP-HI]
             uint16_t addr = get_addr(DS_register, data[0] + (data[1] << 8));
             uint16_t value = mem_read(addr, 2);
             mylog("logs/main.log", "Instruction 0x%02X: MOV AX, MEM16 (0x%04X @0x%08X)\n", opcode, value, addr);
             set_register_value(AX_register, value);
+            break;
+        }
+        case 0xA2: {  // MOV MEM8, AL: [0xA2, DISP-LO, DISP-HI]
+            uint16_t addr = get_addr(DS_register, data[0] + (data[1] << 8));
+            mem_write(addr, get_register_value(AL_register), 2);
+            ret_val = 3;
+            mylog("logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), AL (0x%04X)\n", opcode, addr, get_register_value(AL_register));
             break;
         }
         case 0xA3: {  // MOV MEM16, AX: [0xA3, ADDR-LO, ADDR-HI]
@@ -1175,6 +1207,36 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
                 uint16_t addr = get_addr(DS_register, data[0] + (data[1] << 8));
                 mem_write(addr, data[2], 1);
                 mylog("logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), IMMED8 (0x%02X)\n", opcode, addr, data[2]);
+                ret_val = 5;
+            } else {
+                REGS->invalid_operations ++;
+                printf("Invalid instruction: 0x%02X, REG field != 0\n", opcode);
+            }
+            break;
+        }
+        case 0xC7: {  // MOV MEM8, IMMED8: [0xC7, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+            if(get_register_field(data[0]) == 0) {
+                operands_t operands = decode_operands(opcode & 0xFC, data); // Treat R/M field as destination
+                uint16_t addr = get_addr(DS_register, operands.dst.address);
+                uint8_t mod_field = get_mode_field(data[0]);
+                uint16_t value = 0;
+                if(mod_field == 0) {
+                    if(6 == get_reg_mem_field(data[0])) {
+                        value = data[3] + (data[4] << 8);
+                        ret_val = 6;
+                    } else {
+                        value = data[1] + (data[2] << 8);
+                        ret_val = 4;
+                    }
+                } else if(mod_field == 1) {
+                    value = data[2] + (data[3] << 8);
+                    ret_val = 5;
+                } else {
+                    value = data[3] + (data[4] << 8);
+                    ret_val = 6;
+                }
+                mem_write(addr, value, 2);
+                mylog("logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), IMMED16 (0x%04X)\n", opcode, addr, value);
                 ret_val = 5;
             } else {
                 REGS->invalid_operations ++;
@@ -1875,6 +1937,11 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
                 }
                 res_val = operands.dst_val & operands.src_val;
                 update_flags(operands.dst_val, operands.src_val, res_val, 1, LOGIC_OP);
+                if(operands.dst_type == 0) {    // Register_mode
+                    mylog("logs/main.log", "Instruction 0x%02X: TEST %s (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+                } else {
+                    mylog("logs/main.log", "Instruction 0x%02X: TEST %s (0x%02X @ 0x%06X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.dst.address, operands.src_val, res_val);
+                }
             } else {
                 REGS->invalid_operations ++;
                 printf("Error: Invalid TEST instruction: 0x%02X: reg_field > 0\n", opcode);
@@ -2752,15 +2819,9 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x9F:  // LAHF
             ret_val = lahf_instr();
             break;
-        // case 0xA0:  // MOV AL, MEM8: [0xA0, DISP-LO, DISP-HI]
-        //     REGS->IP += mov_op(memory[1], &memory[2]); // ADDR-LO, ADDR-HI
-        //     break;
+        case 0xA0:  // MOV AL, MEM8: [0xA0, DISP-LO, DISP-HI]
         case 0xA1:  // MOV AX, MEM16: [0xA1, DISP-LO, DISP-HI]
-        //     REGS->IP += mov_op(memory[1], &memory[2]); // ADDR-LO, ADDR-HI
-        //     break;
-        // case 0xA2:  // MOV MEM8, AL: [0xA2, DISP-LO, DISP-HI]
-        //     REGS->IP += mov_op(memory[1], &memory[2]); // ADDR-LO, ADDR-HI
-        //     break;
+        case 0xA2:  // MOV MEM8, AL: [0xA2, DISP-LO, DISP-HI]
         case 0xA3:  // MOV MEM8, AX: [0xA3, DISP-LO, DISP-HI]
             ret_val = mov_instr(memory[0], &memory[1]);
             break;
@@ -2843,13 +2904,9 @@ int16_t process_instruction(uint8_t * memory) {
         case 0xC6:  // MOV MEM8, IMMED8: [0xC6, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-8]
             ret_val = mov_instr(memory[0], &memory[1]);
             break;
-        // case 0xC7:  // MOV MEM16, IMMED16
-        //     if(get_register_field(memory[1]) == 0) {
-        //         REGS->IP += mov_op(memory[1], &memory[2]);  // MOD 000 R/M, DISP-LO, DISP-HI, DATA-LO, DATA-HI
-        //     } else {
-        //         INVALID_INSTRUCTION;
-        //     }
-        //     break;
+        case 0xC7:  // MOV MEM16, IMMED16
+            ret_val = mov_instr(memory[0], &memory[1]);
+            break;
         case 0xC8:
             // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
@@ -2876,9 +2933,9 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0xCE:  // INTO
         //     REGS->IP += into_op();
         //     break;
-        // case 0xCF:  // IRET
-        //     REGS->IP += iret_op();
-        //     break;
+        case 0xCF:  // IRET
+            ret_val = jmp_instr(memory[0], &memory[1]);
+            break;
         case 0xD0:
             // 8-bit operations
             ret_val = shift_instr(memory[0], &memory[1]);
@@ -3169,6 +3226,18 @@ int16_t process_instruction(uint8_t * memory) {
     return ret_val;
 }
 
+uint16_t delayed_int_timeout = 0;
+uint16_t delayed_int_vector = 0xFFFF;
+
+void set_delayed_int(uint8_t vector, uint16_t dely_ticks) {
+    if(get_flag(IF)) {
+        printf("Triggering interrupt %d\n", vector);
+    } else {
+        printf("Setting interrupt %d with IF = 0\n", vector);
+    }
+    REGS->int_vector = vector;
+}
+
 void set_int_vector(uint8_t vector) {
     if(get_flag(IF)) {
         printf("Triggering interrupt %d\n", vector);
@@ -3297,6 +3366,13 @@ uint8_t cpu_is_halted(void) {
 }
 
 int cpu_tick(void) {
+    if(delayed_int_timeout > 0) {
+        delayed_int_timeout --;
+        if((delayed_int_timeout == 0) && (delayed_int_vector != 0xFFFF)) {
+            set_int_vector(delayed_int_vector);
+            delayed_int_vector = 0xFFFF;
+        }
+    }
     if(REGS->int_vector != 0xFFFF) {
         if(get_flag(IF)) {
             printf("CPU interrupt %d\n", REGS->int_vector);

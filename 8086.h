@@ -7,3 +7,4 @@ int init_cpu(uint8_t continue_simulation);
 int cpu_tick(void);
 void cpu_save_state(void);
 void set_int_vector(uint8_t vector);
+void set_delayed_int(uint8_t vector, uint16_t dely_ticks);

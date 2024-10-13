@@ -51,7 +51,7 @@ uint8_t ppi_write(uint32_t addr, uint16_t value, uint8_t width) {
         case 0x61:
             if(((portb_reg & 0x40) == 0) && ((value & 0x40) > 0)) {
                 mylog(PPI_LOG_FILE, "PPI Triggering Interrupt 2\n");
-                set_int_vector(2);
+                set_delayed_int(2, 20);
             }
             portb_reg = value;
             update_portc();
