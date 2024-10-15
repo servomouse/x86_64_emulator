@@ -62,6 +62,7 @@ typedef enum {
     SS_register,
     FLAGS_register,
 } register_name_t;
+
 register_name_t override_segment = invalid_register;
 
 typedef enum {
@@ -634,6 +635,7 @@ operands_t decode_operands(uint8_t opcode, uint8_t *data) {
         addr += data[1] + (data[2] << 8);
         operands.num_bytes += 2;
     }
+    addr = get_addr(DS_register, addr);
     if((opcode & 0x02) == 0) {
         // Instruction source is specified in REG field
         operands.src_type = 0;
@@ -666,13 +668,13 @@ operands_t decode_operands(uint8_t opcode, uint8_t *data) {
     if(operands.src_type == 0) {    // Register mode
         operands.src_val = get_register_value(operands.src.register_name);
     } else {                        // Memory mode
-        uint32_t addr = get_addr(DS_register, operands.src.address);
+        // uint32_t addr = get_addr(DS_register, operands.src.address);
         operands.src_val = mem_read(addr, operands.width);
     }
     if(operands.dst_type == 0) {    // Register mode
         operands.dst_val = get_register_value(operands.dst.register_name);
     } else {                        // Memory mode
-        uint32_t addr = get_addr(DS_register, operands.dst.address);
+        // uint32_t addr = get_addr(DS_register, operands.dst.address);
         operands.dst_val = mem_read(addr, operands.width);
     }
     return operands;
@@ -689,7 +691,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
     // JE/JZ    ZF=1                    equal/zero
     // JG/JNLE  ((SF XOR OF) OR ZF)=O   greater / not less nor equal
     // JGE/JNL  (SF XOR OF)=O           greater or equal/not less
-    // JLlJNGE  (SF XOR OF)=1           less/not greater nor equal
+    // JL/JNGE  (SF XOR OF)=1           less/not greater nor equal
     // JLE/JNG  ((SF XOR OF) OR ZF)=1   less or equal/ not greater
     // JNC      CF=O                    not carry
     // JNE/JNZ  ZF=O                    not equal/ not zero             0x75
@@ -825,6 +827,17 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
+        case 0x7C: {   // JL/JNGE SHORT-LABEL: [0x7F, IP-INC8] (p269, 4-30)
+            ip_inc += 2;
+            mylog("logs/main.log", "Instruction 0x7C: Relative Jump JL/JNGE");
+            if ((get_flag(SF) ^ get_flag(OF)) > 0) {
+                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                ip_inc += ((int8_t*)data)[0];
+            } else {
+                mylog("logs/main.log", ": condition PF == 0 didn't meet: PF = %d\n", get_flag(PF));
+            }
+            break;
+        }
         case 0xC3: {  // RET (intrasegment)
             uint16_t sp_reg = get_register_value(SP_register);
             uint32_t addr = get_addr(SS_register, sp_reg);
@@ -949,7 +962,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
                 set_register_value(operands.dst.register_name, operands.src_val);
                 ret_val = 2;
             } else {    // Memory mode
-                mem_write(get_addr(DS_register, operands.dst.address), operands.src_val, operands.width);
+                mem_write(operands.dst.address, operands.src_val, operands.width);
                 ret_val = 4;
             }
             break;
@@ -968,7 +981,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if (operands.dst_type == 0) {   // Register_mode
                 set_register_value(operands.dst.register_name, operands.src_val);
             } else {    // Memory mode
-                mem_write(get_addr(DS_register, operands.dst.address), operands.src_val, operands.width);
+                mem_write(operands.dst.address, operands.src_val, operands.width);
             }
             break;
         }
@@ -980,13 +993,13 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if (operands.src_type == 0) {
                 src_val = get_register_value(operands.src.register_name);
             } else {
-                uint32_t addr = get_addr(DS_register, operands.src.address);
-                src_val = mem_read(addr, operands.width);
+                // uint32_t addr = get_addr(DS_register, operands.src.address);
+                src_val = mem_read(operands.src.address, operands.width);
             }
             if (operands.dst_type == 0) {   // Register_mode
                 set_register_value(operands.dst.register_name, src_val);
             } else {    // Memory mode
-                mem_write(get_addr(DS_register, operands.dst.address), src_val, operands.width);
+                mem_write(operands.dst.address, src_val, operands.width);
             }
             break;
         }
@@ -998,13 +1011,13 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if (operands.src_type == 0) {
                 src_val = get_register_value(operands.src.register_name);
             } else {
-                uint32_t addr = get_addr(DS_register, operands.src.address);
-                src_val = mem_read(addr, operands.width);
+                // uint32_t addr = get_addr(DS_register, operands.src.address);
+                src_val = mem_read(operands.src.address, operands.width);
             }
             if (operands.dst_type == 0) {   // Register_mode
                 set_register_value(operands.dst.register_name, src_val);
             } else {    // Memory mode
-                mem_write(get_addr(DS_register, operands.dst.address), src_val, operands.width);
+                mem_write(operands.dst.address, src_val, operands.width);
             }
             break;
         }
@@ -1033,9 +1046,9 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if (operands.dst_type == 0) {
                 set_register_value(operands.dst.register_name, get_register_value(operands.src.register_name));
             } else {
-                uint32_t addr = get_addr(DS_register, operands.dst.address);
+                // uint32_t addr = get_addr(DS_register, operands.dst.address);
                 uint16_t value = get_register_value(operands.src.register_name);
-                mem_write(addr, value, 2);
+                mem_write(operands.dst.address, value, 2);
             }
             break;
         }
@@ -1064,8 +1077,8 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if (operands.src_type == 0) {
                 set_register_value(operands.dst.register_name, get_register_value(operands.src.register_name));
             } else {
-                uint32_t addr = get_addr(DS_register, operands.src.address);
-                set_register_value(operands.dst.register_name, mem_read(addr, 2));
+                // uint32_t addr = get_addr(DS_register, operands.src.address);
+                set_register_value(operands.dst.register_name, mem_read(operands.src.address, 2));
             }
             break;
         }
@@ -1217,7 +1230,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         case 0xC7: {  // MOV MEM8, IMMED8: [0xC7, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
             if(get_register_field(data[0]) == 0) {
                 operands_t operands = decode_operands(opcode & 0xFC, data); // Treat R/M field as destination
-                uint16_t addr = get_addr(DS_register, operands.dst.address);
+                // uint16_t addr = get_addr(DS_register, operands.dst.address);
                 uint8_t mod_field = get_mode_field(data[0]);
                 uint16_t value = 0;
                 if(mod_field == 0) {
@@ -1235,8 +1248,8 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
                     value = data[3] + (data[4] << 8);
                     ret_val = 6;
                 }
-                mem_write(addr, value, 2);
-                mylog("logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), IMMED16 (0x%04X)\n", opcode, addr, value);
+                mem_write(operands.dst.address, value, 2);
+                mylog("logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), IMMED16 (0x%04X)\n", opcode, operands.dst.address, value);
                 ret_val = 5;
             } else {
                 REGS->invalid_operations ++;
@@ -1301,8 +1314,8 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                     if(operands.dst_type == 0) {    // Register mode
                         set_register_value(operands.dst.register_name, res_val);
                     } else {    // Memory mode
-                        uint32_t addr = get_addr(DS_register, operands.dst.address);
-                        mem_write(addr, res_val, 1);
+                        // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                        mem_write(operands.dst.address, res_val, 1);
                     }
                     update_flags(operands.dst_val, 1, res_val, operands.width, SHIFT_L_OP);
                     mylog("logs/main.log", "Instruction 0x%02X: SAL/SHL REG16/MEM16, 1: dst (%s) = 0x%02X, result = 0x%02X\n", opcode, operands.destination, operands.dst_val, res_val);
@@ -1346,8 +1359,8 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                     if(operands.dst_type == 0) {    // Register mode
                         set_register_value(operands.dst.register_name, res_val);
                     } else {    // Memory mode
-                        uint32_t addr = get_addr(DS_register, operands.dst.address);
-                        mem_write(addr, res_val, 1);
+                        // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                        mem_write(operands.dst.address, res_val, 1);
                     }
                     update_flags(operands.dst_val, 1, res_val, operands.width, SHIFT_L_OP);
                     mylog("logs/main.log", "Instruction 0x%02X: SAL/SHL REG16/MEM16, 1: dst (%s) = 0x%04X, result = 0x%04X\n", opcode, operands.destination, operands.dst_val, res_val);
@@ -1412,8 +1425,8 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                     if(operands.src_type == 0) {    // Register mode
                         set_register_value(operands.src.register_name, res_val);
                     } else {    // Memory mode
-                        uint32_t addr = get_addr(DS_register, operands.src.address);
-                        mem_write(addr, res_val, 1);
+                        // uint32_t addr = get_addr(DS_register, operands.src.address);
+                        mem_write(operands.src.address, res_val, 1);
                     }
                     update_flags(operands.dst_val, operands.src_val, res_val, 2, SHIFT_R_OP);
                     // set_flag(OF, 0);
@@ -1449,6 +1462,15 @@ uint8_t cmp_instr(uint8_t opcode, uint8_t *data) {
             res_val = operands.dst_val - operands.src_val;
             update_flags(operands.dst_val, operands.src_val, res_val, 2, SUB_OP);
             mylog("logs/main.log", "Instruction 0x%02X: CMP %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
+            break;
+        }
+        case 0x3C: {  // CMP AL, IMMED8: [0x3C, DATA-8]
+            operands.src_val = data[0];
+            operands.dst_val = get_register_value(AL_register);
+            res_val = operands.dst_val - operands.src_val;
+            mylog("logs/main.log", "Instruction 0x3D: CMP AX immed16 = 0x%04X\n", operands.src_val);
+            update_flags(operands.dst_val, operands.src_val, res_val, 2, SUB_OP);
+            ret_val = 2;
             break;
         }
         case 0x3D: {  // CMP AX, immed16: [0x3D, DATA-LO, DATA-HI]
@@ -1522,8 +1544,8 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
                 if(operands.dst_type == 0) {    // Register mode
                     set_register_value(operands.dst.register_name, res_val);
                 } else {    // Memory mode
-                    uint32_t addr = get_addr(DS_register, operands.dst.address);
-                    mem_write(addr, res_val, operands.width);
+                    // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                    mem_write(operands.dst.address, res_val, operands.width);
                 }
             } else {
                 REGS->invalid_operations ++;
@@ -1547,8 +1569,8 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
                 if(operands.dst_type == 0) {    // Register mode
                     set_register_value(operands.dst.register_name, res_val);
                 } else {    // Memory mode
-                    uint32_t addr = get_addr(DS_register, operands.dst.address);
-                    mem_write(addr, res_val, operands.width);
+                    // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                    mem_write(operands.dst.address, res_val, operands.width);
                 }
             } else {
                 REGS->invalid_operations ++;
@@ -1562,8 +1584,8 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(DS_register, operands.dst.address);
-                mem_write(addr, res_val, operands.width);
+                // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                mem_write(operands.dst.address, res_val, operands.width);
             }
             break;
         }
@@ -1574,8 +1596,8 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {                        // Memory mode
-                uint32_t addr = get_addr(DS_register, operands.dst.address);
-                mem_write(addr, res_val, operands.width);
+                // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                mem_write(operands.dst.address, res_val, operands.width);
             }
             break;
         }
@@ -1586,8 +1608,8 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(DS_register, operands.dst.address);
-                mem_write(addr, res_val, operands.width);
+                // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                mem_write(operands.dst.address, res_val, operands.width);
             }
             break;
         }
@@ -1621,8 +1643,8 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {                        // Memory mode
-                uint32_t addr = get_addr(DS_register, operands.dst.address);
-                mem_write(addr, res_val, operands.width);
+                // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                mem_write(operands.dst.address, res_val, operands.width);
             }
             break;
         }
@@ -1636,8 +1658,8 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {                        // Memory mode
-                uint32_t addr = get_addr(DS_register, operands.dst.address);
-                mem_write(addr, res_val, operands.width);
+                // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                mem_write(operands.dst.address, res_val, operands.width);
             }
             break;
         }
@@ -1687,8 +1709,8 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
                 if(operands.dst_type == 0) {    // Register mode
                     set_register_value(operands.dst.register_name, res_val);
                 } else {    // Memory mode
-                    uint32_t addr = get_addr(DS_register, operands.dst.address);
-                    mem_write(addr, res_val, operands.width);
+                    // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                    mem_write(operands.dst.address, res_val, operands.width);
                 }
             } else if(reg_field == 7) { // CMP REG8/MEM8, IMMED8: [0x80, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-8]
                 res_val = operands.dst_val - operands.src_val;
@@ -1715,8 +1737,8 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
                 if(operands.dst_type == 0) {    // Register mode
                     set_register_value(operands.dst.register_name, res_val);
                 } else {    // Memory mode
-                    uint32_t addr = get_addr(DS_register, operands.dst.address);
-                    mem_write(addr, res_val, operands.width);
+                    // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                    mem_write(operands.dst.address, res_val, operands.width);
                 }
             } else if(reg_field == 7) { // CMP REG16/MEM16,IMMED16: [0x81, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
                 res_val = operands.dst_val - operands.src_val;
@@ -1777,61 +1799,36 @@ uint8_t xor_instr(uint8_t opcode, uint8_t *data) {
     if(operands.src_type == 0) {    // Register mode
         src_val = get_register_value(operands.src.register_name);
     } else {    // Memory mode
-        uint32_t addr = get_addr(DS_register, operands.src.address);
-        src_val = mem_read(addr, operands.width);
+        // uint32_t addr = get_addr(DS_register, operands.src.address);
+        src_val = mem_read(operands.src.address, operands.width);
     }
     if(operands.dst_type == 0) {    // Register mode
         dst_val = get_register_value(operands.dst.register_name);
     } else {    // Memory mode
-        uint32_t addr = get_addr(DS_register, operands.dst.address);
-        dst_val = mem_read(addr, operands.width);
+        // uint32_t addr = get_addr(DS_register, operands.dst.address);
+        dst_val = mem_read(operands.dst.address, operands.width);
     }
     ret_val += operands.num_bytes;
     switch(opcode) {
         case 0x30:  // XOR REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
-            REGS->invalid_operations ++;
-            printf("Error: Invalid XOR instruction: 0x%02X\n", opcode);
-            break;
         case 0x31:  // XOR REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-            REGS->invalid_operations ++;
-            printf("Error: Invalid XOR instruction: 0x%02X\n", opcode);
-            break;
-        case 0x32: {  // XOR REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
-            // Instruction destination is specified in REG field
-            res_val = src_val ^ dst_val;
-            if(operands.dst_type == 0) {    // Register mode
-                set_register_value(operands.dst.register_name, res_val);
-            } else {    // Memory mode
-                uint32_t addr = get_addr(DS_register, operands.dst.address);
-                mem_write(addr, res_val, 1);
-            }
-            update_flags(dst_val, src_val, res_val, 1, LOGIC_OP);
-            // set_flag(OF, 0);
-            // set_flag(CF, 0);
-            // update_psz_flags(res_val, 1);
-            mylog("logs/main.log", "Instruction 0x32: XOR %s, %s: dst = 0x%02X, src = 0x%02X, result = 0x%02X\n", operands.destination, operands.source, dst_val, src_val, res_val);
-            break;
-        }
+        case 0x32:  // XOR REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x33:  // XOR REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-            // Instruction destination is specified in REG field
             res_val = src_val ^ dst_val;
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(DS_register, operands.dst.address);
-                mem_write(addr, res_val, 2);
+                // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                mem_write(operands.dst.address, res_val, operands.width);
             }
-            update_flags(dst_val, src_val, res_val, 2, LOGIC_OP);
-            // set_flag(OF, 0);
-            // set_flag(CF, 0);
-            // update_psz_flags(res_val, 2);
-            mylog("logs/main.log", "Instruction 0x33: XOR %s, %s: dst = 0x%02X, src = 0x%02X, result = 0x%02X\n", operands.destination, operands.source, dst_val, src_val, res_val);
+            update_flags(dst_val, src_val, res_val, operands.width, LOGIC_OP);
+            mylog("logs/main.log", "Instruction 0x%02X: XOR %s, %s: dst = 0x%04X, src = 0x%04X, result = 0x%04X\n", opcode, operands.destination, operands.source, dst_val, src_val, res_val);
             break;
-        case 0x34:  // XOR AL, IMMED8           [DATA-8]
+        case 0x34:  // XOR AL, IMMED8: [0x34, DATA-8]
             REGS->invalid_operations ++;
             printf("Error: Invalid XOR instruction: 0x%02X\n", opcode);
             break;
-        case 0x35:  // XOR AX, immed16          [DATA-LO, DATA-HI]
+        case 0x35:  // XOR AX, immed16: [0x35, DATA-LO, DATA-HI]
             REGS->invalid_operations ++;
             printf("Error: Invalid XOR instruction: 0x%02X\n", opcode);
             break;
@@ -1861,8 +1858,8 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(DS_register, operands.dst.address);
-                mem_write(addr, res_val, 2);
+                // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                mem_write(operands.dst.address, res_val, 2);
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
             mylog("logs/main.log", "Instruction 0x0A: OR %s (0x%02X), %s (0x%02X); result = 0x%02X\n", operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
@@ -1872,8 +1869,8 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(DS_register, operands.dst.address);
-                mem_write(addr, res_val, 2);
+                // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                mem_write(operands.dst.address, res_val, 2);
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
             mylog("logs/main.log", "Instruction 0x%02X: OR %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
@@ -1909,8 +1906,8 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                uint32_t addr = get_addr(DS_register, operands.dst.address);
-                mem_write(addr, res_val, 2);
+                // uint32_t addr = get_addr(DS_register, operands.dst.address);
+                mem_write(operands.dst.address, res_val, 2);
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
             mylog("logs/main.log", "Instruction 0x22: AND %s (0x%02X), %s (0x%02X); result = 0x%04X\n", operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
@@ -1994,6 +1991,10 @@ uint8_t pop_reg_instr(uint8_t opcode, uint8_t *data) {
             pop_register(DI_register);
             break;
         }
+        case 0x9D: {  // POPF
+            pop_register(FLAGS_register);
+            break;
+        }
         default:
             REGS->invalid_operations ++;
             printf("Error: Invalid POP instruction: 0x%02X\n", opcode);
@@ -2059,6 +2060,11 @@ uint8_t push_reg_instr(uint8_t opcode, uint8_t *data) {
         case 0x57: {  // PUSH DI
             push_register(get_register_value(DI_register));
             mylog("logs/main.log", "Instruction 0x%02X: PUSH DI\n", opcode);
+            break;
+        }
+        case 0x9C: {  // PUSHF
+            push_register(get_register_value(FLAGS_register));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSHF\n", opcode);
             break;
         }
         default:
@@ -2470,7 +2476,7 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x39:  // CMP REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x3A:  // CMP REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x3B:  // CMP REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x3C:  // CMP AL, IMMED8           [DATA-8]
+        case 0x3C:  // CMP AL, IMMED8: [0x3C, DATA-8]
         case 0x3D:  // CMP AX, immed16: [0x3D, DATA-LO, DATA-HI]
             ret_val = cmp_instr(memory[0], &memory[1]);
             break;
@@ -2579,19 +2585,18 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x7B:  // JNP/JPO SHORT LABEL: [0x7B, IP-INC8]
             ret_val = jmp_instr(memory[0], &memory[1]);
             break;
-        // case 0x7C:
-        //     if(jl_op())
-        //         REGS->IP = memory[1];
-        //     break;
-        // case 0x7D:
+        case 0x7C:   // JL/JNGE SHORT-LABEL: [0x7F, IP-INC8]
+            ret_val = jmp_instr(memory[0], &memory[1]);
+            break;
+        // case 0x7D:   // JNL/JGE SHORT-LABEL: [0x7F, IP-INC8]
         //     if(!jl_op())
         //         REGS->IP = memory[1];
         //     break;
-        // case 0x7E:
+        // case 0x7E:   // JLE/JNG SHORT-LABEL: [0x7F, IP-INC8]
         //     if(jle_op())
         //         REGS->IP = memory[1];
         //     break;
-        // case 0x7F:
+        // case 0x7F:   // JNLE/JG SHORT-LABEL: [0x7F, IP-INC8]
         //     if(!jle_op())
         //         REGS->IP = memory[1];
         //     break;
@@ -2693,8 +2698,7 @@ int16_t process_instruction(uint8_t * memory) {
         //             break;
         //     }
         //     break;
-        case 0x83:
-            // 16-bit operations
+        case 0x83:  // 16-bit operations
             switch(get_register_field(memory[1])) {
                 case 0: // ADD REG16/MEM16, IMMED8: [0x83, MOD 000 RIM, (DISP-LO),(DISP-HI), DATA-SX]
                     // printf("ERROR: Unimplemented ADD (0x83) instruction!\n");
@@ -2807,12 +2811,12 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x9B:  // WAIT
         //     REGS->IP += wait_op();
         //     break;
-        // case 0x9C:  // PUSHF
-        //     REGS->IP += pushf_op();
-        //     break;
-        // case 0x9D:  // POPF
-        //     REGS->IP += popf_op();
-        //     break;
+        case 0x9C:  // PUSHF
+            ret_val = push_reg_instr(memory[0], &memory[1]);
+            break;
+        case 0x9D:  // POPF
+            ret_val = pop_reg_instr(memory[0], &memory[1]);
+            break;
         case 0x9E:  // SAHF
             ret_val = sahf_instr();
             break;
@@ -3235,7 +3239,8 @@ void set_delayed_int(uint8_t vector, uint16_t dely_ticks) {
     } else {
         printf("Setting interrupt %d with IF = 0\n", vector);
     }
-    REGS->int_vector = vector;
+    delayed_int_vector = vector;
+    delayed_int_timeout = dely_ticks;
 }
 
 void set_int_vector(uint8_t vector) {

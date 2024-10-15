@@ -20,7 +20,7 @@ uint8_t cmd_reg;
 
 void update_portc(void) {
     portc_reg = 0;
-    if((portb_reg & 0x08) > 0) {
+    if((portb_reg & 0x08) == 0) {
         portc_reg |= SW1;
         portc_reg |= SW2 << 1;
         portc_reg |= SW3 << 2;
