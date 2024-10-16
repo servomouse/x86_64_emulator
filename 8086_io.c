@@ -12,7 +12,7 @@ uint8_t *IO_SPACE = NULL;
 
 void io_write(uint32_t addr, uint16_t value, uint8_t width) {
     
-    if ((addr >= 0x3B0) && (addr <= 0x3BF)) {
+    if ((addr >= 0x3B0) && (addr <= 0x3DC)) {
         mda_write(addr, value, width);
     } else if ((addr >= 0x40) && (addr <= 0x43)) {
         timer_write(addr, value, width);
@@ -51,7 +51,7 @@ uint16_t io_read(uint32_t addr, uint8_t width) {
     //     ret_val = 0xFFFF;
     // }
 
-    if ((addr >= 0x3B0) && (addr <= 0x3BF)) {
+    if ((addr >= 0x3B0) && (addr <= 0x3DC)) {
         ret_val = mda_read(addr, width);
     } else if ((addr >= 0x40) && (addr <= 0x43)) {
         ret_val = timer_read(addr, width);

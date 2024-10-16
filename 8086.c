@@ -2320,10 +2320,10 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x2D:  // SUB AX, immed16          [DATA-LO, DATA-HI]
             ret_val = sub_instr(memory[0], &memory[1]);
             break;
-        // case 0x2E:  // CS:
-        //     segment_override(CS);  // CS: segment overrige prefix
-        //     REGS->IP += 1;
-        //     break;
+        case 0x2E:  // CS:
+            mylog("logs/main.log", "Instruction 0x2E: CS (override segment)\n");
+            override_segment = CS_register;
+            break;
         // case 0x2F:  // DAS
         //     das_op();
         //     REGS->IP += 1;
@@ -2336,10 +2336,11 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x35:  // XOR AX, immed16          [DATA-LO, DATA-HI]
             ret_val = xor_instr(memory[0], &memory[1]);
             break;
-        // case 0x36:  // SS:
-        //     segment_override(SS);  // SS: segment overrige prefix
-        //     REGS->IP += 1;
-        //     break;
+        case 0x36:  // SS:
+            mylog("logs/main.log", "Instruction 0x36: SS (override segment)\n");
+            override_segment = SS_register;
+            break;
+            break;
         // case 0x37:  // AAA
         //     aaa_op();
         //     REGS->IP += 1;
@@ -2352,10 +2353,11 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x3D:  // CMP AX, immed16: [0x3D, DATA-LO, DATA-HI]
             ret_val = cmp_instr(memory[0], &memory[1]);
             break;
-        // case 0x3E:  // DS:
-        //     segment_override(DS);  // DS: segment overrige prefix
-        //     REGS->IP += 1;
-        //     break;
+        case 0x3E:  // DS:
+            mylog("logs/main.log", "Instruction 0x3E: DS (override segment)\n");
+            override_segment = DS_register;
+            break;
+            break;
         // case 0x3F:  // AAS
         //     aas_op();
         //     REGS->IP += 1;

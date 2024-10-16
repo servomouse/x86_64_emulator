@@ -26,6 +26,8 @@ typedef struct {    // | Type                       | I/O | 40x25 | 80x25 | Grap
 
 mda_regs_t *mda_regs;
 
+uint8_t status_register = 0x08;
+
 uint8_t mda_init(void) {
     mda_regs = calloc(1, sizeof(mda_regs_t));
     return 0;
@@ -38,6 +40,9 @@ uint8_t mda_write(uint32_t addr, uint16_t value, uint8_t width) {
 
 uint16_t mda_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
+    if(addr == 0x3DA) {
+        ret_val = status_register;
+    }
     mylog(MDA_LOG_FILE, "MDA_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
