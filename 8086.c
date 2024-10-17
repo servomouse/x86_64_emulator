@@ -1929,6 +1929,11 @@ uint8_t push_reg_instr(uint8_t opcode, uint8_t *data) {
             mylog("logs/main.log", "Instruction 0x%02X: PUSH AX\n", opcode);
             break;
         }
+        case 0x51: {  // PUSH CX
+            push_register(get_register_value(CX_register));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSH CX\n", opcode);
+            break;
+        }
         case 0x52: {  // PUSH DX
             push_register(get_register_value(DX_register));
             mylog("logs/main.log", "Instruction 0x%02X: PUSH DX\n", opcode);
@@ -1979,6 +1984,20 @@ uint8_t esc_instr(uint8_t opcode, uint8_t *data) {
 int16_t inc_instr(uint8_t opcode, uint8_t *data) {
     int16_t ret_val = 1;
     switch(opcode) {
+        case 0x40: {  // INC AX
+            uint16_t val = get_register_value(AX_register);
+            mylog("logs/main.log", "Instruction 0x%02X: INC AX: 0x%04X => 0x%04X\n", opcode, val, val+1);
+            set_register_value(AX_register, val + 1);
+            update_flags(val, 1, val+1, 2, ADD_OP);
+            break;
+        }
+        case 0x41: {  // INC CX
+            uint16_t val = get_register_value(CX_register);
+            mylog("logs/main.log", "Instruction 0x%02X: INC CX: 0x%04X => 0x%04X\n", opcode, val, val+1);
+            set_register_value(CX_register, val + 1);
+            update_flags(val, 1, val+1, 2, ADD_OP);
+            break;
+        }
         case 0x42: {  // INC DX
             uint16_t val = get_register_value(DX_register);
             mylog("logs/main.log", "Instruction 0x%02X: INC DX: 0x%04X => 0x%04X\n", opcode, val, val+1);
@@ -1990,6 +2009,27 @@ int16_t inc_instr(uint8_t opcode, uint8_t *data) {
             uint16_t val = get_register_value(BX_register);
             mylog("logs/main.log", "Instruction 0x%02X: INC BX: 0x%04X => 0x%04X\n", opcode, val, val+1);
             set_register_value(BX_register, val + 1);
+            update_flags(val, 1, val+1, 2, ADD_OP);
+            break;
+        }
+        case 0x44: {  // INC SP
+            uint16_t val = get_register_value(SP_register);
+            mylog("logs/main.log", "Instruction 0x%02X: INC SP: 0x%04X => 0x%04X\n", opcode, val, val+1);
+            set_register_value(SP_register, val + 1);
+            update_flags(val, 1, val+1, 2, ADD_OP);
+            break;
+        }
+        case 0x45: {  // INC BP
+            uint16_t val = get_register_value(BP_register);
+            mylog("logs/main.log", "Instruction 0x%02X: INC BP: 0x%04X => 0x%04X\n", opcode, val, val+1);
+            set_register_value(BP_register, val + 1);
+            update_flags(val, 1, val+1, 2, ADD_OP);
+            break;
+        }
+        case 0x46: {  // INC SI
+            uint16_t val = get_register_value(SI_register);
+            mylog("logs/main.log", "Instruction 0x%02X: INC SI: 0x%04X => 0x%04X\n", opcode, val, val+1);
+            set_register_value(SI_register, val + 1);
             update_flags(val, 1, val+1, 2, ADD_OP);
             break;
         }
@@ -2014,6 +2054,48 @@ int16_t dec_instr(uint8_t opcode, uint8_t *data) {
             uint16_t val = get_register_value(AX_register);
             mylog("logs/main.log", "Instruction 0x%02X: DEC AX: 0x%04X => 0x%04X\n", opcode, val, val-1);
             set_register_value(AX_register, val - 1);
+            update_flags(val, 1, val-1, 2, SUB_OP);
+            break;
+        }
+        case 0x49: {  // DEC CX
+            uint16_t val = get_register_value(CX_register);
+            mylog("logs/main.log", "Instruction 0x%02X: DEC CX: 0x%04X => 0x%04X\n", opcode, val, val-1);
+            set_register_value(CX_register, val - 1);
+            update_flags(val, 1, val-1, 2, SUB_OP);
+            break;
+        }
+        case 0x4A: {  // DEC DX
+            uint16_t val = get_register_value(DX_register);
+            mylog("logs/main.log", "Instruction 0x%02X: DEC DX: 0x%04X => 0x%04X\n", opcode, val, val-1);
+            set_register_value(DX_register, val - 1);
+            update_flags(val, 1, val-1, 2, SUB_OP);
+            break;
+        }
+        case 0x4B: {  // DEC BX
+            uint16_t val = get_register_value(BX_register);
+            mylog("logs/main.log", "Instruction 0x%02X: DEC BX: 0x%04X => 0x%04X\n", opcode, val, val-1);
+            set_register_value(BX_register, val - 1);
+            update_flags(val, 1, val-1, 2, SUB_OP);
+            break;
+        }
+        case 0x4C: {  // DEC SP
+            uint16_t val = get_register_value(SP_register);
+            mylog("logs/main.log", "Instruction 0x%02X: DEC SP: 0x%04X => 0x%04X\n", opcode, val, val-1);
+            set_register_value(SP_register, val - 1);
+            update_flags(val, 1, val-1, 2, SUB_OP);
+            break;
+        }
+        case 0x4D: {  // DEC BP
+            uint16_t val = get_register_value(BP_register);
+            mylog("logs/main.log", "Instruction 0x%02X: DEC BP: 0x%04X => 0x%04X\n", opcode, val, val-1);
+            set_register_value(BP_register, val - 1);
+            update_flags(val, 1, val-1, 2, SUB_OP);
+            break;
+        }
+        case 0x4E: {  // DEC SI
+            uint16_t val = get_register_value(SI_register);
+            mylog("logs/main.log", "Instruction 0x%02X: DEC SI: 0x%04X => 0x%04X\n", opcode, val, val-1);
+            set_register_value(SI_register, val - 1);
             update_flags(val, 1, val-1, 2, SUB_OP);
             break;
         }
@@ -2362,28 +2444,28 @@ int16_t process_instruction(uint8_t * memory) {
         //     aas_op();
         //     REGS->IP += 1;
         //     break;
-        // case 0x40:  // INC AX
-        // case 0x41:  // INC CX
+        case 0x40:  // INC AX
+        case 0x41:  // INC CX
         case 0x42:  // INC DX
         case 0x43:  // INC BX
-        // case 0x44:  // INC SP
-        // case 0x45:  // INC BP
-        // case 0x46:  // INC SI
+        case 0x44:  // INC SP
+        case 0x45:  // INC BP
+        case 0x46:  // INC SI
         case 0x47:  // INC DI
             ret_val = inc_instr(memory[0], &memory[1]);
             break;
         case 0x48:  // DEC AX
-        // case 0x49:  // DEC CX
-        // case 0x4A:  // DEC DX
-        // case 0x4B:  // DEC BX
-        // case 0x4C:  // DEC SP
-        // case 0x4D:  // DEC BP
-        // case 0x4E:  // DEC SI
+        case 0x49:  // DEC CX
+        case 0x4A:  // DEC DX
+        case 0x4B:  // DEC BX
+        case 0x4C:  // DEC SP
+        case 0x4D:  // DEC BP
+        case 0x4E:  // DEC SI
         case 0x4F:  // DEC DI
             ret_val = dec_instr(memory[0], &memory[1]);
             break;
         case 0x50:  // PUSH AX
-        // case 0x51:  // PUSH CX
+        case 0x51:  // PUSH CX
         case 0x52:  // PUSH DX
         case 0x53:  // PUSH BX
         case 0x54:  // PUSH SP
@@ -2621,25 +2703,17 @@ int16_t process_instruction(uint8_t * memory) {
         //     REGS->IP += xchg_16b_op(memory[1], &memory[2]);
         //     break;
         case 0x88:  // MOV REG8/MEM8, REG8: 0x88, MOD REG R/M (DISP-LO), (DISP-HI)]
-            ret_val = mov_instr(memory[0], &memory[1]);
-            break;
         case 0x89:  // MOV REG16/MEM16, REG16: [0x89, MOD REG R/M, (DISP-LO),(DISP-HI)]
-            ret_val = mov_instr(memory[0], &memory[1]);
-            break;
         case 0x8A:  // MOV REG8, REG8/MEM8: [0x8A, MOD REG R/M, (DISP-LO),(DISP-HI)]
-            ret_val = mov_instr(memory[0], &memory[1]);
-            break;
         case 0x8B:  // MOV REG16, REG16/MEM16: [0x8B, MOD REG R/M, (DISP-LO), (DISP-HI)]
-            ret_val = mov_instr(memory[0], &memory[1]);
-            break;
-        case 0x8C:
+        case 0x8C:  // MOV REG16/MEM16, SEGREG: [0x8C, MOD 0SR R/M, (DISP-LO), (DISP-HI)]
             // reg_field: Segment register code: OO=ES, 01=CS, 10=SS, 11 =DS
             ret_val = mov_instr(memory[0], &memory[1]);
             break;
         // case 0x8D:  // LEA REG16, MEM16
         //     REGS->IP += lea_op(memory[1], &memory[2]);  // DISP-LO, DISP-HI
         //     break;
-        case 0x8E:
+        case 0x8E:  // MOV SEGREG, REG16/MEM16: [0x8C, MOD 0SR R/M, (DISP-LO), (DISP-HI)]
             // reg_field: Segment register code: OO=ES, 01=CS, 10=SS, 11 =DS
             ret_val = mov_instr(memory[0], &memory[1]);
             break;
