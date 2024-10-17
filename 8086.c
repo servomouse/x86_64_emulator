@@ -487,37 +487,37 @@ void set_register_value(register_name_t reg_name, uint16_t value) {
             REGS->AX = value;
             break;
         case AL_register:
-            REGS->AX = set_l(REGS->AX, value);
+            REGS->AX = set_l(REGS->AX, value & 0xFF);
             break;
         case AH_register:
-            REGS->AX = set_h(REGS->AX, value);
+            REGS->AX = set_h(REGS->AX, value & 0xFF);
             break;
         case BX_register:
             REGS->BX = value;
             break;
         case BL_register:
-            REGS->BX = set_l(REGS->BX, value);
+            REGS->BX = set_l(REGS->BX, value & 0xFF);
             break;
         case BH_register:
-            REGS->BX = set_h(REGS->BX, value);
+            REGS->BX = set_h(REGS->BX, value & 0xFF);
             break;
         case CX_register:
             REGS->CX = value;
             break;
         case CL_register:
-            REGS->CX = set_l(REGS->CX, value);
+            REGS->CX = set_l(REGS->CX, value & 0xFF);
             break;
         case CH_register:
-            REGS->CX = set_h(REGS->CX, value);
+            REGS->CX = set_h(REGS->CX, value & 0xFF);
             break;
         case DX_register:
             REGS->DX = value;
             break;
         case DL_register:
-            REGS->DX = set_l(REGS->DX, value);
+            REGS->DX = set_l(REGS->DX, value & 0xFF);
             break;
         case DH_register:
-            REGS->DX = set_h(REGS->DX, value);
+            REGS->DX = set_h(REGS->DX, value & 0xFF);
             break;
         case SI_register:
             REGS->SI = value;
@@ -1547,11 +1547,11 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             break;
         }
         case 0x04: {  // ADD AL, IMMED8, [0x04, DATA-8]
-            int16_t src_val = data[0];
-            int16_t dst_val = get_register_value(AL_register);
+            int8_t src_val = data[0];
+            int8_t dst_val = get_register_value(AL_register);
             res_val = dst_val + src_val;
-            mylog("logs/main.log", "Instruction 0x%02X: ADD AX (0x%04X), immed (0x%04X); res = 0x%04X\n", opcode, dst_val, src_val, res_val);
-            update_flags(dst_val, src_val, res_val, 2, ADD_OP);
+            mylog("logs/main.log", "Instruction 0x%02X: ADD AL (0x%04X), immed (0x%04X); res = 0x%04X\n", opcode, dst_val, src_val, res_val);
+            update_flags(dst_val, src_val, res_val, 1, ADD_OP);
             set_register_value(AL_register, res_val);
             ret_val = 2;
             break;

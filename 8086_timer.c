@@ -1,4 +1,5 @@
 #include "8086_timer.h"
+#include "8086.h"
 #include "utils.h"
 
 #define TIMER_LOG_FILE "logs/timer.log"
@@ -12,7 +13,7 @@ typedef struct {
     uint8_t write_counter;
     uint8_t is_counting;
     uint8_t gate;
-    void (*output_cb)(int);
+    void (*output_cb)(uint8_t);
 } counter_t;
 
 typedef enum {
@@ -52,7 +53,7 @@ static void process_event(counter_t *timer, timer_event_t event) {
     }
 }
 
-static void dummy_cb(int a) {
+static void dummy_cb(uint8_t a) {
     return;
 }
 
@@ -65,7 +66,7 @@ uint8_t timer_init(void) {
     counter0.read_counter = 0;
     counter0.write_counter = 0;
     counter0.is_counting = 0;
-    counter0.output_cb = &dummy_cb;
+    counter0.output_cb = &set_int_vector;
     counter1.value = 0;
     counter1.mode = 0;
     counter1.read_counter = 0;
@@ -213,7 +214,7 @@ static void counter_tick(counter_t *timer) {
     }
     if(timer->inner_value == 0) {
         if((mode == 0) || (mode == 1)) {
-            (*(timer->output_cb))(1);
+            (*(timer->output_cb))(0);
             timer->is_counting = 0;
         } else if((mode == 2) || (mode == 3) || (mode == 6) || (mode == 7)) {
             (*(timer->output_cb))(1);
@@ -264,7 +265,7 @@ void timer_set_gate(uint8_t idx, uint8_t value) {
     }
 }
 
-void timer_set_output_cb(uint8_t idx, void (*fun_ptr)(int)) {
+void timer_set_output_cb(uint8_t idx, void (*fun_ptr)(uint8_t)) {
     if(idx == 0) {
         counter0.output_cb = fun_ptr;
     } else if(idx == 1) {
