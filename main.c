@@ -4,6 +4,9 @@
 #include <string.h>
 #include "utils.h"
 #include "8086.h"
+#include "8086_io.h"
+#include "devices/8259a_interrupt_controller.h"
+
 #include "log_server_iface/logs_win.h"
 
 int main(int argc, char *argv[]) {
@@ -19,6 +22,11 @@ int main(int argc, char *argv[]) {
     if (EXIT_FAILURE == init_cpu(continue_simulation)) {
         return EXIT_FAILURE;
     }
+    if(EXIT_FAILURE == io_init(continue_simulation)) {
+        return EXIT_FAILURE;
+    }
+    int_controller_reset();
+    map_device(0xA0, 0xAF, &int_controller_write, &int_controller_read);
     while (EXIT_SUCCESS == cpu_tick()) { // Run CPU
         // sleep_ms(5);
 		// clear_console();

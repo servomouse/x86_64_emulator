@@ -2,7 +2,7 @@
 #include "8086.h"
 #include "8086_io.h"
 #include "8086_mem.h"
-#include "8086_timer.h"
+#include "8253_timer.h"
 #include "utils.h"
 
 #define COMMON_LOG_FILE "logs/cpu_log.txt"
@@ -3293,9 +3293,6 @@ int init_cpu(uint8_t continue_simulation) {
     if(MEMORY == NULL) {
         return EXIT_FAILURE;
     }
-    if(EXIT_FAILURE == io_init(continue_simulation)) {
-        return EXIT_FAILURE;
-    }
     REGS = calloc(1, sizeof(registers_t));
     REGS->int_vector = 0xFFFF;
     if(continue_simulation) {
@@ -3345,7 +3342,7 @@ int cpu_tick(void) {
         print_proc_commands();
         return EXIT_FAILURE;
     }
-    if (REGS->invalid_operations < 1) {
+    if ((REGS->invalid_operations < 1) && (0 == get_io_error())) {
         REGS->ticks++;
         REGS->IP += inc;
         if(REGS->ticks & 0x0001) {
