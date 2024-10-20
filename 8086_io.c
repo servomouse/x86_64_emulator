@@ -81,6 +81,7 @@ static uint8_t check_allocation(void) {
 }
 
 /* Retunrs an ID which can be used to unmap the device. In case of error returns 0 */
+__declspec(dllexport)
 uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR, READ_FUNC_PTR) {
     uint32_t id = get_id(start_addr, end_addr);
     uint32_t overlaps_id = range_overlaps(start_addr, end_addr);
@@ -112,6 +113,7 @@ uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR, READ
 }
 
 /* Use the ID returned by the map_device function to unmap it */
+__declspec(dllexport)
 void unmap_device(uint32_t id) {
     for(uint32_t i=0; i<io_space.num_devices; i++) {
         if(io_space.dev_table[i].id == id) {
@@ -121,6 +123,7 @@ void unmap_device(uint32_t id) {
     }
 }
 
+__declspec(dllexport)
 void io_write(uint32_t addr, uint16_t value, uint8_t width) {
     uint8_t addr_found = 0;
     for(uint32_t i=0; i<io_space.num_devices; i++) {
@@ -158,6 +161,7 @@ void io_write(uint32_t addr, uint16_t value, uint8_t width) {
 
 // uint8_t counter = 0xFF;
 
+__declspec(dllexport)
 uint16_t io_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0xFF;
     if(width == 2) {
@@ -235,7 +239,7 @@ int restore_io(uint8_t *io_space, const char *filename) {
     return EXIT_SUCCESS;
 }
 
-int io_init(uint8_t continue_simulation) {
+int io_reset(uint8_t continue_simulation) {
     IO_SPACE = (uint8_t*)calloc(sizeof(uint8_t), IO_SPACE_SIZE);
     mda_init();
     ppi_init();

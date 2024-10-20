@@ -6,9 +6,17 @@
 #endif
 #include <stdarg.h>
 #include <time.h>
-#include "log_server_iface/logs_win.h"
+// #include "log_server_iface/logs_win.h"
 
 #define BUFFER_SIZE 1024
+
+typedef void(*log_func_t)(const char*, char*);
+log_func_t print_log;
+
+__declspec(dllexport)
+void set_log_func(log_func_t python_log_func) {
+    print_log = python_log_func;
+}
 
 void mylog(const char *log_file, const char *format, ...) {
     va_list args;
@@ -17,7 +25,8 @@ void mylog(const char *log_file, const char *format, ...) {
     vsnprintf(buffer, sizeof(buffer), format, args);
     // vprintf(format, args);
     // printf("Processing string %s\n", buffer);
-    log_server_send(log_file, buffer);
+    // log_server_send(log_file, buffer);
+    print_log(log_file, buffer);
     #ifdef PRINT_LOGS_TO_FILE
     FILE *file = fopen(LOG_FILE_NAME, "a");
     if(file) {
@@ -50,5 +59,47 @@ char *get_time(void) {
     tmp = localtime(&t);
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", tmp);
     return buffer;
+}
+
+int store_data(void *data, size_t size, char *filename) {
+    uint64_t hash = get_hash((uint8_t*)data, size);
+    FILE *file = fopen(filename, "wb");
+    if (file == NULL) {
+        printf("ERROR: Failed to open file %s\n", filename);
+        return EXIT_FAILURE;
+    }
+    fwrite((uint8_t *)data, 1, size, file);
+    fwrite(&hash, sizeof(hash), 1, file);
+    fclose(file);
+    return EXIT_SUCCESS;
+}
+
+int restore_data(void *data, size_t size, char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (file == NULL) {
+        printf("ERROR: Failed to open file %s\n", filename);
+        return EXIT_FAILURE;
+    }
+    size_t len_data = fread((uint8_t *)data, 1, size, file);
+    uint64_t hash;
+    fread(&hash, sizeof(hash), 1, file);
+    if(hash != get_hash((uint8_t*)data, size)) {
+        printf("ERROR: File corrupted (hash check failed)\n", filename);
+        return EXIT_FAILURE;
+    }
+    fclose(file);
+    if(len_data != size) {
+        printf("ERROR: Failed reading file %s (%d of %d bytes were read)\n", filename, len_data, size);
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
+uint64_t get_hash(uint8_t *data, size_t size) {
+    uint64_t hash = 5381;
+    for(size_t i=0; i<size; i++) {
+        hash = ((hash << 5) + hash) + data[i];
+    }
+    return hash;
 }
 

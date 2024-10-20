@@ -22,11 +22,11 @@ int main(int argc, char *argv[]) {
     if (EXIT_FAILURE == init_cpu(continue_simulation)) {
         return EXIT_FAILURE;
     }
-    if(EXIT_FAILURE == io_init(continue_simulation)) {
+    if(EXIT_FAILURE == io_reset(continue_simulation)) {
         return EXIT_FAILURE;
     }
     int_controller_reset();
-    map_device(0xA0, 0xAF, &int_controller_write, &int_controller_read);
+    // map_device(0xA0, 0xAF, &int_controller_write, &int_controller_read);
     while (EXIT_SUCCESS == cpu_tick()) { // Run CPU
         // sleep_ms(5);
 		// clear_console();

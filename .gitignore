@@ -4,3 +4,4 @@ main.exe
 main
 8086_stash.c
 logs/*
+data/*

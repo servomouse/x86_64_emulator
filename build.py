@@ -1,7 +1,8 @@
 import subprocess
 import os
 import sys
-
+# gcc -shared -o bin/8259a_int_controller.dll devices/8259a_interrupt_controller.c utils.c log_server_iface/logs_win.c -lws2_32 -I. -I./devices
+# gcc -shared -o bin/8259a_int_controller.dll devices/8259a_interrupt_controller.c utils.c -I. -I./devices
 
 files_to_build = ["main.c",
                   "8086.c",
