@@ -1,12 +1,45 @@
 // https://en.wikipedia.org/wiki/Intel_8086
 #include "8086.h"
-#include "8086_io.h"
-#include "8086_mem.h"
-#include "8253_timer.h"
-#include "utils.h"
+// #include "8086_io.h"
+// #include "8086_mem.h"
+// #include "8253_timer.h"
+#include <string.h>
 
 #define COMMON_LOG_FILE "logs/cpu_log.txt"
 #define REGISTERS_FILE  "logs/regs.txt"
+#define CPU_DUMP_FILE  "data/cpu_regs.bin"
+
+WRITE_FUNC_PTR(mem_write);
+READ_FUNC_PTR(mem_read);
+WRITE_FUNC_PTR(io_write);
+READ_FUNC_PTR(io_read);
+
+typedef enum {
+    invalid_register = 0,
+    AX_register,
+    AL_register,
+    AH_register,
+    BX_register,
+    BL_register,
+    BH_register,
+    CX_register,
+    CL_register,
+    CH_register,
+    DX_register,
+    DL_register,
+    DH_register,
+    SI_register,
+    DI_register,
+    BP_register,
+    SP_register,
+    IP_register,
+    CS_register,
+    DS_register,
+    ES_register,
+    SS_register,
+    FLAGS_register,
+    override_segment,
+} register_name_t;
 
 typedef struct {
     // Helper registers
@@ -34,36 +67,11 @@ typedef struct {
     uint16_t flags;
     uint16_t int_vector;    // 0xFFFF is invalid value
     uint16_t prefixes;
+    register_name_t override_segment;
 } registers_t;
 registers_t *REGS = NULL;
 
-typedef enum {
-    invalid_register = 0,
-    AX_register,
-    AL_register,
-    AH_register,
-    BX_register,
-    BL_register,
-    BH_register,
-    CX_register,
-    CL_register,
-    CH_register,
-    DX_register,
-    DL_register,
-    DH_register,
-    SI_register,
-    DI_register,
-    BP_register,
-    SP_register,
-    IP_register,
-    CS_register,
-    DS_register,
-    ES_register,
-    SS_register,
-    FLAGS_register,
-} register_name_t;
-
-register_name_t override_segment = invalid_register;
+// register_name_t override_segment = invalid_register;
 
 typedef enum {
     CF = 0,    // Carry flag
@@ -475,6 +483,8 @@ uint16_t get_register_value(register_name_t reg_name) {
             return REGS->ES;
         case SS_register:
             return REGS->SS;
+        case override_segment:
+            return REGS->override_segment;
         default:
             mylog("logs/main.log", "Invalid register name: 0x%02X\n", reg_name);
             return 0;
@@ -549,6 +559,9 @@ void set_register_value(register_name_t reg_name, uint16_t value) {
         case FLAGS_register:
             REGS->flags = value;
             break;
+        case override_segment:
+            REGS->override_segment = value;
+            break;
         default:
             mylog("logs/main.log", "Invalid register name: 0x%02X\n", reg_name);
     }
@@ -557,9 +570,9 @@ void set_register_value(register_name_t reg_name, uint16_t value) {
 uint32_t get_addr(register_name_t segment_reg, uint16_t addr) {
     // override_segment
     uint32_t ret_val = 0;
-    if(override_segment != invalid_register) {
+    if(get_register_value(override_segment) != invalid_register) {
         ret_val = get_register_value(override_segment);
-        override_segment = invalid_register;
+        set_register_value(override_segment, invalid_register);
     } else {
         ret_val = get_register_value(segment_reg);
     }
@@ -2388,7 +2401,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0x26:  // ES:
             mylog("logs/main.log", "Instruction 0x26: ES (override segment)\n");
-            override_segment = ES_register;
+            set_register_value(override_segment, ES_register);
             break;
         // case 0x27:  // DAA
         //     daa_op();
@@ -2404,7 +2417,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0x2E:  // CS:
             mylog("logs/main.log", "Instruction 0x2E: CS (override segment)\n");
-            override_segment = CS_register;
+            set_register_value(override_segment, CS_register);
             break;
         // case 0x2F:  // DAS
         //     das_op();
@@ -2420,7 +2433,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0x36:  // SS:
             mylog("logs/main.log", "Instruction 0x36: SS (override segment)\n");
-            override_segment = SS_register;
+            set_register_value(override_segment, SS_register);
             break;
             break;
         // case 0x37:  // AAA
@@ -2437,7 +2450,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0x3E:  // DS:
             mylog("logs/main.log", "Instruction 0x3E: DS (override segment)\n");
-            override_segment = DS_register;
+            set_register_value(override_segment, DS_register);
             break;
             break;
         // case 0x3F:  // AAS
@@ -3286,13 +3299,13 @@ int restore_registers(char *filename, registers_t *regs) {
     return EXIT_SUCCESS;
 }
 
-static uint8_t *MEMORY = NULL;
+// static uint8_t *MEMORY = NULL;
 
 int init_cpu(uint8_t continue_simulation) {
-    MEMORY = mem_init(continue_simulation);
-    if(MEMORY == NULL) {
-        return EXIT_FAILURE;
-    }
+    // MEMORY = mem_init(continue_simulation);
+    // if(MEMORY == NULL) {
+    //     return EXIT_FAILURE;
+    // }
     REGS = calloc(1, sizeof(registers_t));
     REGS->int_vector = 0xFFFF;
     if(continue_simulation) {
@@ -3307,8 +3320,8 @@ int init_cpu(uint8_t continue_simulation) {
 
 void cpu_save_state(void) {
     store_registers(REGISTERS_FILE, REGS);
-    store_memory();
-    store_io();
+    // store_memory();
+    // store_io();
 }
 
 uint8_t cpu_is_halted(void) {
@@ -3335,24 +3348,108 @@ int cpu_tick(void) {
             set_flag(IF, 0);
             set_flag(TF, 0);}
         }
-    uint32_t addr = REGS->CS;
-    uint8_t inc = process_instruction(&MEMORY[(addr<<4) + REGS->IP]);
+    uint32_t addr = ((uint32_t)REGS->CS << 4) + REGS->IP;
+    static uint8_t code[10];
+    for(uint8_t i=0; i<sizeof(code); i++) {
+        code[i] = mem_read(addr+i, 1);
+    }
+    uint8_t inc = process_instruction(code);
     if (cpu_is_halted()) {
         printf("ERROR: CPU is halted!\n");
         print_proc_commands();
         return EXIT_FAILURE;
     }
-    if ((REGS->invalid_operations < 1) && (0 == get_io_error())) {
+    if ((REGS->invalid_operations < 1)) {
         REGS->ticks++;
         REGS->IP += inc;
-        if(REGS->ticks & 0x0001) {
-            timer_tick();
-        }
+        // if(REGS->ticks & 0x0001) {
+        //     timer_tick();
+        // }
         return EXIT_SUCCESS;
     }
     // store_registers(REGISTERS_FILE, REGS);
     cpu_save_state();
     mylog("logs/main.log", "Processed commands: %d\n", REGS->ticks);
     print_proc_commands();
+    return EXIT_FAILURE;
+}
+
+__declspec(dllexport)
+/* Set space_type to 0 for IO_SPACE and to 1 for MEM_SPACE */
+void connect_address_space(uint8_t space_type, WRITE_FUNC_PTR(write_func), READ_FUNC_PTR(read_func)) {
+    if(space_type == 0) {   // IO_SPACE
+        io_write = write_func;
+        io_read = read_func;
+    } else {   // MEM_SPACE
+        mem_write = write_func;
+        mem_read = read_func;
+    }
+}
+
+__declspec(dllexport)
+void module_reset(void) {
+    REGS = calloc(1, sizeof(registers_t));
+    REGS->int_vector = 0xFFFF;
+    REGS->IP = 0xFFF0;
+    REGS->CS = 0xF000;
+}
+
+__declspec(dllexport)
+void module_save(void) {
+    store_data(&REGS, sizeof(registers_t), CPU_DUMP_FILE);
+}
+
+__declspec(dllexport)
+void module_restore(void) {
+    registers_t *temp_regs = calloc(1, sizeof(registers_t));
+    if(EXIT_SUCCESS == restore_data(temp_regs, sizeof(registers_t), CPU_DUMP_FILE)) {
+        memcpy(REGS, temp_regs, sizeof(registers_t));
+    }
+}
+
+__declspec(dllexport)
+int module_tick(void) {
+    // if(delayed_int_timeout > 0) {
+    //     delayed_int_timeout --;
+    //     if((delayed_int_timeout == 0) && (delayed_int_vector != 0xFFFF)) {
+    //         set_int_vector(delayed_int_vector);
+    //         delayed_int_vector = 0xFFFF;
+    //     }
+    // }
+    if(REGS->int_vector != 0xFFFF) {
+        if(get_flag(IF)) {
+            printf("CPU interrupt %d\n", REGS->int_vector);
+            push_register(REGS->flags);
+            push_register(REGS->CS);
+            push_register(REGS->IP);
+            set_register_value(IP_register, mem_read(4 * REGS->int_vector, 2));
+            set_register_value(CS_register, mem_read((4 * REGS->int_vector) + 2, 2));
+            REGS->int_vector = 0xFFFF;
+            set_flag(IF, 0);
+            set_flag(TF, 0);}
+        }
+    uint32_t addr = ((uint32_t)REGS->CS << 4) + REGS->IP;
+    static uint8_t code[10];
+    for(uint8_t i=0; i<sizeof(code); i++) {
+        code[i] = mem_read(addr+i, 1);
+    }
+    uint8_t inc = process_instruction(code);
+    if (cpu_is_halted()) {
+        printf("ERROR: CPU is halted!\n");
+        // print_proc_commands();
+        return EXIT_FAILURE;
+    }
+    if ((REGS->invalid_operations < 1)) {
+        REGS->ticks++;
+        REGS->IP += inc;
+        // if(REGS->ticks & 0x0001) {
+        //     timer_tick();
+        // }
+        return EXIT_SUCCESS;
+    }
+    // store_registers(REGISTERS_FILE, REGS);
+    // cpu_save_state();
+    mylog("logs/main.log", "Processed commands: %d\n", REGS->ticks);
+    // print_proc_commands();
     return EXIT_FAILURE;
 }

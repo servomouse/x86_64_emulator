@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     if (EXIT_FAILURE == init_cpu(continue_simulation)) {
         return EXIT_FAILURE;
     }
-    if(EXIT_FAILURE == io_reset(continue_simulation)) {
+    if(EXIT_FAILURE == module_reset(continue_simulation)) {
         return EXIT_FAILURE;
     }
     int_controller_reset();

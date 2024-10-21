@@ -1,19 +1,20 @@
 #include "8086_io.h"
-#include "8086_mda.h"
-#include "8086_ppi.h"
-#include "8253_timer.h"
+// #include "8086_mda.h"
+// #include "8086_ppi.h"
+// #include "8253_timer.h"
 #include "utils.h"
+#include <string.h>
 
 #define IO_LOG_FILE "logs/io_log.txt"
-#define IO_DUMP_FILE "logs/io_dump.bin"
+#define IO_DUMP_FILE "data/io_dump.bin"
 #define IO_SPACE_SIZE 0x100000
 
 typedef struct {
     uint32_t id;
     uint32_t start;
     uint32_t end;
-    WRITE_FUNC_PTR;
-    READ_FUNC_PTR;
+    WRITE_FUNC_PTR(write_func);
+    READ_FUNC_PTR(read_func);
 } map_t;
 
 typedef struct {
@@ -50,7 +51,7 @@ static uint8_t range_overlaps(uint32_t start, uint32_t end) {
     return 0;
 }
 
-static void add_device(uint32_t index, uint32_t id, uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR, READ_FUNC_PTR) {
+static void add_device(uint32_t index, uint32_t id, uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR(write_func), READ_FUNC_PTR(read_func)) {
     io_space.dev_table[index].start = start_addr;
     io_space.dev_table[index].end = end_addr;
     io_space.dev_table[index].id = id;
@@ -82,7 +83,7 @@ static uint8_t check_allocation(void) {
 
 /* Retunrs an ID which can be used to unmap the device. In case of error returns 0 */
 __declspec(dllexport)
-uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR, READ_FUNC_PTR) {
+uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR(write_func), READ_FUNC_PTR(read_func)) {
     uint32_t id = get_id(start_addr, end_addr);
     uint32_t overlaps_id = range_overlaps(start_addr, end_addr);
     if(range_overlaps(start_addr, end_addr)) {
@@ -108,7 +109,7 @@ uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR, READ
     if(!check_allocation()) {   // Allocation failed
         return 0;
     }
-    mylog(IO_LOG_FILE, "Device 0x%08X was successfully unmapped\n", id);
+    mylog(IO_LOG_FILE, "Device 0x%08X was successfully mapped at addressed 0x%04X-0x%04X\n", id, start_addr, end_addr);
     return id;
 }
 
@@ -124,7 +125,7 @@ void unmap_device(uint32_t id) {
 }
 
 __declspec(dllexport)
-void io_write(uint32_t addr, uint16_t value, uint8_t width) {
+void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     uint8_t addr_found = 0;
     for(uint32_t i=0; i<io_space.num_devices; i++) {
         if(io_space.dev_table[i].id == 0) {
@@ -162,7 +163,7 @@ void io_write(uint32_t addr, uint16_t value, uint8_t width) {
 // uint8_t counter = 0xFF;
 
 __declspec(dllexport)
-uint16_t io_read(uint32_t addr, uint8_t width) {
+uint16_t data_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0xFF;
     if(width == 2) {
         ret_val = 0xFFFF;
@@ -239,19 +240,20 @@ int restore_io(uint8_t *io_space, const char *filename) {
     return EXIT_SUCCESS;
 }
 
-int io_reset(uint8_t continue_simulation) {
+__declspec(dllexport)
+void module_reset(void) {
     IO_SPACE = (uint8_t*)calloc(sizeof(uint8_t), IO_SPACE_SIZE);
-    mda_init();
-    ppi_init();
-    timer_init();
+    // mda_init();
+    // ppi_init();
+    // timer_init();
     if(IO_SPACE == NULL) {
         printf("IO ERROR: Failed to allocate memory\n");
         io_error = 1;
-        return EXIT_FAILURE;
+        return;
     }
-    if(continue_simulation) {
-        restore_io(IO_SPACE, IO_DUMP_FILE);
-    }
+    // if(continue_simulation) {
+    //     restore_io(IO_SPACE, IO_DUMP_FILE);
+    // }
     // FILE *f;
     // f = fopen(IO_LOG_FILE, "a");
     // if(f == NULL) {
@@ -260,9 +262,27 @@ int io_reset(uint8_t continue_simulation) {
     // }
     // fprintf(f, "%s I/O log start\n", get_time());
     // fclose(f);
-    return EXIT_SUCCESS;
+    // return EXIT_SUCCESS;
 }
 
 int get_io_error(void) {
     return io_error;
+}
+
+__declspec(dllexport)
+void module_save(void) {
+    store_data(IO_SPACE, IO_SPACE_SIZE, IO_DUMP_FILE);
+}
+
+__declspec(dllexport)
+void module_restore(void) {
+    uint8_t temp[IO_SPACE_SIZE] = {0};
+    if(EXIT_SUCCESS == restore_data(temp, IO_SPACE_SIZE, IO_DUMP_FILE)) {
+        memcpy(IO_SPACE, temp, IO_SPACE_SIZE);
+    }
+}
+
+__declspec(dllexport)
+int module_tick(void) {
+    return 0;
 }

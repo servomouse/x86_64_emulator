@@ -84,12 +84,12 @@ int restore_data(void *data, size_t size, char *filename) {
     uint64_t hash;
     fread(&hash, sizeof(hash), 1, file);
     if(hash != get_hash((uint8_t*)data, size)) {
-        printf("ERROR: File corrupted (hash check failed)\n", filename);
+        printf("ERROR: File %s corrupted (hash check failed)\n", filename);
         return EXIT_FAILURE;
     }
     fclose(file);
     if(len_data != size) {
-        printf("ERROR: Failed reading file %s (%d of %d bytes were read)\n", filename, len_data, size);
+        printf("ERROR: Failed reading file %s (%lld of %lld bytes were read)\n", filename, len_data, size);
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
