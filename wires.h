@@ -21,4 +21,5 @@ typedef struct wire_t {
     void(*wire_state_change_cb)(wire_state_t);  // User defined
 } wire_t;
 
+// Example: wire_t wire_name = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
 #define WIRE_T(_wire_type, _cb) {.wire_type = _wire_type, .wire_get_state = NULL, .wire_set_state = NULL, .wire_state_change_cb = _cb}

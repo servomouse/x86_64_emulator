@@ -3468,7 +3468,7 @@ void dummy_int_cb(wire_state_t new_state) {
 }
 
 __declspec(dllexport)
-wire_t nmi_wire = WIRE_T(WIRE_INPUT, dummy_nmi_cb);
+wire_t nmi_wire = WIRE_T(WIRE_INPUT, &dummy_nmi_cb);
 
 __declspec(dllexport)
-wire_t int_wire = WIRE_T(WIRE_INPUT, dummy_int_cb);
+wire_t int_wire = WIRE_T(WIRE_INPUT, &dummy_int_cb);
