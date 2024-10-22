@@ -1,4 +1,5 @@
 #include "8259a_interrupt_controller.h"
+#include "wires.h"
 
 #define INT_CONTROLLER_LOG_FILE "logs/8259a_interrupt_controller.log"
 #define INT_CONTROLLER_DATA_FILE "data/8259a_interrupt_controller.bin"
@@ -59,3 +60,13 @@ __declspec(dllexport)
 int module_tick(void) {
     return 0;
 }
+
+void dummy_cb(wire_state_t new_state) {
+    return;
+}
+
+__declspec(dllexport)
+wire_t nmi_wire = WIRE_T(WIRE_OUTPUT_PP, dummy_cb);
+
+__declspec(dllexport)
+wire_t int_wire = WIRE_T(WIRE_OUTPUT_PP, dummy_cb);

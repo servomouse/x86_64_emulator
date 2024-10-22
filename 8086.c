@@ -1,5 +1,6 @@
 // https://en.wikipedia.org/wiki/Intel_8086
 #include "8086.h"
+#include "wires.h"
 // #include "8086_io.h"
 // #include "8086_mem.h"
 // #include "8253_timer.h"
@@ -3453,3 +3454,21 @@ int module_tick(void) {
     // print_proc_commands();
     return EXIT_FAILURE;
 }
+
+void dummy_nmi_cb(wire_state_t new_state) {
+    if(new_state == 1)
+        mylog("logs/main.log", "NMI activated\n");
+    return;
+}
+
+void dummy_int_cb(wire_state_t new_state) {
+    if(new_state == 1)
+        mylog("logs/main.log", "INT activated\n");
+    return;
+}
+
+__declspec(dllexport)
+wire_t nmi_wire = WIRE_T(WIRE_INPUT, dummy_nmi_cb);
+
+__declspec(dllexport)
+wire_t int_wire = WIRE_T(WIRE_INPUT, dummy_int_cb);
