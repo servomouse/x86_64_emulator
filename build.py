@@ -31,7 +31,7 @@ def main():
             files = glob.glob('./devices/*.c')
             for f in files:
                 fname = os.path.basename(f).replace(".c", "")
-                print(f"Building {fname} . . . ", end='')
+                print(f"Building {fname} . . . ", end='', flush=True)
                 # fname = "8259a_interrupt_controller"
                 output = subprocess.getoutput(f"gcc -shared -o bin/{fname}.dll devices/{fname}.c utils.c -I. -I./devices -Wall")
                 if len(output) == 0:

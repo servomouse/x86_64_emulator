@@ -15,6 +15,7 @@ def system_init():
     global mb
     devices = {
         "int_ctrlr": {"file": "bin/8259a_interrupt_controller.dll", "type": "device"},
+        "dma_ctrlr": {"file": "bin/8237a-5_dma.dll", "type": "device"},
         "io_ctrlr": {"file": "bin/8086_io.dll", "type": "address_space"},
         "memory": {"file": "bin/8086_mem.dll", "type": "address_space"},
         "cpu": {"file": "bin/8086_cpu.dll", "type": "processor"},
@@ -43,9 +44,11 @@ def system_init():
         temp_wire.set_state(config["default_state"])
 
     int_ctrlr = mb.devices["int_ctrlr"]
+    dma_ctrlr = mb.devices["dma_ctrlr"]
     io_ctrlr = mb.devices["io_ctrlr"]
 
     int_ctrlr.id = io_ctrlr.map_device(int_ctrlr.addr_start, int_ctrlr.addr_end, int_ctrlr.data_write_p, int_ctrlr.data_read_p)
+    dma_ctrlr.id = io_ctrlr.map_device(dma_ctrlr.addr_start, dma_ctrlr.addr_end, dma_ctrlr.data_write_p, dma_ctrlr.data_read_p)
 
     mb.devices["cpu"].connect_address_space(0, mb.devices["io_ctrlr"].data_write_p, mb.devices["io_ctrlr"].data_read_p)
     mb.devices["cpu"].connect_address_space(1, mb.devices["memory"].data_write_p, mb.devices["memory"].data_read_p)

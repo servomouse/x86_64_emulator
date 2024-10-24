@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "utils.h"
 
 void module_reset(void);
 void data_write(uint32_t addr, uint16_t value, uint8_t width);
