@@ -5,3 +5,6 @@ main
 8086_stash.c
 logs/*
 data/*
+bin/*
+.vscode/*
+__pycache__/*

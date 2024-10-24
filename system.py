@@ -1,11 +1,9 @@
-# import ctypes
 import log_manager
-import signal
 import os
+import sys
 import time
 from wires import (WireType, WireState, Wire)
 from device_manager import (DevModule, AddressSpace, Processor, DevManager)
-import threading
 
 
 stop_main_thread = False
@@ -22,7 +20,6 @@ def system_init():
         "cpu": {"file": "bin/8086_cpu.dll", "type": "processor"},
     }
     for dev_name, config in devices.items():
-        cls = None
         if config["type"] == "device":
             mb.add_device(DevModule(config["file"]), dev_name)
         elif config["type"] == "address_space":
@@ -71,35 +68,8 @@ def test_system():
     print("After restore: ", result)
 
 
-def run_system(stop_cond):
-    global mb
-    while mb.tick_devices():
-        time.sleep(0.1)
-        if stop_cond():
-            return
-    exit_program()
-
-
-def main_thread_init():
-    global main_thread, stop_main_thread
-    main_thread = threading.Thread(target=run_system, args=(lambda: stop_main_thread,))
-    main_thread.start()
-
-
-def main_thread_exit():
-    global stop_main_thread, main_thread
-    stop_main_thread = True
-    try:
-        main_thread.join()
-    except RuntimeError:
-        print("Main thread has been completed. ", end='')
-
-
 def exit_program():
     global stop_main_thread, main_thread, mb
-    print("Exit main thread . . . ", end='')
-    main_thread_exit()
-    print("Done")
     print("Saving devices . . . ", end='')
     mb.save_devices()
     print("Done")
@@ -114,19 +84,16 @@ def main():
     log_manager.log_manager_init()
     mb = DevManager()
     system_init()
+    if len(sys.argv) > 1 and sys.argv[1] == "--continue":
+        print("Restoring devices")
+        mb.restore_devices()
 
-    def signal_handler(sig, frame):
-        print("Ctrl-C received, exiting")
-        exit_program()
-
-    signal.signal(signal.SIGINT, signal_handler)
-    main_thread_init()
     try:
-        while not stop_main_thread:
-            time.sleep(1)
+        while mb.tick_devices():
+            time.sleep(0.1)
     except KeyboardInterrupt:
-        exit_program()
-    time.sleep(1)
+        print("Ctrl-C received, exit")
+    exit_program()
 
 
 if __name__ == "__main__":
