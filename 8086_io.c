@@ -284,5 +284,5 @@ void module_restore(void) {
 
 __declspec(dllexport)
 int module_tick(void) {
-    return 0;
+    return io_error;
 }

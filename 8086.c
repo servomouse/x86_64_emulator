@@ -3389,15 +3389,16 @@ void connect_address_space(uint8_t space_type, WRITE_FUNC_PTR(write_func), READ_
 
 __declspec(dllexport)
 void module_reset(void) {
-    REGS = calloc(1, sizeof(registers_t));
+    REGS = (registers_t*)calloc(1, sizeof(registers_t));
     REGS->int_vector = 0xFFFF;
     REGS->IP = 0xFFF0;
     REGS->CS = 0xF000;
+    printf("REGS->IP = 0x%04X, REGS->CS = 0x%04X\n", REGS->IP, REGS->CS);
 }
 
 __declspec(dllexport)
 void module_save(void) {
-    store_data(&REGS, sizeof(registers_t), CPU_DUMP_FILE);
+    store_data(REGS, sizeof(registers_t), CPU_DUMP_FILE);
 }
 
 __declspec(dllexport)
