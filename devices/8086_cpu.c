@@ -1,5 +1,5 @@
 // https://en.wikipedia.org/wiki/Intel_8086
-#include "8086.h"
+#include "8086_cpu.h"
 #include "wires.h"
 // #include "8086_io.h"
 // #include "8086_mem.h"

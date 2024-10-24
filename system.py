@@ -14,7 +14,7 @@ mb = None
 def system_init():
     global mb
     devices = {
-        "int_ctrlr": {"file": "bin/8259a_int_controller.dll", "type": "device"},
+        "int_ctrlr": {"file": "bin/8259a_interrupt_controller.dll", "type": "device"},
         "io_ctrlr": {"file": "bin/8086_io.dll", "type": "address_space"},
         "memory": {"file": "bin/8086_mem.dll", "type": "address_space"},
         "cpu": {"file": "bin/8086_cpu.dll", "type": "processor"},
