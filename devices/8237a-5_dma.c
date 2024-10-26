@@ -13,6 +13,7 @@ typedef struct {
     uint8_t reg1;
     uint8_t reg2;
     uint8_t reg3;
+    uint8_t registers[16];
 } device_regs_t;
 
 device_regs_t regs;
@@ -48,7 +49,8 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
             regs.reg3 = value;
             break;
         default:
-            printf("DMA ERROR: incorrect address: 0x%08X\n", addr);
+            regs.registers[addr] = value;
+            // printf("DMA ERROR: incorrect address: 0x%08X\n", addr);
     }
 }
 
@@ -69,7 +71,8 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
             ret_val = regs.reg3;
             break;
         default:
-            printf("DMA ERROR: incorrect address: 0x%08X\n", addr);
+            // printf("DMA ERROR: incorrect address: 0x%08X\n", addr);
+            ret_val = regs.registers[addr];
     }
     mylog(DEVICE_LOG_FILE, "INT_CONTROLLER_READ addr = 0x%08X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;

@@ -3,6 +3,7 @@ import datetime
 import threading
 import time
 import os
+import glob
 
 
 buffers = {}
@@ -75,9 +76,14 @@ print_thread = None
 
 
 def log_manager_init():
-    global print_thread
-    print_thread = threading.Thread(target=time_thread, args=(lambda: stop_thread,))
-    print_thread.start()
+	global print_thread
+
+	files = glob.glob('./logs/*')
+	for f in files:
+		os.remove(f)
+
+	print_thread = threading.Thread(target=time_thread, args=(lambda: stop_thread,))
+	print_thread.start()
 
 
 def log_manager_exit():

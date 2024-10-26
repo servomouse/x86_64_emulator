@@ -35,7 +35,7 @@ class Wire:
 
         @ctypes.CFUNCTYPE(None, WireState)
         def _wire_set_state(new_state):
-            self.set_state(new_state)
+            self.set_state(new_state.value)
 
         class WireStruct(ctypes.Structure):
             _fields_ = [("wire_type", WireType),

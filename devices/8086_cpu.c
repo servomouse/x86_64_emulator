@@ -3462,9 +3462,14 @@ void dummy_nmi_cb(wire_state_t new_state) {
     return;
 }
 
-void dummy_int_cb(wire_state_t new_state) {
-    if(new_state == 1)
+void int_cb(wire_state_t new_state) {
+    if(new_state == WIRE_LOW) {
         mylog("logs/main.log", "INT activated\n");
+        uint8_t vec = io_read(0xA0, 1);
+        if(vec != 0xFF) {
+            set_int_vector(vec);
+        }
+    }
     return;
 }
 
@@ -3472,4 +3477,4 @@ __declspec(dllexport)
 wire_t nmi_wire = WIRE_T(WIRE_INPUT, &dummy_nmi_cb);
 
 __declspec(dllexport)
-wire_t int_wire = WIRE_T(WIRE_INPUT, &dummy_int_cb);
+wire_t int_wire = WIRE_T(WIRE_INPUT, &int_cb);

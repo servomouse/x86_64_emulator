@@ -9,6 +9,7 @@
 
 typedef struct {
     uint8_t int_register;
+    uint8_t triggerded_int;
 } device_regs_t;
 
 device_regs_t regs;
@@ -34,7 +35,7 @@ __declspec(dllexport)
 uint16_t data_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
     if(addr == 0xA0) {
-        ret_val = regs.int_register;
+        ret_val = regs.triggerded_int;
     }
     mylog(DEVICE_LOG_FILE, "INT_CONTROLLER_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
@@ -70,3 +71,29 @@ wire_t nmi_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
 
 __declspec(dllexport)
 wire_t int_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+
+void int0_cb(wire_state_t new_state) {
+    if(new_state == WIRE_LOW) {
+        regs.triggerded_int = 0;
+        int_wire.wire_set_state(WIRE_LOW);
+    } else {
+        regs.triggerded_int = 0xFF;
+        int_wire.wire_set_state(WIRE_HIGH);
+    }
+}
+
+void int1_cb(wire_state_t new_state) {
+    if(new_state == WIRE_LOW) {
+        regs.triggerded_int = 1;
+        int_wire.wire_set_state(WIRE_LOW);
+    } else {
+        regs.triggerded_int = 0xFF;
+        int_wire.wire_set_state(WIRE_HIGH);
+    }
+}
+
+__declspec(dllexport)   // Timer interrupt
+wire_t int0_wire = WIRE_T(WIRE_INPUT, &int0_cb);
+
+__declspec(dllexport)   // Keyboard interrupt
+wire_t int1_wire = WIRE_T(WIRE_INPUT, &int1_cb);

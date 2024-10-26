@@ -16,6 +16,10 @@ def system_init():
     devices = {
         "int_ctrlr": {"file": "bin/8259a_interrupt_controller.dll", "type": "device"},
         "dma_ctrlr": {"file": "bin/8237a-5_dma.dll", "type": "device"},
+        "cga_ctrlr": {"file": "bin/8086_cga.dll", "type": "device"},
+        "mda_ctrlr": {"file": "bin/8086_mda.dll", "type": "device"},
+        "ppi_ctrlr": {"file": "bin/8255a-5_ppi.dll", "type": "device"},
+        "timer": {"file": "bin/8253_timer.dll", "type": "device"},
         "io_ctrlr": {"file": "bin/8086_io.dll", "type": "address_space"},
         "memory": {"file": "bin/8086_mem.dll", "type": "address_space"},
         "cpu": {"file": "bin/8086_cpu.dll", "type": "processor"},
@@ -34,6 +38,8 @@ def system_init():
     wires = {
         "nmi_wire": {"devices": ["cpu", "int_ctrlr"], "default_state": WireState.WIRE_HIGH},
         "int_wire": {"devices": ["cpu", "int_ctrlr"], "default_state": WireState.WIRE_HIGH},
+        "int0_wire": {"devices": ["timer", "int_ctrlr"], "default_state": WireState.WIRE_HIGH},
+        "int1_wire": {"devices": ["ppi_ctrlr", "int_ctrlr"], "default_state": WireState.WIRE_HIGH},
     }
 
     for wire_name, config in wires.items():
@@ -45,10 +51,19 @@ def system_init():
 
     int_ctrlr = mb.devices["int_ctrlr"]
     dma_ctrlr = mb.devices["dma_ctrlr"]
+    cga_ctrlr = mb.devices["cga_ctrlr"]
+    mda_ctrlr = mb.devices["mda_ctrlr"]
+    ppi_ctrlr = mb.devices["ppi_ctrlr"]
+    timer = mb.devices["timer"]
     io_ctrlr = mb.devices["io_ctrlr"]
 
     int_ctrlr.id = io_ctrlr.map_device(int_ctrlr.addr_start, int_ctrlr.addr_end, int_ctrlr.data_write_p, int_ctrlr.data_read_p)
-    dma_ctrlr.id = io_ctrlr.map_device(dma_ctrlr.addr_start, dma_ctrlr.addr_end, dma_ctrlr.data_write_p, dma_ctrlr.data_read_p)
+    dma_ctrlr.id0 = io_ctrlr.map_device(dma_ctrlr.addr_start, dma_ctrlr.addr_end, dma_ctrlr.data_write_p, dma_ctrlr.data_read_p)
+    dma_ctrlr.id1 = io_ctrlr.map_device(0x00, 0x0F, dma_ctrlr.data_write_p, dma_ctrlr.data_read_p)
+    cga_ctrlr.id = io_ctrlr.map_device(cga_ctrlr.addr_start, cga_ctrlr.addr_end, cga_ctrlr.data_write_p, cga_ctrlr.data_read_p)
+    mda_ctrlr.id = io_ctrlr.map_device(mda_ctrlr.addr_start, mda_ctrlr.addr_end, mda_ctrlr.data_write_p, mda_ctrlr.data_read_p)
+    ppi_ctrlr.id = io_ctrlr.map_device(ppi_ctrlr.addr_start, ppi_ctrlr.addr_end, ppi_ctrlr.data_write_p, ppi_ctrlr.data_read_p)
+    timer.id = io_ctrlr.map_device(timer.addr_start, timer.addr_end, timer.data_write_p, timer.data_read_p)
 
     mb.devices["cpu"].connect_address_space(0, mb.devices["io_ctrlr"].data_write_p, mb.devices["io_ctrlr"].data_read_p)
     mb.devices["cpu"].connect_address_space(1, mb.devices["memory"].data_write_p, mb.devices["memory"].data_read_p)
