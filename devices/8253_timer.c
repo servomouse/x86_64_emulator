@@ -5,7 +5,7 @@
 #include <string.h>
 
 #define DEVICE_LOG_FILE "logs/timer.log"
-#define DEVICE_DATA_FILE "data/8237a-5.bin"
+#define DEVICE_DATA_FILE "data/8253_timer.bin"
 #define START_ADDR (uint32_t)0x040
 #define END_ADDR (uint32_t)0x043
 

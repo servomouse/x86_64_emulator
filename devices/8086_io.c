@@ -124,6 +124,8 @@ void unmap_device(uint32_t id) {
     }
 }
 
+uint8_t port213;
+
 __declspec(dllexport)
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     uint8_t addr_found = 0;
@@ -137,8 +139,12 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
         }
     }
     if(!addr_found) {
-        printf("IO_WRITE ERROR: No device at address 0x%08X!\n", addr);
-        io_error = 1;
+        if(addr == 0x213) {
+            port213 = value;
+        } else {
+            printf("IO_WRITE ERROR: No device at address 0x%08X!\n", addr);
+            io_error = 1;
+        }
     }
     mylog(IO_LOG_FILE, "IO_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     

@@ -3,8 +3,8 @@
 #include "utils.h"
 #include <string.h>
 
-#define DEVICE_LOG_FILE "logs/8237a-5.log"
-#define DEVICE_DATA_FILE "data/8237a-5.bin"
+#define DEVICE_LOG_FILE "logs/8237a-5_dma.log"
+#define DEVICE_DATA_FILE "data/8237a-5_dma.bin"
 #define START_ADDR (uint32_t)0x080
 #define END_ADDR (uint32_t)0x083
 

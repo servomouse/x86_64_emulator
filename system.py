@@ -57,7 +57,8 @@ def system_init():
     timer = mb.devices["timer"]
     io_ctrlr = mb.devices["io_ctrlr"]
 
-    int_ctrlr.id = io_ctrlr.map_device(int_ctrlr.addr_start, int_ctrlr.addr_end, int_ctrlr.data_write_p, int_ctrlr.data_read_p)
+    int_ctrlr.id0 = io_ctrlr.map_device(int_ctrlr.addr_start, int_ctrlr.addr_end, int_ctrlr.data_write_p, int_ctrlr.data_read_p)
+    int_ctrlr.id1 = io_ctrlr.map_device(0x20, 0x21, int_ctrlr.data_write_p, int_ctrlr.data_read_p)
     dma_ctrlr.id0 = io_ctrlr.map_device(dma_ctrlr.addr_start, dma_ctrlr.addr_end, dma_ctrlr.data_write_p, dma_ctrlr.data_read_p)
     dma_ctrlr.id1 = io_ctrlr.map_device(0x00, 0x0F, dma_ctrlr.data_write_p, dma_ctrlr.data_read_p)
     cga_ctrlr.id = io_ctrlr.map_device(cga_ctrlr.addr_start, cga_ctrlr.addr_end, cga_ctrlr.data_write_p, cga_ctrlr.data_read_p)
@@ -108,7 +109,8 @@ def main():
 
     try:
         while mb.tick_devices():
-            time.sleep(0.1)
+            # time.sleep(0.1)
+            pass
     except KeyboardInterrupt:
         print("Ctrl-C received, exit")
     exit_program()

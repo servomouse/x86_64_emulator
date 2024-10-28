@@ -10,6 +10,8 @@
 typedef struct {
     uint8_t int_register;
     uint8_t triggerded_int;
+    uint8_t reg20;
+    uint8_t reg21;
 } device_regs_t;
 
 device_regs_t regs;
@@ -29,6 +31,13 @@ __declspec(dllexport)
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     mylog(DEVICE_LOG_FILE, "INT_CONTROLLER_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     regs.int_register = value;
+    if(addr == 0xA0) {
+        regs.triggerded_int = value;
+    } else if(addr == 0x20) {
+        regs.reg20 = value;
+    } else if(addr == 0x21) {
+        regs.reg21 = value;
+    }
 }
 
 __declspec(dllexport)
@@ -36,6 +45,10 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
     if(addr == 0xA0) {
         ret_val = regs.triggerded_int;
+    } else if(addr == 0x20) {
+        ret_val = regs.reg20;
+    } else if(addr == 0x21) {
+        ret_val = regs.reg21;
     }
     mylog(DEVICE_LOG_FILE, "INT_CONTROLLER_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;

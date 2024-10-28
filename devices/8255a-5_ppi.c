@@ -44,7 +44,7 @@ wire_t int1_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
 
 void update_portc(void) {
     regs.portc_reg = 0;
-    if((regs.portb_reg & 0x08) == 0) {
+    if((regs.portb_reg & 0x08) > 0) {
         regs.portc_reg |= SW1;
         regs.portc_reg |= SW2 << 1;
         regs.portc_reg |= SW3 << 2;

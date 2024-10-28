@@ -26,7 +26,7 @@ def print_logs(filename, logstring):
             buffers[filename]["time"] = 0
             buffers[filename]["data"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n"
 
-        buffers[filename]["data"] += log_string + "\n"
+        buffers[filename]["data"] += log_string
 
         if buffers[filename]["time"] == 0:
             buffers[filename]["time"] = time.time()
