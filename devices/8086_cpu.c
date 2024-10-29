@@ -14,6 +14,7 @@ WRITE_FUNC_PTR(mem_write);
 READ_FUNC_PTR(mem_read);
 WRITE_FUNC_PTR(io_write);
 READ_FUNC_PTR(io_read);
+uint16_t(*code_read)(uint32_t, uint8_t);
 
 typedef enum {
     invalid_register = 0,
@@ -1200,8 +1201,8 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0xC6: {  // MOV MEM8, IMMED8: [0xC6, MOD 000 R/M, DISP-LO, DISP-HI, DATA-8]
             if(get_register_field(data[0]) == 0) {
-                uint16_t addr = get_addr(DS_register, data[0] + (data[1] << 8));
-                mem_write(addr, data[2], 1);
+                uint16_t addr = get_addr(DS_register, data[1] + (data[2] << 8));
+                mem_write(addr, data[3], 1);
                 mylog("logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), IMMED8 (0x%02X)\n", opcode, addr, data[2]);
                 ret_val = 5;
             } else {
@@ -3012,7 +3013,7 @@ int16_t process_instruction(uint8_t * memory) {
         //     break;
         case 0xE6:  // OUT AL, IMMED8
             // Move the content of the AL register to the io port specified in the immed8 field
-            mylog("logs/main.log", "Instruction 0xE6: OUT AL IMMED8, immed8 = 0x%02X; ", memory[1]);
+            mylog("logs/main.log", "Instruction 0xE6: OUT AL IMMED8, immed8 = 0x%02X;\n", memory[1]);
             io_write(memory[1], get_register_value(AL_register), 1); // DATA-8
             ret_val += 1;
             break;
@@ -3329,6 +3330,8 @@ uint8_t cpu_is_halted(void) {
     return (REGS->halt == 1) && (get_flag(IF) == 0);
 }
 
+// uint8_t ip_inc = 0;
+
 int cpu_tick(void) {
     if(delayed_int_timeout > 0) {
         delayed_int_timeout --;
@@ -3388,6 +3391,11 @@ void connect_address_space(uint8_t space_type, WRITE_FUNC_PTR(write_func), READ_
 }
 
 __declspec(dllexport)
+void set_code_read_func(READ_FUNC_PTR(read_func)) {
+    code_read = read_func;
+}
+
+__declspec(dllexport)
 void module_reset(void) {
     REGS = (registers_t*)calloc(1, sizeof(registers_t));
     REGS->int_vector = 0xFFFF;
@@ -3433,7 +3441,7 @@ int module_tick(void) {
     uint32_t addr = ((uint32_t)REGS->CS << 4) + REGS->IP;
     static uint8_t code[10];
     for(uint8_t i=0; i<sizeof(code); i++) {
-        code[i] = mem_read(addr+i, 1);
+        code[i] = code_read(addr+i, 1);
     }
     uint8_t inc = process_instruction(code);
     if (cpu_is_halted()) {

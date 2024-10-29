@@ -68,6 +68,7 @@ def system_init():
 
     mb.devices["cpu"].connect_address_space(0, mb.devices["io_ctrlr"].data_write_p, mb.devices["io_ctrlr"].data_read_p)
     mb.devices["cpu"].connect_address_space(1, mb.devices["memory"].data_write_p, mb.devices["memory"].data_read_p)
+    mb.devices["cpu"].set_code_read_func(mb.devices["memory"].code_read_p)
 
 
 def test_system():

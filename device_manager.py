@@ -42,6 +42,13 @@ class ReadWriteModule:
         #Create functions pointers:
         self.data_write_p = ctypes.CFUNCTYPE(None, ctypes.c_uint32, ctypes.c_uint16, ctypes.c_uint8)(self.device.data_write)
         self.data_read_p = ctypes.CFUNCTYPE(ctypes.c_uint16, ctypes.c_uint32, ctypes.c_uint8)(self.device.data_read)
+        try:
+            self.device.code_read.argtypes = [ctypes.c_uint32, ctypes.c_uint8]
+            self.device.code_read.restype = ctypes.c_uint16
+            self.code_read = self.device.code_read
+            self.code_read_p = ctypes.CFUNCTYPE(ctypes.c_uint16, ctypes.c_uint32, ctypes.c_uint8)(self.device.code_read)
+        except:
+            self.code_read_p = None
 
 
 class DevModule(CommonDevModule, ReadWriteModule):
@@ -74,7 +81,9 @@ class Processor(CommonDevModule):
         read_func_t = ctypes.CFUNCTYPE(ctypes.c_uint16, ctypes.c_uint32, ctypes.c_uint8)
         self.device.connect_address_space.argtypes = [ctypes.c_uint8, write_func_t, read_func_t]
         self.device.connect_address_space.restype = None
+        self.device.set_code_read_func.argtypes = [read_func_t]
         self.connect_address_space = self.device.connect_address_space
+        self.set_code_read_func = self.device.set_code_read_func
 
 
 class DevManager():

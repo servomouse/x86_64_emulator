@@ -9,6 +9,7 @@ char *BIOS_FILENAME_0XF8000 = "BIOS/08NOV82_F8000.BIN";
 // char *BIOS_FILENAME_0XF0000 = "BIOS/F0000.BIN";
 // char *BIOS_FILENAME_0XF8000 = "BIOS/F8000.BIN";
 #define MEMORY_LOG_FILE "logs/mem_log.txt"
+#define CODE_MEM_LOG_FILE "logs/code_mem_log.txt"
 #define MEMORY_DUMP_FILE "data/memory_dump.bin"
 
 #define MEMORY_SIZE 0x100000
@@ -106,6 +107,20 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
         printf("MEM READ ERROR: Incorrect width: %d", width);
     }
     mylog(MEMORY_LOG_FILE, "MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    return ret_val;
+}
+
+__declspec(dllexport)
+uint16_t code_read(uint32_t addr, uint8_t width) {
+    uint16_t ret_val = 0;
+    if(width == 1) {
+        ret_val = MEMORY[addr];
+    } else if (width == 2) {
+        ret_val = MEMORY[addr] + (MEMORY[addr+1] << 8);
+    } else {
+        printf("CODE READ ERROR: Incorrect width: %d", width);
+    }
+    mylog(CODE_MEM_LOG_FILE, "CODE_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
 
