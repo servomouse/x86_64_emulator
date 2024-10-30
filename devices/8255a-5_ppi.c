@@ -136,11 +136,11 @@ int module_tick(void) {
         if(regs.delayed_int_ticks > 0) {
             regs.delayed_int_ticks --;
         } else {
-            if(int1_wire.wire_get_state() == WIRE_HIGH) {
-                int1_wire.wire_set_state(WIRE_LOW);
+            if(int1_wire.wire_get_state() == WIRE_LOW) {
+                int1_wire.wire_set_state(WIRE_HIGH);
                 regs.delayed_int_ticks = 20;
             } else {
-                int1_wire.wire_set_state(WIRE_HIGH);
+                int1_wire.wire_set_state(WIRE_LOW);
                 regs.delayed_int = 0;
             }
         }

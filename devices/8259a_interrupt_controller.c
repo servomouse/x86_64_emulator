@@ -87,20 +87,20 @@ wire_t int_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
 
 void int0_cb(wire_state_t new_state) {
     if(new_state == WIRE_LOW) {
-        regs.triggerded_int = 0;
+        regs.triggerded_int = 0xFF;
         int_wire.wire_set_state(WIRE_LOW);
     } else {
-        regs.triggerded_int = 0xFF;
+        regs.triggerded_int = 0x00;
         int_wire.wire_set_state(WIRE_HIGH);
     }
 }
 
 void int1_cb(wire_state_t new_state) {
     if(new_state == WIRE_LOW) {
-        regs.triggerded_int = 1;
+        regs.triggerded_int = 0xFF;
         int_wire.wire_set_state(WIRE_LOW);
     } else {
-        regs.triggerded_int = 0xFF;
+        regs.triggerded_int = 1;
         int_wire.wire_set_state(WIRE_HIGH);
     }
 }

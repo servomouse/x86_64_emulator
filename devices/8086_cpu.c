@@ -3003,7 +3003,7 @@ int16_t process_instruction(uint8_t * memory) {
         //     }
         //     break;
         case 0xE4:  // IN AL, IMMED8
-            mylog("logs/main.log", "Instruction 0xE4: IN AL IMMED8, immed8 = 0x%02X; ", memory[1]);
+            mylog("logs/main.log", "Instruction 0xE4: IN AL IMMED8, immed8 = 0x%02X;\n", memory[1]);
             set_register_value(AL_register, io_read(memory[1], 1));
             ret_val = 2;
             break;
@@ -3446,32 +3446,28 @@ int module_tick(void) {
     uint8_t inc = process_instruction(code);
     if (cpu_is_halted()) {
         printf("ERROR: CPU is halted!\n");
-        // print_proc_commands();
         return EXIT_FAILURE;
     }
     if ((REGS->invalid_operations < 1)) {
         REGS->ticks++;
         REGS->IP += inc;
-        // if(REGS->ticks & 0x0001) {
-        //     timer_tick();
-        // }
+        if(REGS->IP == 0xF9A9) {
+            printf("ERROR: E_MSG!\n");
+            return EXIT_FAILURE;
+        }
         return EXIT_SUCCESS;
     }
-    // store_registers(REGISTERS_FILE, REGS);
-    // cpu_save_state();
-    mylog("logs/main.log", "Processed commands: %d\n", REGS->ticks);
-    // print_proc_commands();
     return EXIT_FAILURE;
 }
 
 void dummy_nmi_cb(wire_state_t new_state) {
-    if(new_state == 1)
+    if(new_state == WIRE_HIGH)
         mylog("logs/main.log", "NMI activated\n");
     return;
 }
 
 void int_cb(wire_state_t new_state) {
-    if(new_state == WIRE_LOW) {
+    if(new_state == WIRE_HIGH && REGS->ticks > 0) {
         mylog("logs/main.log", "INT activated\n");
         uint8_t vec = io_read(0xA0, 1);
         if(vec != 0xFF) {

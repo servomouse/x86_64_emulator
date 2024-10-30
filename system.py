@@ -36,17 +36,19 @@ def system_init():
             os._exit(1)
 
     wires = {
-        "nmi_wire": {"devices": ["cpu", "int_ctrlr"], "default_state": WireState.WIRE_HIGH},
-        "int_wire": {"devices": ["cpu", "int_ctrlr"], "default_state": WireState.WIRE_HIGH},
-        "int0_wire": {"devices": ["timer", "int_ctrlr"], "default_state": WireState.WIRE_HIGH},
-        "int1_wire": {"devices": ["ppi_ctrlr", "int_ctrlr"], "default_state": WireState.WIRE_HIGH},
+        "nmi_wire": {"devices": ["cpu", "int_ctrlr"], "default_state": WireState.WIRE_LOW},
+        "int_wire": {"devices": ["cpu", "int_ctrlr"], "default_state": WireState.WIRE_LOW},
+        "int0_wire": {"devices": ["timer", "int_ctrlr"], "default_state": WireState.WIRE_LOW},
+        "ch1_output_wire": {"devices": ["timer"], "default_state": WireState.WIRE_LOW}, # Dummy wire
+        "ch2_output_wire": {"devices": ["timer"], "default_state": WireState.WIRE_LOW}, # Dummy wire
+        "int1_wire": {"devices": ["ppi_ctrlr", "int_ctrlr"], "default_state": WireState.WIRE_LOW},
     }
 
     for wire_name, config in wires.items():
         temp_wire = Wire(wire_name)
         for dev in config["devices"]:
             temp_wire.connect_device(mb.devices[dev].device)
-        temp_wire.connect_device(mb.devices["int_ctrlr"].device)
+        # temp_wire.connect_device(mb.devices["int_ctrlr"].device)
         temp_wire.set_state(config["default_state"])
 
     int_ctrlr = mb.devices["int_ctrlr"]
@@ -101,12 +103,16 @@ def exit_program():
 
 def main():
     global mb
-    log_manager.log_manager_init()
-    mb = DevManager()
-    system_init()
-    if len(sys.argv) > 1 and sys.argv[1] == "--continue":
-        print("Restoring devices")
-        mb.restore_devices()
+    try:
+        log_manager.log_manager_init()
+        mb = DevManager()
+        system_init()
+        if len(sys.argv) > 1 and sys.argv[1] == "--continue":
+            print("Restoring devices")
+            mb.restore_devices()
+    except Exception as e:
+        print(e)
+        exit_program()
 
     try:
         while mb.tick_devices():
