@@ -15,23 +15,26 @@ print_callback_t = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_char_p)
 
 
 def print_logs(filename, logstring):
-    global buffer_mutex
-    encoding = 'utf-8'
-    # print(f"{filename.decode(encoding)} <= {logstring.decode(encoding)}")
-    filename = filename.decode(encoding)
-    log_string = logstring.decode(encoding)
-    with buffer_mutex:
-        if filename not in buffers:
-            buffers[filename] = {}
-            buffers[filename]["time"] = 0
-            buffers[filename]["data"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n"
+	global buffer_mutex, stop_thread
+	encoding = 'utf-8'
+	# print(f"{filename.decode(encoding)} <= {logstring.decode(encoding)}")
+	filename = filename.decode(encoding)
+	log_string = logstring.decode(encoding)
+	try:
+		with buffer_mutex:
+			if filename not in buffers:
+				buffers[filename] = {}
+				buffers[filename]["time"] = 0
+				buffers[filename]["data"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n"
 
-        buffers[filename]["data"] += log_string
+			buffers[filename]["data"] += log_string
 
-        if buffers[filename]["time"] == 0:
-            buffers[filename]["time"] = time.time()
-        if len(buffers[filename]["data"]) >= buffer_size:
-            flush_buffer(filename)
+			if buffers[filename]["time"] == 0:
+				buffers[filename]["time"] = time.time()
+			if len(buffers[filename]["data"]) >= buffer_size:
+				flush_buffer(filename)
+	except KeyboardInterrupt:
+		log_manager_exit()
 
 
 def flush_buffer(filename):
@@ -54,7 +57,7 @@ print_callback = print_callback_t(print_logs)
 
 
 def time_thread(stop_cond):
-	global buffers, buffer_mutex
+	global buffers, buffer_mutex, stop_thread
 	while True:
 		with buffer_mutex:
 			for filename in buffers:
@@ -69,6 +72,8 @@ def time_thread(stop_cond):
 			if stop_cond():
 				return
 			time.sleep(0.1)
+		if stop_thread:
+			break
 
 
 stop_thread = False
@@ -87,10 +92,10 @@ def log_manager_init():
 
 
 def log_manager_exit():
-    global stop_thread, print_thread
-    flush_all_buffers()
-    stop_thread = True
-    try:
-        print_thread.join()
-    except RuntimeError:
-        print("Log thread has been completed. ", end='')
+	global stop_thread, print_thread
+	flush_all_buffers()
+	stop_thread = True
+	try:
+		print_thread.join()
+	except RuntimeError:
+		print("Log thread has been completed. ", end='')

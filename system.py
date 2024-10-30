@@ -97,8 +97,9 @@ def exit_program():
     print("Done")
     print("Exit print thread . . . ", end='')
     log_manager.log_manager_exit()
+    stop_main_thread = True
     print("Done")
-    os._exit(0)
+    # os._exit(0)
 
 
 def main():
@@ -117,10 +118,13 @@ def main():
     try:
         while mb.tick_devices():
             # time.sleep(0.1)
-            pass
+            if stop_main_thread:
+                break
+            if log_manager.stop_thread:
+                break
     except KeyboardInterrupt:
         print("Ctrl-C received, exit")
-    exit_program()
+        exit_program()
 
 
 if __name__ == "__main__":

@@ -143,7 +143,7 @@ static uint8_t get_value(timer_t *timer) {
     uint8_t msb = timer->counter >> 8;
     uint8_t ret_val = 0;
     if(timer->read_load == 0) {         // Latch value
-        ;
+        ret_val = lsb;
     } else if(timer->read_load == 1) {  // Read/Load MSByte only
         ret_val = msb;
     } else if(timer->read_load == 2) {  // Read/Load LSByte only
@@ -184,7 +184,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
                 regs.timer[timer_idx].read_load = read_load;
                 regs.timer[timer_idx].bcd = bcd;
                 if((mode == 0) || (mode == 4)) {
-                    regs.timer[timer_idx].counter = regs.timer[timer_idx].value;
+                    // regs.timer[timer_idx].counter = regs.timer[timer_idx].value;
                     regs.timer[timer_idx].counts = 1;
                 }
             } else {
@@ -202,13 +202,13 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
     switch(addr) {
         case 0x40:
-            ret_val = get_value(&regs.timer[0]);
+            ret_val = get_value(&(regs.timer[0]));
             break;
         case 0x41:
-            ret_val = get_value(&regs.timer[1]);
+            ret_val = get_value(&(regs.timer[1]));
             break;
         case 0x42:
-            ret_val = get_value(&regs.timer[2]);
+            ret_val = get_value(&(regs.timer[2]));
             break;
         case 0x43:
             ret_val = 0xFF;
@@ -312,5 +312,8 @@ int module_tick(void) {
     timer_tick(&(regs.timer[0]));
     timer_tick(&(regs.timer[1]));
     timer_tick(&(regs.timer[2]));
+    if(regs.timer[1].counts) {
+        mylog(DEVICE_LOG_FILE, "TIMER 1: counter = %d\n", regs.timer[1].counter);
+    }
     return 0;
 }
