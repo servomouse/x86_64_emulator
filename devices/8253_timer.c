@@ -184,7 +184,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
                 regs.timer[timer_idx].read_load = read_load;
                 regs.timer[timer_idx].bcd = bcd;
                 if((mode == 0) || (mode == 4)) {
-                    // regs.timer[timer_idx].counter = regs.timer[timer_idx].value;
+                    regs.timer[timer_idx].counter --;
                     regs.timer[timer_idx].counts = 1;
                 }
             } else {
@@ -312,8 +312,5 @@ int module_tick(void) {
     timer_tick(&(regs.timer[0]));
     timer_tick(&(regs.timer[1]));
     timer_tick(&(regs.timer[2]));
-    if(regs.timer[1].counts) {
-        mylog(DEVICE_LOG_FILE, "TIMER 1: counter = %d\n", regs.timer[1].counter);
-    }
     return 0;
 }
