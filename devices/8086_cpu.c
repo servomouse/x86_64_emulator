@@ -1621,6 +1621,18 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
+        case 0x14: {  // ADC AL, IMMED8:[DATA-8]
+            operands.dst_val = get_register_value(AL_register);
+            operands.src_val = data[0];
+            res_val = operands.src_val + operands.dst_val;
+            if(get_flag(CF)) {
+                res_val += 1;
+            }
+            mylog("logs/main.log", "Instruction 0x%02X: ADC AL (0x%04X), immed8 (0x%04X), CF = %d; res = 0x%04X\n", opcode, operands.dst_val, operands.src_val, get_flag(CF), res_val);
+            update_flags(operands.dst_val, operands.src_val, res_val, 1, ADD_OP);
+            set_register_value(AL_register, res_val);
+            break;
+        }
         default:
             REGS->invalid_operations ++;
             printf("Error: Invalid ADD instruction: 0x%02X\n", opcode);
@@ -2404,7 +2416,7 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x11:  // ADC REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x12:  // ADC REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x13:  // ADC REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x14:  // ADC AL, IMMED8           [DATA-8]
+        case 0x14:  // ADC AL, IMMED8           [DATA-8]
         // case 0x15:  // ADC AX, immed16          [DATA-LO, DATA-HI]
             ret_val = add_instr(memory[0], &memory[1]);
             break;
