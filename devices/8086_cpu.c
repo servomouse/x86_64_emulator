@@ -1848,11 +1848,13 @@ uint8_t adj_instr(uint8_t opcode, uint8_t *data) {
             set_flag(ZF, (res_val & 0xFF) == 0);
             set_flag(PF, get_parity(res_val & 0xFF));
             mylog("logs/main.log", "Instruction 0x%02X: DAA AL = (0x%02X); result = 0x%04X\n", opcode, src_val, res_val);
+            break;
         }
         default:
             REGS->invalid_operations ++;
             printf("Error: Invalid ADJUST instruction: 0x%02X\n", opcode);
     }
+    return ret_val;
 }
 uint8_t and_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
