@@ -1836,6 +1836,7 @@ uint8_t adj_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     switch(opcode) {
         case 0x27: {  // DAA
+            // https://www.righto.com/2023/01/understanding-x86s-decimal-adjust-after.html
             uint8_t src_val = get_register_value(AL_register);
             uint8_t res_val = src_val;
             if(((res_val & 0x0F) > 9) || (get_flag(AF) > 0)) {
