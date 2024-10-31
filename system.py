@@ -124,7 +124,7 @@ def main():
                 break
     except KeyboardInterrupt:
         print("Ctrl-C received, exit")
-        exit_program()
+    exit_program()
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ typedef struct {
     uint8_t int_register;
     uint8_t triggerded_int;
     uint8_t reg20;
-    uint8_t reg21;
+    uint8_t enabled_ints;
 } device_regs_t;
 
 device_regs_t regs;
@@ -27,16 +27,52 @@ void module_reset(void) {
     regs.int_register = 0;
 }
 
+void dummy_cb(wire_state_t new_state) {
+    return;
+}
+
+__declspec(dllexport)
+wire_t nmi_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+
+__declspec(dllexport)
+wire_t int_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+
+void int0_cb(wire_state_t new_state) {
+    if(new_state == WIRE_LOW) {
+        regs.triggerded_int = 0xFF;
+        int_wire.wire_set_state(WIRE_LOW);
+    } else {
+        regs.triggerded_int = 1;
+        int_wire.wire_set_state(WIRE_HIGH);
+    }
+}
+
+void int1_cb(wire_state_t new_state) {
+    if(new_state == WIRE_LOW) {
+        regs.triggerded_int = 0xFF;
+        int_wire.wire_set_state(WIRE_LOW);
+    } else {
+        regs.triggerded_int = 2;
+        int_wire.wire_set_state(WIRE_HIGH);
+    }
+}
+
+__declspec(dllexport)   // Timer interrupt
+wire_t int0_wire = WIRE_T(WIRE_INPUT, &int0_cb);
+
+__declspec(dllexport)   // Keyboard interrupt
+wire_t int1_wire = WIRE_T(WIRE_INPUT, &int1_cb);
+
 __declspec(dllexport)
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     mylog(DEVICE_LOG_FILE, "INT_CONTROLLER_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
-    regs.int_register = value;
+    // regs.int_register = value;
     if(addr == 0xA0) {
         regs.triggerded_int = value;
     } else if(addr == 0x20) {
         regs.reg20 = value;
     } else if(addr == 0x21) {
-        regs.reg21 = value;
+        regs.enabled_ints = value;
     }
 }
 
@@ -45,10 +81,13 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
     if(addr == 0xA0) {
         ret_val = regs.triggerded_int;
+        if(int_wire.wire_get_state() == WIRE_HIGH) {
+            int_wire.wire_set_state(WIRE_LOW);
+        }
     } else if(addr == 0x20) {
         ret_val = regs.reg20;
     } else if(addr == 0x21) {
-        ret_val = regs.reg21;
+        ret_val = regs.enabled_ints;
     }
     mylog(DEVICE_LOG_FILE, "INT_CONTROLLER_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
@@ -74,39 +113,3 @@ __declspec(dllexport)
 int module_tick(void) {
     return 0;
 }
-
-void dummy_cb(wire_state_t new_state) {
-    return;
-}
-
-__declspec(dllexport)
-wire_t nmi_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
-
-__declspec(dllexport)
-wire_t int_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
-
-void int0_cb(wire_state_t new_state) {
-    if(new_state == WIRE_LOW) {
-        regs.triggerded_int = 0xFF;
-        int_wire.wire_set_state(WIRE_LOW);
-    } else {
-        regs.triggerded_int = 0x00;
-        int_wire.wire_set_state(WIRE_HIGH);
-    }
-}
-
-void int1_cb(wire_state_t new_state) {
-    if(new_state == WIRE_LOW) {
-        regs.triggerded_int = 0xFF;
-        int_wire.wire_set_state(WIRE_LOW);
-    } else {
-        regs.triggerded_int = 1;
-        int_wire.wire_set_state(WIRE_HIGH);
-    }
-}
-
-__declspec(dllexport)   // Timer interrupt
-wire_t int0_wire = WIRE_T(WIRE_INPUT, &int0_cb);
-
-__declspec(dllexport)   // Keyboard interrupt
-wire_t int1_wire = WIRE_T(WIRE_INPUT, &int1_cb);

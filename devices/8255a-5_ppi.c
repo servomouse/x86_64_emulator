@@ -76,9 +76,9 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
             break;
         case 0x61:
             if(((regs.portb_reg & 0x40) == 0) && ((value & 0x40) > 0)) {
-                mylog(DEVICE_LOG_FILE, "PPI Triggering Interrupt 2\n");
+                mylog(DEVICE_LOG_FILE, "PPI Setting Interrupt 2\n");
                 regs.delayed_int = 1;
-                regs.delayed_int_ticks = 20;
+                regs.delayed_int_ticks = 10;
             }
             regs.portb_reg = value;
             update_portc();
@@ -137,6 +137,7 @@ int module_tick(void) {
             regs.delayed_int_ticks --;
         } else {
             if(int1_wire.wire_get_state() == WIRE_LOW) {
+                mylog(DEVICE_LOG_FILE, "PPI Triggering Interrupt 2\n");
                 int1_wire.wire_set_state(WIRE_HIGH);
                 regs.delayed_int_ticks = 20;
             } else {

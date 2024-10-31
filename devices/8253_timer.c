@@ -114,9 +114,9 @@ static void set_value(timer_t *timer, uint16_t value) {
     if(timer->read_load == 0) {         // Latch value
         ;
     } else if(timer->read_load == 1) {  // Read/Load MSByte only
-        msb = value & 0xFF;
-    } else if(timer->read_load == 2) {  // Read/Load LSByte only
         lsb = value & 0xFF;
+    } else if(timer->read_load == 2) {  // Read/Load LSByte only
+        msb = value & 0xFF;
     } else {                            // Read/Load LSByte first, then MSByte
         if(timer->read_load_counter == 0) {
             lsb = value & 0xFF;
@@ -136,6 +136,7 @@ static void set_value(timer_t *timer, uint16_t value) {
     if((timer->mode == 0) || (timer->mode == 4)) {
         timer->counter = timer->value;
     }
+    mylog(DEVICE_LOG_FILE, "Set timer %d value to 0x%04X, counter = 0x%04X, load-read = d\n", timer->value, timer->counter, timer->read_load);
 }
 
 static uint8_t get_value(timer_t *timer) {

@@ -919,6 +919,18 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
+        case 0xE3: {    // JCXZ SHORT-LABEL: [0xE3, IP-INC8]
+            // JCXZ (Jump if CX Zero)
+            ip_inc += 2;
+            mylog("logs/main.log", "Instruction 0xE3: Relative Jump JCXZ");
+            if (get_register_value(CX_register) == 0) {
+                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                ip_inc += ((int8_t*)data)[0];
+            } else {
+                mylog("logs/main.log", ": condition CX == 0 didn't meet: CX = 0x%04X\n", get_register_value(CX_register));
+            }
+            break;
+        }
         case 0xE8: {  // CALL NEAR-PROC: [0xE8, IP-ING-LO, IP-INC-HI]
             int16_t offset = data[0] + (data[1] << 8);
             ip_inc += 3 + offset;
@@ -1203,7 +1215,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             if(get_register_field(data[0]) == 0) {
                 uint16_t addr = get_addr(DS_register, data[1] + (data[2] << 8));
                 mem_write(addr, data[3], 1);
-                mylog("logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), IMMED8 (0x%02X)\n", opcode, addr, data[2]);
+                mylog("logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), IMMED8 (0x%02X)\n", opcode, addr, data[3]);
                 ret_val = 5;
             } else {
                 REGS->invalid_operations ++;
@@ -1820,6 +1832,28 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
     return ret_val;
 }
 
+uint8_t adj_instr(uint8_t opcode, uint8_t *data) {
+    uint8_t ret_val = 1;
+    switch(opcode) {
+        case 0x27: {  // DAA
+            uint8_t src_val = get_register_value(AL_register);
+            uint8_t res_val = src_val;
+            if(((res_val & 0x0F) > 9) || (get_flag(AF) > 0)) {
+                res_val += 6;
+            }
+            if((src_val > 0x99) || (get_flag(CF) > 0)) {
+                res_val += 0x60;
+            }
+            set_flag(SF, (res_val & 0x80) > 0);
+            set_flag(ZF, (res_val & 0xFF) == 0);
+            set_flag(PF, get_parity(res_val & 0xFF));
+            mylog("logs/main.log", "Instruction 0x%02X: DAA AL = (0x%02X); result = 0x%04X\n", opcode, src_val, res_val);
+        }
+        default:
+            REGS->invalid_operations ++;
+            printf("Error: Invalid ADJUST instruction: 0x%02X\n", opcode);
+    }
+}
 uint8_t and_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     operands_t operands = decode_operands(opcode, data);
@@ -2405,10 +2439,9 @@ int16_t process_instruction(uint8_t * memory) {
             mylog("logs/main.log", "Instruction 0x26: ES (override segment)\n");
             set_register_value(override_segment, ES_register);
             break;
-        // case 0x27:  // DAA
-        //     daa_op();
-        //     REGS->IP += 1;
-        //     break;
+        case 0x27:  // DAA
+            ret_val = adj_instr(memory[0], &memory[1]);
+            break;
         // case 0x28:  // SUB REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         // case 0x29:  // SUB REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x2A:  // SUB REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -2994,14 +3027,10 @@ int16_t process_instruction(uint8_t * memory) {
             // condition is met it jumps at specified label, otherwise falls through
             ret_val = jmp_instr(memory[0], &memory[1]);
             break;
-        // case 0xE3:  // JPXZ
-        //     // JCXZ (Jump if ECX Zero) branches to the label specified in the instruction if it finds a value of zero in ECX
-        //     if(REGS->CX == 0) {
-        //         REGS->IP += memory[1];  // IP-INC-8
-        //     } else {
-        //         REGS->IP += 2;
-        //     }
-        //     break;
+        case 0xE3:  // JPXZ
+            // JCXZ (Jump if ECX Zero) branches to the label specified in the instruction if it finds a value of zero in ECX
+            ret_val = jmp_instr(memory[0], &memory[1]);
+            break;
         case 0xE4:  // IN AL, IMMED8
             mylog("logs/main.log", "Instruction 0xE4: IN AL IMMED8, immed8 = 0x%02X;\n", memory[1]);
             set_register_value(AL_register, io_read(memory[1], 1));
@@ -3471,7 +3500,9 @@ void int_cb(wire_state_t new_state) {
         mylog("logs/main.log", "INT activated\n");
         uint8_t vec = io_read(0xA0, 1);
         if(vec != 0xFF) {
+            mylog("logs/short.log", "INT activated\n");
             set_int_vector(vec);
+            // printf("CPU Interrupt %d\n", vec);
         }
     }
     return;
