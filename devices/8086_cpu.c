@@ -1225,27 +1225,29 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0xC7: {  // MOV MEM8, IMMED8: [0xC7, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
             if(get_register_field(data[0]) == 0) {
-                operands_t operands = decode_operands(opcode & 0xFC, data); // Treat R/M field as destination
-                uint8_t mod_field = get_mode_field(data[0]);
-                uint16_t value = 0;
-                if(mod_field == 0) {
-                    if(6 == get_reg_mem_field(data[0])) {
-                        value = data[3] + (data[4] << 8);
-                        ret_val = 6;
-                    } else {
-                        value = data[1] + (data[2] << 8);
-                        ret_val = 4;
-                    }
-                } else if(mod_field == 1) {
-                    value = data[2] + (data[3] << 8);
-                    ret_val = 5;
-                } else {
-                    value = data[3] + (data[4] << 8);
-                    ret_val = 6;
-                }
-                mem_write(operands.dst.address, value, 2);
-                mylog("logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), IMMED16 (0x%04X)\n", opcode, operands.dst.address, value);
-                ret_val = 5;
+                uint16_t addr = get_addr(DS_register, data[1] + (data[2] << 8));
+                uint16_t value = data[3] + (data[4] << 8);
+                // operands_t operands = decode_operands(opcode & 0xFC, data); // Treat R/M field as destination
+                // uint8_t mod_field = get_mode_field(data[0]);
+                // uint16_t value = 0;
+                // if(mod_field == 0) {
+                //     if(6 == get_reg_mem_field(data[0])) {
+                //         value = data[3] + (data[4] << 8);
+                //         ret_val = 6;
+                //     } else {
+                //         value = data[1] + (data[2] << 8);
+                //         ret_val = 4;
+                //     }
+                // } else if(mod_field == 1) {
+                //     value = data[2] + (data[3] << 8);
+                //     ret_val = 5;
+                // } else {
+                //     value = data[3] + (data[4] << 8);
+                //     ret_val = 6;
+                // }
+                mem_write(addr, value, 2);
+                mylog("logs/main.log", "Instruction 0x%02X: MOV MEM16 (@0x%08X), IMMED16 (0x%04X)\n", opcode, addr, value);
+                ret_val = 6;
             } else {
                 REGS->invalid_operations ++;
                 printf("Invalid instruction: 0x%02X, REG field != 0\n", opcode);

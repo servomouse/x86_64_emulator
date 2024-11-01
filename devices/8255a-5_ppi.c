@@ -77,6 +77,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
         case 0x61:
             if(((regs.portb_reg & 0x40) == 0) && ((value & 0x40) > 0)) {
                 mylog(DEVICE_LOG_FILE, "PPI Setting Interrupt 2\n");
+                module_reset();
                 regs.delayed_int = 1;
                 regs.delayed_int_ticks = 10;
             }
@@ -100,6 +101,7 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
     switch(addr) {
         case 0x60:
             ret_val = regs.porta_reg;
+            regs.porta_reg = 0;
             break;
         case 0x61:
             ret_val = regs.portb_reg;
