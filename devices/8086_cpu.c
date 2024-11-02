@@ -1740,6 +1740,27 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
             break;
         }
+        case 0x83: {  // SBB REG16/MEM16, IMMED8: [0x83, MOD 011 R/M, (DISP-LO), (DISP-HI), DATA-SX]
+            // DATA-SX: 8-bit immediate value that is automatically sign-extended to 16-bits before use.
+            int16_t src_val = 0;
+            if(operands.src_type == 0) {    // Register mode
+                src_val = (int16_t)(data[1]);
+                set_register_value(operands.src.register_name, res_val);
+                ret_val = 3;
+            } else {    // Register mode
+                src_val = (int16_t)(data[3]);
+                ret_val = 5;
+            }
+            res_val = operands.src_val - src_val;;
+            mylog("logs/main.log", "Instruction 0x2B: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", operands.destination, operands.dst_val, operands.destination, operands.src_val, res_val);
+            update_flags(operands.src_val, src_val, res_val, operands.width, SUB_OP);
+            if(operands.src_type == 0) {    // Register mode
+                set_register_value(operands.src.register_name, res_val);
+            } else {    // Register mode
+                mem_write(operands.src.address, res_val, 2);
+            }
+            break;
+        }
         case 0x2A: {  // SUB REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
             res_val = operands.dst_val - operands.src_val;
             mylog("logs/main.log", "Instruction 0x2B: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", operands.destination, operands.dst_val, operands.destination, operands.src_val, res_val);
@@ -2788,8 +2809,7 @@ int16_t process_instruction(uint8_t * memory) {
                     REGS->invalid_operations ++;
                     break;
                 case 3: // SBB REG16/MEM16, IMMED8: [0x83, MOD 011 RIM, (DISP-LO),(DISP-HI), DATA-SX]
-                    printf("ERROR: Unimplemented SUB (0x83) instruction!\n");
-                    REGS->invalid_operations ++;
+                    ret_val = sub_instr(memory[0], &memory[1]);
                     break;
                 case 4:
                     printf("ERROR: Invalid instruction: 0x83 REG = 4\n");
