@@ -20,6 +20,7 @@ def system_init():
         "mda_ctrlr": {"file": "bin/8086_mda.dll", "type": "device"},
         "ppi_ctrlr": {"file": "bin/8255a-5_ppi.dll", "type": "device"},
         "timer": {"file": "bin/8253_timer.dll", "type": "device"},
+        "io_expansion_box": {"file": "bin/8086_io_expansion_box.dll", "type": "device"},
         "io_ctrlr": {"file": "bin/8086_io.dll", "type": "address_space"},
         "memory": {"file": "bin/8086_mem.dll", "type": "address_space"},
         "cpu": {"file": "bin/8086_cpu.dll", "type": "processor"},
@@ -58,9 +59,11 @@ def system_init():
     ppi_ctrlr = mb.devices["ppi_ctrlr"]
     timer = mb.devices["timer"]
     io_ctrlr = mb.devices["io_ctrlr"]
+    io_expansion_box = mb.devices["io_expansion_box"]
 
     int_ctrlr.id0 = io_ctrlr.map_device(int_ctrlr.addr_start, int_ctrlr.addr_end, int_ctrlr.data_write_p, int_ctrlr.data_read_p)
     int_ctrlr.id1 = io_ctrlr.map_device(0x20, 0x21, int_ctrlr.data_write_p, int_ctrlr.data_read_p)
+    io_expansion_box.id0 = io_ctrlr.map_device(io_expansion_box.addr_start, io_expansion_box.addr_end, io_expansion_box.data_write_p, io_expansion_box.data_read_p)
     dma_ctrlr.id0 = io_ctrlr.map_device(dma_ctrlr.addr_start, dma_ctrlr.addr_end, dma_ctrlr.data_write_p, dma_ctrlr.data_read_p)
     dma_ctrlr.id1 = io_ctrlr.map_device(0x00, 0x0F, dma_ctrlr.data_write_p, dma_ctrlr.data_read_p)
     cga_ctrlr.id = io_ctrlr.map_device(cga_ctrlr.addr_start, cga_ctrlr.addr_end, cga_ctrlr.data_write_p, cga_ctrlr.data_read_p)
