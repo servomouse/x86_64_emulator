@@ -2134,6 +2134,7 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             set_register_value(AL_register, res_val);
             update_flags(operands.dst_val, operands.src_val, res_val, 1, LOGIC_OP);
             mylog("logs/main.log", "Instruction 0x%02X: AND AL (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
+            ret_val += 1;
             break;
         }
         case 0xF6: {
@@ -2428,33 +2429,22 @@ int16_t inc_dec_instr(uint8_t opcode, uint8_t *data) {
             operands_t operands = new_decode_operands(opcode, data, 1);
             ret_val += operands.num_bytes;
             uint8_t reg_field = get_register_field(data[0]);
-            // MOD field specifies the type of operation, thus dst_val isn't used
-            // if (operands.dst_type == 0) {   // Reg mode
-            //     res_val = get_register_value(operands.src.register_name);
-            // } else {    // Memory mode
-            //     res_val = mem_read(operands.src.address, operands.width);
-            // }
             uint16_t res_val = 0;
             if(reg_field == 0) {    // INC
                 uint16_t res_val = operands.dst_val + 1;
-                mylog("logs/main.log", "Instruction 0x%02X: INC %s: 0x%04X => 0x%04X\n", opcode, operands.source, res_val, res_val+1);
-                // if (operands.dst_type == 0) {   // Reg mode
-                //     set_register_value(operands.dst.register_name, res_val);
-                // } else {    // Memory mode
-                //     mem_write(operands.dst.address, res_val, operands.width);
-                // }
-                update_flags(res_val, 1, res_val+1, operands.width, ADD_OP);
+                mylog("logs/main.log", "Instruction 0x%02X: INC %s: 0x%04X => 0x%04X\n", opcode, operands.destination, operands.dst_val, res_val);
+                update_flags(res_val, 1, res_val, operands.width, ADD_OP);
             } else if (reg_field == 1) {    // DEC
                 uint16_t res_val = operands.dst_val - 1;
-                mylog("logs/main.log", "Instruction 0x%02X: DEC %s: 0x%04X => 0x%04X\n", opcode, operands.source, res_val, res_val-1);
-                update_flags(res_val, 1, res_val-1, operands.width, SUB_OP);
+                mylog("logs/main.log", "Instruction 0x%02X: DEC %s: 0x%04X => 0x%04X\n", opcode, operands.destination, operands.dst_val, res_val);
+                update_flags(res_val, 1, res_val, operands.width, SUB_OP);
             } else {
                 printf("ERROR: Invalid INC/DEC operation: 0x%02X, reg_field = %d\n", opcode, reg_field);
             }
             if (operands.dst_type == 0) {   // Reg mode
-                set_register_value(operands.src.register_name, res_val);
+                set_register_value(operands.dst.register_name, res_val);
             } else {    // Memory mode
-                mem_write(operands.src.address, res_val, operands.width);
+                mem_write(operands.dst.address, res_val, operands.width);
             }
             break;
         }
