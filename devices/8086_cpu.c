@@ -2690,7 +2690,6 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x83:  // 16-bit operations
             switch(get_register_field(memory[1])) {
                 case 0: // ADD REG16/MEM16, IMMED8: [0x83, MOD 000 RIM, (DISP-LO),(DISP-HI), DATA-SX]
-                    // printf("ERROR: Unimplemented ADD (0x83) instruction!\n");
                     ret_val = add_instr(memory[0], &memory[1]);
                     break;
                 case 1:

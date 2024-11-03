@@ -10,6 +10,7 @@ char *BIOS_FILENAME_0XF8000 = "BIOS/08NOV82_F8000.BIN";
 // char *BIOS_FILENAME_0XF8000 = "BIOS/F8000.BIN";
 #define MEMORY_LOG_FILE "logs/mem_log.txt"
 #define CODE_MEM_LOG_FILE "logs/code_mem_log.txt"
+#define VIDEO_MEM_LOG_FILE "logs/video_mem_log.txt"
 #define MEMORY_DUMP_FILE "data/memory_dump.bin"
 
 #define MEMORY_SIZE 0x100000
@@ -86,11 +87,15 @@ uint8_t * mem_init(uint8_t continue_simulation) {
 
 __declspec(dllexport)
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
-    mylog(MEMORY_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    if((addr >= 0xA0000) && (addr < 0xC0000)) {
+        mylog(VIDEO_MEM_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    }else {
+        mylog(MEMORY_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    }
     if(width == 1) {
         MEMORY[addr] = value;
     } else if (width == 2) {
-        *((uint16_t*)&MEMORY[addr]) = value;
+        *((uint16_t*)&(MEMORY[addr])) = value;
     } else {
         printf("MEM WRITE ERROR: Incorrect width: %d", width);
     }
@@ -106,7 +111,11 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
     } else {
         printf("MEM READ ERROR: Incorrect width: %d", width);
     }
-    mylog(MEMORY_LOG_FILE, "MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    if((addr >= 0xA0000) && (addr < 0xC0000)) {
+        mylog(VIDEO_MEM_LOG_FILE, "MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    }else {
+        mylog(MEMORY_LOG_FILE, "MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    }
     return ret_val;
 }
 
