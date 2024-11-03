@@ -1252,156 +1252,62 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     uint16_t res_val = 0;
     switch(opcode) {
-        case 0xD0: {
-            // 8-bit operations
+        case 0xD0:      // 8-bit shifts by 1
+        case 0xD1:      // 16-bit shifts by 1
+        case 0xD2:      // 8-bit shifts by CL
+        case 0xD3: {    // 16-bit shifts by CL
             operands_t operands = decode_operands(opcode, data, 1);
             ret_val += operands.num_bytes;
-            switch(get_register_field(data[0])) {
-                case 0:   // ROL REG8/MEM8, 1: [opcode, MOD 000 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented ROL REG8/MEM8, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
-                case 1: // ROR REG8/MEM8, 1: [opcode, MOD 001 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented ROR REG8/MEM8, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
-                case 2: // RCL REG8/MEM8, 1: [opcode, MOD 010 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented RCL REG8/MEM8, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
-                case 3: // RCR REG8/MEM8, 1: [opcode, MOD 011 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented RCR REG8/MEM8, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
-                case 4: // SAL/SHL REG8/MEM8, 1: [opcode, MOD 100 R/M, DISP-LO, DISP-HI]
-                    res_val = operands.dst_val << 1;
-                    if(operands.dst_type == 0) {    // Register mode
-                        set_register_value(operands.dst.register_name, res_val);
-                    } else {    // Memory mode
-                        mem_write(operands.dst.address, res_val, operands.width);
-                    }
-                    update_flags(operands.dst_val, 1, res_val, operands.width, SHIFT_L_OP);
-                    mylog("logs/main.log", "Instruction 0x%02X: SAL/SHL REG16/MEM16, 1: dst (%s) = 0x%02X, result = 0x%02X\n", opcode, operands.destination, operands.dst_val, res_val);
-                    break;
-                case 5: // SHR REG8/MEM8, 1: [opcode, MOD 101 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented SHR REG8/MEM8, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
-                case 6: // INVALID_INSTRUCTION
-                    REGS->invalid_operations ++;
-                    printf("Invalid instruction: 0x%02X, REG field 110\n", opcode);
-                    break;
-                case 7: // SAR REG8/MEM8, 1: [opcode, MOD 111 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented SAR REG8/MEM8, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
+            if((opcode == 0xD0) || (opcode == 0xD1)) {
+                operands.src_val = 1;
+            } else if((opcode == 0xD2) || (opcode == 0xD3)) {
+                operands.src_val = get_register_value(CL_register);
             }
-            break;
-        }
-        case 0xD1: {
-            // 16-bit operations
-            operands_t operands = decode_operands(opcode, data, 1);
-            ret_val += operands.num_bytes;
             switch(get_register_field(data[0])) {
-                case 0: // ROL REG16/MEM16, 1: [0xD1, MOD 000 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented ROL REG16/MEM16, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
-                case 1: // ROR REG16/MEM16, 1: [0xD1, MOD 001 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented ROR REG16/MEM16, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
-                case 2: // RCL REG16/MEM16, 1: [0xD1, MOD 010 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented RCL REG16/MEM16, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
-                case 3: // RCR REG16/MEM16, 1: [0xD1, MOD 011 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented RCR REG16/MEM16, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
-                case 4: // SAL/SHL REG16/MEM16, 1: [0xD1, MOD 100 R/M, DISP-LO, DISP-HI]
-                    res_val = operands.dst_val << 1;
-                    if(operands.dst_type == 0) {    // Register mode
-                        set_register_value(operands.dst.register_name, res_val);
-                    } else {    // Memory mode
-                        mem_write(operands.dst.address, res_val, 1);
-                    }
-                    update_flags(operands.dst_val, 1, res_val, operands.width, SHIFT_L_OP);
-                    mylog("logs/main.log", "Instruction 0x%02X: SAL/SHL REG16/MEM16, 1: dst (%s) = 0x%04X, result = 0x%04X\n", opcode, operands.destination, operands.dst_val, res_val);
-                    break;
-                case 5: // SHR REG16/MEM16, 1: [0xD1, MOD 101 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented SHR REG16/MEM16, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
-                case 6: // INVALID_INSTRUCTION
-                    REGS->invalid_operations ++;
-                    printf("Invalid instruction: 0x%02X, REG field 110\n", opcode);
-                    break;
-                case 7: // SAR REG16/MEM16, 1: [0xD1, MOD 111 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented SAR REG16/MEM16, 1 operation\n");
-                    REGS->invalid_operations ++;
-                    break;
-            }
-            break;
-        }
-        case 0xD2: {
-            // 8-bit operations
-            operands_t operands = decode_operands(opcode, data, 1);
-            ret_val += operands.num_bytes;
-            switch(get_register_field(data[0])) {
-                case 0: // ROL REG8/MEM8, CL: [0xD2, MOD 000 R/M, (DISP-LO), (DISP-HI)]
+                case 0:   // ROL REG/MEM, 1/CL: [opcode, MOD 000 R/M, DISP-LO, DISP-HI]
                     // rotr32(x, n) (( x>>n  ) | (x<<(64-n)))
-                    operands.src_val = get_register_value(CL_register);
                     if(operands.src_val > 16) {
                         operands.src_val = operands.src_val % 16;
                     }
                     operands.dst_val = (operands.dst_val << operands.src_val) | (operands.dst_val >> (16 - operands.src_val));
                     update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SHIFT_L_OP);
-                    if(operands.dst_type == 0) {
-                        set_register_value(operands.dst.register_name, res_val);
-                        ret_val = 2;
-                    } else {
-                        mem_write(operands.dst.address, res_val, operands.width);
-                        ret_val = 4;
-                    }
-                    mylog("logs/main.log", "Instruction 0x%02X: ROL %s (0x%04X), CL (0x%04X): result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+                    mylog("logs/main.log", "Instruction 0x%02X: ROL %s (0x%04X), %d: result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     break;
-                case 1: // ROR REG8/MEM8, CL: [0xD2, MOD 001 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented ROR REG8/MEM8, CL operation\n");
+                case 1: // ROR REG/MEM, 1/CL: [opcode, MOD 001 R/M, DISP-LO, DISP-HI]
+                    printf("ERROR: unimplemented ROR REG/MEM, 1/CL operation\n");
                     REGS->invalid_operations ++;
                     break;
-                case 2: // RCL REG8/MEM8, CL: [0xD2, MOD 010 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented RCL REG8/MEM8, CL operation\n");
+                case 2: // RCL REG/MEM, 1/CL: [opcode, MOD 010 R/M, DISP-LO, DISP-HI]
+                    printf("ERROR: unimplemented RCL REG/MEM, 1/CL operation\n");
                     REGS->invalid_operations ++;
                     break;
-                case 3: // RCR REG8/MEM8, CL: [0xD2, MOD 011 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented RCR REG8/MEM8, CL operation\n");
+                case 3: // RCR REG/MEM, 1/CL: [opcode, MOD 011 R/M, DISP-LO, DISP-HI]
+                    printf("ERROR: unimplemented RCR REG/MEM, 1/CL operation\n");
                     REGS->invalid_operations ++;
                     break;
-                case 4: // SAL/SHL REG8/MEM8, CL: [0xD2, MOD 100 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented SAL/SHL REG8/MEM8, CL operation\n");
-                    REGS->invalid_operations ++;
+                case 4: // SAL/SHL REG/MEM, 1/CL, 1: [opcode, MOD 100 R/M, DISP-LO, DISP-HI]
+                    res_val = operands.dst_val << operands.src_val;
+                    update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SHIFT_L_OP);
+                    mylog("logs/main.log", "Instruction 0x%02X: SAL/SHL %s (0x%04X), %d: dst , result = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     break;
-                case 5: // SHR REG8/MEM8, CL: [0xD2, MOD 101 R/M, DISP-LO, DISP-HI]
-                    // operands.dst_val = operands.src_val;   // dst_val isn't unused because the REG field specifies operation type
-                    operands.src_val = get_register_value(CL_register);
+                case 5: // SHR REG/MEM, 1/CL: [opcode, MOD 101 R/M, DISP-LO, DISP-HI]
                     res_val = operands.dst_val >> operands.src_val;
-                    if(operands.dst_type == 0) {    // Register mode
-                        set_register_value(operands.dst.register_name, res_val);
-                    } else {    // Memory mode
-                        mem_write(operands.dst.address, res_val, 1);
-                    }
                     update_flags(operands.dst_val, operands.src_val, res_val, 2, SHIFT_R_OP);
-                    mylog("logs/main.log", "Instruction 0x%02X: SHR %s (0x%04X), CL (0x%04X); result = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+                    mylog("logs/main.log", "Instruction 0x%02X: SHR %s (0x%04X), CL %d; result = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     break;
                 case 6: // INVALID_INSTRUCTION
+                    REGS->invalid_operations ++;
                     printf("Invalid instruction: 0x%02X, REG field 110\n", opcode);
+                    break;
+                case 7: // SAR REG/MEM, 1/CL: [opcode, MOD 111 R/M, DISP-LO, DISP-HI]
+                    printf("ERROR: unimplemented SAR REG/MEM, 1/CL operation\n");
                     REGS->invalid_operations ++;
                     break;
-                case 7: // SAR REG8/MEM8, CL: [0xD2, MOD 111 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented SAR REG8/MEM8, CL operation\n");
-                    REGS->invalid_operations ++;
-                    break;
+            }
+            if(operands.dst_type == 0) {    // Register mode
+                set_register_value(operands.dst.register_name, res_val);
+            } else {    // Memory mode
+                mem_write(operands.dst.address, res_val, operands.width);
             }
             break;
         }
@@ -1417,15 +1323,10 @@ uint8_t cmp_instr(uint8_t opcode, uint8_t *data) {
     int16_t res_val = 0;
     operands_t operands = {0};
     switch(opcode) {
-        case 0x3A: {  // CMP REG8, REG8/MEM8      [0x3A, MOD REG R/M, (DISP-LO), (DISP-HI)]
-            operands_t operands = decode_operands(opcode, data, 0);
-            ret_val += operands.num_bytes;
-            res_val = operands.dst_val - operands.src_val;
-            update_flags(operands.dst_val, operands.src_val, res_val, operands.num_bytes, SUB_OP);
-            mylog("logs/main.log", "Instruction 0x%02X: CMP %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
-            break;
-        }
-        case 0x3B: {  // CMP REG16, REG16/MEM16   [0x3B, MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x38:  // CMP REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x39:  // CMP REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x3A:  // CMP REG8, REG8/MEM8      [0x3A, MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x3B: {// CMP REG16, REG16/MEM16   [0x3B, MOD REG R/M, (DISP-LO), (DISP-HI)]
             operands_t operands = decode_operands(opcode, data, 0);
             ret_val += operands.num_bytes;
             res_val = operands.dst_val - operands.src_val;
@@ -1570,33 +1471,10 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
-        case 0x01: {  // ADD REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-            operands_t operands = decode_operands(opcode, data, 0);
-            ret_val += operands.num_bytes;
-            res_val = operands.dst_val + operands.src_val;
-            mylog("logs/main.log", "Instruction 0x%02X: ADD %s (0x%04X), %s (0x%04X); res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
-            update_flags(operands.dst_val, operands.src_val, res_val, operands.width, ADD_OP);
-            if(operands.dst_type == 0) {    // Register mode
-                set_register_value(operands.dst.register_name, res_val);
-            } else {    // Memory mode
-                mem_write(operands.dst.address, res_val, operands.width);
-            }
-            break;
-        }
-        case 0x02: {  // ADD REG8, REG8/MEM8: [0x02, MOD REG R/M, (DISP-LO), (DISP-HI)]
-            operands_t operands = decode_operands(opcode, data, 0);
-            ret_val += operands.num_bytes;
-            res_val = operands.dst_val + operands.src_val;
-            mylog("logs/main.log", "Instruction 0x%02X: ADD %s (0x%02X), %s (0x%02X); res = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
-            update_flags(operands.dst_val, operands.src_val, res_val, operands.width, ADD_OP);
-            if(operands.dst_type == 0) {    // Register mode
-                set_register_value(operands.dst.register_name, res_val);
-            } else {                        // Memory mode
-                mem_write(operands.dst.address, res_val, operands.width);
-            }
-            break;
-        }
-        case 0x03: {  // ADD REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x00:      // ADD REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x01:      // ADD REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x02:      // ADD REG8, REG8/MEM8: [0x02, MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x03: {    // ADD REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
             operands_t operands = decode_operands(opcode, data, 0);
             ret_val += operands.num_bytes;
             res_val = operands.dst_val + operands.src_val;
@@ -1629,7 +1507,9 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             ret_val = 3;
             break;
         }
-        case 0x10: {  // ADC REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x10:  // ADC REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x11:  // ADC REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x12: {  // ADC REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
             operands_t operands = decode_operands(opcode, data, 0);
             ret_val += operands.num_bytes;
             res_val = operands.dst_val + operands.src_val;
@@ -1661,8 +1541,8 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
-        case 0x14: {  // ADC AL, IMMED8:[DATA-8]
-        operands_t operands = {0};
+        case 0x14: {  // ADC AL, IMMED8: [DATA-8]
+            operands_t operands = {0};
             operands.dst_val = get_register_value(AL_register);
             operands.src_val = data[0];
             res_val = operands.src_val + operands.dst_val;
@@ -1673,6 +1553,20 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             update_flags(operands.dst_val, operands.src_val, res_val, 1, ADD_OP);
             set_register_value(AL_register, res_val);
             ret_val = 2;
+            break;
+        }
+        case 0x15: {  // ADC AX, immed16: [DATA-LO, DATA-HI]
+            operands_t operands = {0};
+            operands.dst_val = get_register_value(AL_register);
+            operands.src_val = data[0] + (data[1] << 8);
+            res_val = operands.src_val + operands.dst_val;
+            if(get_flag(CF)) {
+                res_val += 1;
+            }
+            mylog("logs/main.log", "Instruction 0x%02X: ADC AL (0x%04X), immed16 (0x%04X), CF = %d; res = 0x%04X\n", opcode, operands.dst_val, operands.src_val, get_flag(CF), res_val);
+            update_flags(operands.dst_val, operands.src_val, res_val, 2, ADD_OP);
+            set_register_value(AL_register, res_val);
+            ret_val = 3;
             break;
         }
         default:
@@ -1764,28 +1658,61 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
             if(reg_field != 7) {
                 if(operands.dst_type == 0) {    // Register mode
                     set_register_value(operands.dst.register_name, res_val);
-                } else {    // Register mode
+                } else {    // Memory mode
                     mem_write(operands.dst.address, res_val, operands.width);
                 }
             }
             break;
         }
-        case 0x2A: {  // SUB REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x18:  // SBB REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x19:  // SBB REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x1A:  // SBB REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x1B:  // SBB REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x28:  // SUB REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x29:  // SUB REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x2A:  // SUB REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x2B: {// SUB REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
             operands_t operands = decode_operands(opcode, data, 0);
             ret_val += operands.num_bytes;
             res_val = operands.dst_val - operands.src_val;
-            mylog("logs/main.log", "Instruction 0x2B: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", operands.destination, operands.dst_val, operands.destination, operands.src_val, res_val);
+            mylog("logs/main.log", "Instruction 0x%02X: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.destination, operands.src_val, res_val);
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
-            set_register_value(operands.dst.register_name, res_val);
+            if(operands.dst_type == 0) {
+                set_register_value(operands.dst.register_name, res_val);
+            } else {    // Memory mode
+                mem_write(operands.dst.address, res_val, operands.width);
+            }
             break;
         }
-        case 0x2B: {  // SUB REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-            operands_t operands = decode_operands(opcode, data, 0);
-            ret_val += operands.num_bytes;
+        case 0x1C:  // SBB AL, IMMED8   [DATA-8]
+        case 0x1D:  // SBB AX, immed16  [DATA-LO, DATA-HI]
+        case 0x2C:  // SUB AL, IMMED8:  [DATA-8]
+        case 0x2D: {// SUB AX, immed16: [DATA-LO, DATA-HI]
+            operands_t operands = {0};
+            if((opcode == 0x2C) || (opcode == 0x1C)) {
+                operands.src_val = get_register_value(AL_register);
+                operands.dst_val = data[0];
+                operands.width = 1;
+                ret_val = 2;
+            } else if((opcode == 0x2D) || (opcode == 0x1D)) {
+                operands.src_val = get_register_value(AX_register);
+                operands.dst_val = data[0] + (data[1] << 8);
+                operands.width = 2;
+                ret_val = 3;
+            }
             res_val = operands.dst_val - operands.src_val;
-            mylog("logs/main.log", "Instruction 0x2B: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", operands.destination, operands.dst_val, operands.destination, operands.src_val, res_val);
+            if((opcode == 0x1C) || (opcode == 0x1D)) {
+                if(get_flag(CF)) {
+                    res_val -= 1;
+                }
+            }
+            mylog("logs/main.log", "Instruction 0x%02X: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.destination, operands.src_val, res_val);
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
-            set_register_value(operands.dst.register_name, res_val);
+            if(opcode == 0x2C) {
+                set_register_value(AL_register, res_val);
+            } else if(opcode == 0x2D) {
+                set_register_value(AX_register, res_val);
+            }
             break;
         }
         default:
@@ -1953,7 +1880,10 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     uint16_t res_val = 0;
     switch(opcode) {
-        case 0x22: {  // AND REG8, REG8/MEM8:      [0x22, MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x20:  // AND REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x21:  // AND REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x22:  // AND REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x23: {// AND REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
             operands_t operands = decode_operands(opcode, data, 0);
             ret_val += operands.num_bytes;
             res_val = operands.src_val & operands.dst_val;
@@ -1963,7 +1893,7 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
                 mem_write(operands.dst.address, res_val, 2);
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
-            mylog("logs/main.log", "Instruction 0x22: AND %s (0x%02X), %s (0x%02X); result = 0x%04X\n", operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
+            mylog("logs/main.log", "Instruction 0x%02X: AND %s (0x%02X), %s (0x%02X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             break;
         }
         case 0x24: {  // AND AL, IMMED8: [0x24, DATA-8]
@@ -1974,7 +1904,18 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             set_register_value(AL_register, res_val);
             update_flags(operands.dst_val, operands.src_val, res_val, 1, LOGIC_OP);
             mylog("logs/main.log", "Instruction 0x%02X: AND AL (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
-            ret_val += 1;
+            ret_val = 2;
+            break;
+        }
+        case 0x25: {  // AND AX, immed16: [DATA-LO, DATA-HI]
+            operands_t operands = {0};
+            operands.dst_val = get_register_value(AL_register);
+            operands.src_val = data[0] + (data[1] << 8);
+            res_val = operands.src_val & operands.dst_val;
+            set_register_value(AL_register, res_val);
+            update_flags(operands.dst_val, operands.src_val, res_val, 2, LOGIC_OP);
+            mylog("logs/main.log", "Instruction 0x%02X: AND AL (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
+            ret_val = 3;
             break;
         }
         case 0xF6: {    // TEST REG8/MEM8, IMMED8: [0xF6, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-8]
@@ -2004,45 +1945,47 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
 
 uint8_t pop_reg_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
+    register_name_t reg;
     switch(opcode) {
-        case 0x1F: {  // POP DS
-            pop_register(DS_register);
-            break;
-        }
-        case 0x58: {  // POP AX
-            pop_register(AX_register);
-            break;
-        }
-        case 0x59: {  // POP CX
-            pop_register(CX_register);
-            break;
-        }
-        case 0x5A: {  // POP DX
-            pop_register(DX_register);
-            break;
-        }
-        case 0x5B: {  // POP BX
-            pop_register(BX_register);
-            break;
-        }
-        case 0x5C: {  // POP SP
-            pop_register(SP_register);
-            break;
-        }
-        case 0x5D: {  // POP BP
-            pop_register(BP_register);
-            break;
-        }
-        case 0x5E: {  // POP SI
-            pop_register(SI_register);
-            break;
-        }
-        case 0x5F: {  // POP DI
-            pop_register(DI_register);
-            break;
-        }
-        case 0x9D: {  // POPF
-            pop_register(FLAGS_register);
+        case 0x07:  // POP ES
+        case 0x17:  // POP SS
+        case 0x1F:  // POP DS
+        case 0x58:  // POP AX
+        case 0x59:  // POP CX
+        case 0x5A:  // POP DX
+        case 0x5B:  // POP BX
+        case 0x5C:  // POP SP
+        case 0x5D:  // POP BP
+        case 0x5E:  // POP SI
+        case 0x5F:  // POP DI
+        case 0x9D: {// POPF
+            if(opcode == 0x07) {
+                reg = ES_register;
+            } else if(opcode == 0x17) {
+                reg = SS_register;
+            } else if(opcode == 0x1F) {
+                reg = DS_register;
+            } else if(opcode == 0x58) {
+                reg = AX_register;
+            } else if(opcode == 0x59) {
+                reg = CX_register;
+            } else if(opcode == 0x5A) {
+                reg = DX_register;
+            } else if(opcode == 0x5B) {
+                reg = BX_register;
+            } else if(opcode == 0x5C) {
+                reg = SP_register;
+            } else if(opcode == 0x5D) {
+                reg = BP_register;
+            } else if(opcode == 0x5E) {
+                reg = SI_register;
+            } else if(opcode == 0x5F) {
+                reg = DI_register;
+            } else if(opcode == 0x9D) {
+                reg = FLAGS_register;
+            }
+            mylog("logs/main.log", "Instruction 0x%02X: POP %s\n", opcode, get_reg_name_string(reg));
+            pop_register(reg);
             break;
         }
         default:
@@ -2054,60 +1997,50 @@ uint8_t pop_reg_instr(uint8_t opcode, uint8_t *data) {
 
 uint8_t push_reg_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
+    register_name_t reg;
     switch(opcode) {
-        case 0x0E: {  // PUSH CS
-            push_register(get_register_value(CS_register));
-            mylog("logs/main.log", "Instruction 0x%02X: PUSH CS\n", opcode);
-            break;
-        }
-        case 0x1E: {  // PUSH DS
-            push_register(get_register_value(DS_register));
-            mylog("logs/main.log", "Instruction 0x%02X: PUSH DS\n", opcode);
-            break;
-        }
-        case 0x50: {    // PUSH AX
-            push_register(get_register_value(AX_register));
-            mylog("logs/main.log", "Instruction 0x%02X: PUSH AX\n", opcode);
-            break;
-        }
-        case 0x51: {  // PUSH CX
-            push_register(get_register_value(CX_register));
-            mylog("logs/main.log", "Instruction 0x%02X: PUSH CX\n", opcode);
-            break;
-        }
-        case 0x52: {  // PUSH DX
-            push_register(get_register_value(DX_register));
-            mylog("logs/main.log", "Instruction 0x%02X: PUSH DX\n", opcode);
-            break;
-        }
-        case 0x53: {  // PUSH BX
-            push_register(get_register_value(BX_register));
-            mylog("logs/main.log", "Instruction 0x%02X: PUSH BX\n", opcode);
-            break;
-        }
-        case 0x54: {  // PUSH SP
-            push_register(get_register_value(SP_register));
-            mylog("logs/main.log", "Instruction 0x%02X: PUSH SP\n", opcode);
-            break;
-        }
-        case 0x55: {  // PUSH BP
-            push_register(get_register_value(BP_register));
-            mylog("logs/main.log", "Instruction 0x%02X: PUSH BP\n", opcode);
-            break;
-        }
-        case 0x56: {  // PUSH SI
-            push_register(get_register_value(SI_register));
-            mylog("logs/main.log", "Instruction 0x%02X: PUSH SI\n", opcode);
-            break;
-        }
-        case 0x57: {  // PUSH DI
-            push_register(get_register_value(DI_register));
-            mylog("logs/main.log", "Instruction 0x%02X: PUSH DI\n", opcode);
-            break;
-        }
-        case 0x9C: {  // PUSHF
-            push_register(get_register_value(FLAGS_register));
-            mylog("logs/main.log", "Instruction 0x%02X: PUSHF\n", opcode);
+        case 0x06:  // PUSH ES
+        case 0x0E:  // PUSH CS
+        case 0x16:  // PUSH SS
+        case 0x1E:  // PUSH DS
+        case 0x50:  // PUSH AX
+        case 0x51:  // PUSH CX
+        case 0x52:  // PUSH DX
+        case 0x53:  // PUSH BX
+        case 0x54:  // PUSH SP
+        case 0x55:  // PUSH BP
+        case 0x56:  // PUSH SI
+        case 0x57:  // PUSH DI
+        case 0x9C: {// PUSHF
+            if(opcode == 0x06) {
+                reg = ES_register;
+            } else if(opcode == 0x0E) {
+                reg = CS_register;
+            } else if(opcode == 0x16) {
+                reg = SS_register;
+            } else if(opcode == 0x1E) {
+                reg = DS_register;
+            } else if(opcode == 0x50) {
+                reg = AX_register;
+            } else if(opcode == 0x51) {
+                reg = CX_register;
+            } else if(opcode == 0x52) {
+                reg = DX_register;
+            } else if(opcode == 0x53) {
+                reg = BX_register;
+            } else if(opcode == 0x54) {
+                reg = SP_register;
+            } else if(opcode == 0x55) {
+                reg = BP_register;
+            } else if(opcode == 0x56) {
+                reg = SI_register;
+            } else if(opcode == 0x57) {
+                reg = DI_register;
+            } else if(opcode == 0x9C) {
+                reg = FLAGS_register;
+            }
+            push_register(get_register_value(reg));
+            mylog("logs/main.log", "Instruction 0x%02X: PUSH %s\n", opcode, get_reg_name_string(reg));
             break;
         }
         default:
@@ -2124,60 +2057,36 @@ uint8_t esc_instr(uint8_t opcode, uint8_t *data) {
 
 int16_t inc_instr(uint8_t opcode, uint8_t *data) {
     int16_t ret_val = 1;
+    register_name_t reg;
     switch(opcode) {
-        case 0x40: {  // INC AX
-            uint16_t val = get_register_value(AX_register);
-            mylog("logs/main.log", "Instruction 0x%02X: INC AX: 0x%04X => 0x%04X\n", opcode, val, val+1);
-            set_register_value(AX_register, val + 1);
-            update_flags(val, 1, val+1, 2, ADD_OP);
-            break;
-        }
-        case 0x41: {  // INC CX
-            uint16_t val = get_register_value(CX_register);
-            mylog("logs/main.log", "Instruction 0x%02X: INC CX: 0x%04X => 0x%04X\n", opcode, val, val+1);
-            set_register_value(CX_register, val + 1);
-            update_flags(val, 1, val+1, 2, ADD_OP);
-            break;
-        }
-        case 0x42: {  // INC DX
-            uint16_t val = get_register_value(DX_register);
-            mylog("logs/main.log", "Instruction 0x%02X: INC DX: 0x%04X => 0x%04X\n", opcode, val, val+1);
-            set_register_value(DX_register, val + 1);
-            update_flags(val, 1, val+1, 2, ADD_OP);
-            break;
-        }
-        case 0x43: {  // INC BX
-            uint16_t val = get_register_value(BX_register);
-            mylog("logs/main.log", "Instruction 0x%02X: INC BX: 0x%04X => 0x%04X\n", opcode, val, val+1);
-            set_register_value(BX_register, val + 1);
-            update_flags(val, 1, val+1, 2, ADD_OP);
-            break;
-        }
-        case 0x44: {  // INC SP
-            uint16_t val = get_register_value(SP_register);
-            mylog("logs/main.log", "Instruction 0x%02X: INC SP: 0x%04X => 0x%04X\n", opcode, val, val+1);
-            set_register_value(SP_register, val + 1);
-            update_flags(val, 1, val+1, 2, ADD_OP);
-            break;
-        }
-        case 0x45: {  // INC BP
-            uint16_t val = get_register_value(BP_register);
-            mylog("logs/main.log", "Instruction 0x%02X: INC BP: 0x%04X => 0x%04X\n", opcode, val, val+1);
-            set_register_value(BP_register, val + 1);
-            update_flags(val, 1, val+1, 2, ADD_OP);
-            break;
-        }
-        case 0x46: {  // INC SI
-            uint16_t val = get_register_value(SI_register);
-            mylog("logs/main.log", "Instruction 0x%02X: INC SI: 0x%04X => 0x%04X\n", opcode, val, val+1);
-            set_register_value(SI_register, val + 1);
-            update_flags(val, 1, val+1, 2, ADD_OP);
-            break;
-        }
-        case 0x47: {  // INC DI
-            uint16_t val = get_register_value(DI_register);
-            mylog("logs/main.log", "Instruction 0x%02X: INC DI: 0x%04X => 0x%04X\n", opcode, val, val+1);
-            set_register_value(DI_register, val + 1);
+        case 0x40:  // INC AX
+        case 0x41:  // INC CX
+        case 0x42:  // INC DX
+        case 0x43:  // INC BX
+        case 0x44:  // INC SP
+        case 0x45:  // INC BP
+        case 0x46:  // INC SI
+        case 0x47: {// INC DI
+            if(opcode == 0x40) {
+                reg = AX_register;
+            }else if(opcode == 0x41) {
+                reg = CX_register;
+            } else if(opcode == 0x42) {
+                reg = DX_register;
+            } else if(opcode == 0x43) {
+                reg = BX_register;
+            } else if(opcode == 0x44) {
+                reg = SP_register;
+            } else if(opcode == 0x45) {
+                reg = BP_register;
+            } else if(opcode == 0x46) {
+                reg = SI_register;
+            } else if(opcode == 0x47) {
+                reg = DI_register;
+            }
+            uint16_t val = get_register_value(reg);
+            mylog("logs/main.log", "Instruction 0x%02X: INC %s: 0x%04X => 0x%04X\n", opcode, get_reg_name_string(reg), val, val+1);
+            set_register_value(reg, val+1);
             update_flags(val, 1, val+1, 2, ADD_OP);
             break;
         }
@@ -2190,60 +2099,36 @@ int16_t inc_instr(uint8_t opcode, uint8_t *data) {
 
 int16_t dec_instr(uint8_t opcode, uint8_t *data) {
     int16_t ret_val = 1;
+    register_name_t reg;
     switch(opcode) {
-        case 0x48: {  // DEC AX
-            uint16_t val = get_register_value(AX_register);
-            mylog("logs/main.log", "Instruction 0x%02X: DEC AX: 0x%04X => 0x%04X\n", opcode, val, val-1);
-            set_register_value(AX_register, val - 1);
-            update_flags(val, 1, val-1, 2, SUB_OP);
-            break;
-        }
-        case 0x49: {  // DEC CX
-            uint16_t val = get_register_value(CX_register);
-            mylog("logs/main.log", "Instruction 0x%02X: DEC CX: 0x%04X => 0x%04X\n", opcode, val, val-1);
-            set_register_value(CX_register, val - 1);
-            update_flags(val, 1, val-1, 2, SUB_OP);
-            break;
-        }
-        case 0x4A: {  // DEC DX
-            uint16_t val = get_register_value(DX_register);
-            mylog("logs/main.log", "Instruction 0x%02X: DEC DX: 0x%04X => 0x%04X\n", opcode, val, val-1);
-            set_register_value(DX_register, val - 1);
-            update_flags(val, 1, val-1, 2, SUB_OP);
-            break;
-        }
-        case 0x4B: {  // DEC BX
-            uint16_t val = get_register_value(BX_register);
-            mylog("logs/main.log", "Instruction 0x%02X: DEC BX: 0x%04X => 0x%04X\n", opcode, val, val-1);
-            set_register_value(BX_register, val - 1);
-            update_flags(val, 1, val-1, 2, SUB_OP);
-            break;
-        }
-        case 0x4C: {  // DEC SP
-            uint16_t val = get_register_value(SP_register);
-            mylog("logs/main.log", "Instruction 0x%02X: DEC SP: 0x%04X => 0x%04X\n", opcode, val, val-1);
-            set_register_value(SP_register, val - 1);
-            update_flags(val, 1, val-1, 2, SUB_OP);
-            break;
-        }
-        case 0x4D: {  // DEC BP
-            uint16_t val = get_register_value(BP_register);
-            mylog("logs/main.log", "Instruction 0x%02X: DEC BP: 0x%04X => 0x%04X\n", opcode, val, val-1);
-            set_register_value(BP_register, val - 1);
-            update_flags(val, 1, val-1, 2, SUB_OP);
-            break;
-        }
-        case 0x4E: {  // DEC SI
-            uint16_t val = get_register_value(SI_register);
-            mylog("logs/main.log", "Instruction 0x%02X: DEC SI: 0x%04X => 0x%04X\n", opcode, val, val-1);
-            set_register_value(SI_register, val - 1);
-            update_flags(val, 1, val-1, 2, SUB_OP);
-            break;
-        }
-        case 0x4F: {  // DEC DI
-            uint16_t val = get_register_value(DI_register);
-            mylog("logs/main.log", "Instruction 0x%02X: DEC DI: 0x%04X => 0x%04X\n", opcode, val, val-1);
-            set_register_value(DI_register, val - 1);
+        case 0x48:  // DEC AX
+        case 0x49:  // DEC CX
+        case 0x4A:  // DEC DX
+        case 0x4B:  // DEC BX
+        case 0x4C:  // DEC SP
+        case 0x4D:  // DEC BP
+        case 0x4E:  // DEC SI
+        case 0x4F: {// DEC DI
+            if(opcode == 0x48) {
+                reg = AX_register;
+            }else if(opcode == 0x49) {
+                reg = CX_register;
+            } else if(opcode == 0x4A) {
+                reg = DX_register;
+            } else if(opcode == 0x4B) {
+                reg = BX_register;
+            } else if(opcode == 0x4C) {
+                reg = SP_register;
+            } else if(opcode == 0x4D) {
+                reg = BP_register;
+            } else if(opcode == 0x4E) {
+                reg = SI_register;
+            } else if(opcode == 0x4f) {
+                reg = DI_register;
+            }
+            uint16_t val = get_register_value(reg);
+            mylog("logs/main.log", "Instruction 0x%02X: DEC %s: 0x%04X => 0x%04X\n", opcode, get_reg_name_string(reg), val, val-1);
+            set_register_value(reg, val - 1);
             update_flags(val, 1, val-1, 2, SUB_OP);
             break;
         }
@@ -2300,34 +2185,56 @@ int16_t inc_dec_instr(uint8_t opcode, uint8_t *data) {
 uint8_t xchg_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     switch(opcode) {
-        case 0x86: {  // XCHG REG8,REG8/MEM8: [0x86, MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x86:      // XCHG REG8, REG8/MEM8: [0x86, MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x87: {    // XCHG REG16, REG16/MEM16: [0x86, MOD REG R/M (DISP-LO), (DISP-HI)]
             operands_t operands = decode_operands(opcode, data, 0);
             ret_val += operands.num_bytes;
             if (operands.src_type == 0) {   // Reg mode
                 set_register_value(operands.src.register_name, operands.dst_val);
-                // ret_val += 1;
             } else {    // Memory mode
                 mem_write(operands.src.address, operands.dst_val, operands.width);
-                // ret_val += 3;
             }
             set_register_value(operands.dst.register_name, operands.src_val);
             mylog("logs/main.log", "Instruction 0x%02X: XCHG %s (0x%04X), %s (0x%04X)\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val);
             break;
         }
-        case 0x93: {  // XCHG AX, BX
-            uint16_t ax = get_register_value(AX_register);
-            uint16_t bx = get_register_value(BX_register);
-            set_register_value(AX_register, bx);
-            set_register_value(BX_register, ax);
-            mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, BX\n", opcode);
-            break;
-        }
-        case 0x96: {  // XCHG AX, SI
-            uint16_t ax = get_register_value(AX_register);
-            uint16_t si = get_register_value(SI_register);
-            set_register_value(AX_register, si);
-            set_register_value(SI_register, ax);
-            mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, SI\n", opcode);
+        case 0x90:  // XCHG AX, AX (NOP))
+        case 0x91:  // XCHG AX, CX
+        case 0x92:  // XCHG AX, DX
+        case 0x93:  // XCHG AX, BX
+        case 0x94:  // XCHG AX, SP
+        case 0x95:  // XCHG AX, BP
+        case 0x96:  // XCHG AX, SI
+        case 0x97: {  // XCHG AX, DI
+            register_name_t r1 = AX_register;
+            register_name_t r2 = AX_register;
+            if(opcode == 0x90) {  // XCHG AX, AX (NOP))
+                    r2 = AX_register;
+                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, AX (NOP)\n", opcode);
+            } else if(opcode == 0x91) {  // XCHG AX, CX
+                    r2 = CX_register;
+                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, CX\n", opcode);
+            } else if(opcode == 0x92) {  // XCHG AX, DX
+                    r2 = DX_register;
+                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, DX\n", opcode);
+            } else if(opcode == 0x93) {  // XCHG AX, BX
+                    r2 = BX_register;
+                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, BX\n", opcode);
+            } else if(opcode == 0x94) {  // XCHG AX, SP
+                    r2 = SP_register;
+                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, SP\n", opcode);
+            } else if(opcode == 0x95) {  // XCHG AX, BP
+                    r2 = BP_register;
+                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, BP\n", opcode);
+            } else if(opcode == 0x96) {  // XCHG AX, SI
+                    r2 = SI_register;
+                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, SI\n", opcode);
+            } else if(opcode == 0x97) {  // XCHG AX, DI
+                    r2 = DI_register;
+                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, DI\n", opcode);
+            }
+            set_register_value(AX_register, get_register_value(r2));
+            set_register_value(r2, get_register_value(r1));
             break;
         }
         default:
@@ -2450,7 +2357,7 @@ int16_t process_instruction(uint8_t * memory) {
           REGS->ticks, REGS->IP, memory[0], memory[1], memory[2], memory[3], memory[4], memory[5]);
     int16_t ret_val = 1;
     switch(memory[0]) {
-        // case 0x00:  // ADD REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]  // 8UHCRINM 
+        case 0x00:  // ADD REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x01:  // ADD REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x02:  // ADD REG8, REG8/MEM8: [0x02, MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x03:  // ADD REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -2458,14 +2365,12 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x05:  // ADD AX, immed16          [0x05, DATA-LO, DATA-HI]
             ret_val = add_instr(memory[0], &memory[1]);
             break;
-        // case 0x06:  // PUSH ES
-            // push_reg_op(memory);
-            // REGS->IP += 1;
-        //     break;
-        // case 0x07:  // POP ES
-            // pop_reg_op(memory[0]);
-            // REGS->IP += 1;
-            // break;
+        case 0x06:  // PUSH ES
+            ret_val = push_reg_instr(memory[0], &memory[1]);
+            break;
+        case 0x07:  // POP ES
+            ret_val = pop_reg_instr(memory[0], &memory[1]);
+            break;
         case 0x08:  // OR REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x09:  // OR REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x0A:  // OR REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -2477,47 +2382,44 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x0E:  // PUSH CS
             ret_val = push_reg_instr(memory[0], &memory[1]);
             break;
-        case 0x0F:  // NOT USED
-            // INVALID_INSTRUCTION;
+        case 0x0F:  // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
             printf("Invalid instruction: 0x%02X\n", memory[0]);
             break;
         case 0x10:  // ADC REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x11:  // ADC REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x12:  // ADC REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x11:  // ADC REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x12:  // ADC REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x13:  // ADC REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x14:  // ADC AL, IMMED8           [DATA-8]
-        // case 0x15:  // ADC AX, immed16          [DATA-LO, DATA-HI]
+        case 0x15:  // ADC AX, immed16          [DATA-LO, DATA-HI]
             ret_val = add_instr(memory[0], &memory[1]);
             break;
-        // case 0x16:  // PUSH SS
-        //     push_reg_op(memory[0]);
-        //     REGS->IP += 1;
-        //     break;
-        // case 0x17:  // POP SS
-        //     pop_reg_op(memory[0]);
-        //     REGS->IP += 1;
-        //     break;
-        // case 0x18:  // SBB REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x19:  // SBB REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x1A:  // SBB REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x1B:  // SBB REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x1C:  // SBB AL, IMMED8           [DATA-8]
-        // case 0x1D:  // SBB AX, immed16          [DATA-LO, DATA-HI]
-        //     REGS->IP += sbb_op(memory);
-        //     break;
+        case 0x16:  // PUSH SS
+            ret_val = push_reg_instr(memory[0], &memory[1]);
+            break;
+        case 0x17:  // POP SS
+            ret_val = pop_reg_instr(memory[0], &memory[1]);
+            break;
+        case 0x18:  // SBB REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x19:  // SBB REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x1A:  // SBB REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x1B:  // SBB REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x1C:  // SBB AL, IMMED8           [DATA-8]
+        case 0x1D:  // SBB AX, immed16          [DATA-LO, DATA-HI]
+            ret_val = sub_instr(memory[0], &memory[1]);
+            break;
         case 0x1E:  // PUSH DS
             ret_val = push_reg_instr(memory[0], &memory[1]);
             break;
         case 0x1F:  // POP DS
             ret_val = pop_reg_instr(memory[0], &memory[1]);
             break;
-        // case 0x20:  // AND REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x21:  // AND REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x20:  // AND REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x21:  // AND REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x22:  // AND REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x23:  // AND REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x23:  // AND REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x24:  // AND AL, IMMED8           [DATA-8]
-        // case 0x25:  // AND AX, immed16          [DATA-LO, DATA-HI]
+        case 0x25:  // AND AX, immed16          [DATA-LO, DATA-HI]
             ret_val = and_instr(memory[0], &memory[1]);
             break;
         case 0x26:  // ES:
@@ -2527,12 +2429,12 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x27:  // DAA
             ret_val = adj_instr(memory[0], &memory[1]);
             break;
-        // case 0x28:  // SUB REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x29:  // SUB REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x28:  // SUB REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x29:  // SUB REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x2A:  // SUB REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x2B:  // SUB REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x2C:  // SUB AL, IMMED8           [DATA-8]
-        // case 0x2D:  // SUB AX, immed16          [DATA-LO, DATA-HI]
+        case 0x2C:  // SUB AL, IMMED8           [DATA-8]
+        case 0x2D:  // SUB AX, immed16          [DATA-LO, DATA-HI]
             ret_val = sub_instr(memory[0], &memory[1]);
             break;
         case 0x2E:  // CS:
@@ -2560,8 +2462,8 @@ int16_t process_instruction(uint8_t * memory) {
         //     aaa_op();
         //     REGS->IP += 1;
         //     break;
-        // case 0x38:  // CMP REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        // case 0x39:  // CMP REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x38:  // CMP REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x39:  // CMP REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x3A:  // CMP REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x3B:  // CMP REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x3C:  // CMP AL, IMMED8: [0x3C, DATA-8]
@@ -2824,12 +2726,10 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0x85:
         //     REGS->IP += test_16b_op(memory[1], &memory[2]);
         //     break;
-        case 0x86:  // XCHG REG8,REG8/MEM8: [0x86, MOD REG R/M (DISP-LO), (DISP-HI)]
+        case 0x86:  // XCHG REG8, REG8/MEM8: [0x86, MOD REG R/M (DISP-LO), (DISP-HI)]
+        case 0x87:  // XCHG REG16, REG16/MEM16: [0x86, MOD REG R/M (DISP-LO), (DISP-HI)]
             ret_val = xchg_instr(memory[0], &memory[1]);
             break;
-        // case 0x87:
-        //     REGS->IP += xchg_16b_op(memory[1], &memory[2]);
-        //     break;
         case 0x88:  // MOV REG8/MEM8, REG8: 0x88, MOD REG R/M (DISP-LO), (DISP-HI)]
         case 0x89:  // MOV REG16/MEM16, REG16: [0x89, MOD REG R/M, (DISP-LO),(DISP-HI)]
         case 0x8A:  // MOV REG8, REG8/MEM8: [0x8A, MOD REG R/M, (DISP-LO),(DISP-HI)]
@@ -2851,30 +2751,16 @@ int16_t process_instruction(uint8_t * memory) {
         //     else
         //         INVALID_INSTRUCTION;
         //     break;
-        case 0x90:  // NOP, XCHG AX AX
-            mylog("logs/main.log", "Instruction 0x90: NOP\n");
-            break;
-        // case 0x91:  // XCHG AX CX
-        //         REGS->IP += xchg_reg_op(AX, CX);
-        //     break;
-        // case 0x92:  // XCHG AX, DX
-        //         REGS->IP += xchg_reg_op(AX, DX);
-        //     break;
+        case 0x90:  // XCHG AX, AX (NOP))
+        case 0x91:  // XCHG AX, CX
+        case 0x92:  // XCHG AX, DX
         case 0x93:  // XCHG AX, BX
+        case 0x94:  // XCHG AX, SP
+        case 0x95:  // XCHG AX, BP
+        case 0x96:  // XCHG AX, SI
+        case 0x97:  // XCHG AX, DI
             ret_val = xchg_instr(memory[0], &memory[1]);
             break;
-        // case 0x94:  // XCHG AX, SP
-        //         REGS->IP += xchg_reg_op(AX, SP);
-        //     break;
-        // case 0x95:  // XCHG AX, BP
-        //         REGS->IP += xchg_reg_op(AX, BP);
-        //     break;
-        case 0x96:  // XCHG AX, SI
-                ret_val = xchg_instr(memory[0], &memory[1]);
-            break;
-        // case 0x97:  // XCHG AX, DI
-        //         REGS->IP += xchg_reg_op(AX, DI);
-        //     break;
         // case 0x98:  // CBW
         //         REGS->IP += cbw_op();
         //     break;
@@ -2987,13 +2873,11 @@ int16_t process_instruction(uint8_t * memory) {
         case 0xC7:  // MOV MEM16, IMMED16
             ret_val = mov_instr(memory[0], &memory[1]);
             break;
-        case 0xC8:
-            // INVALID_INSTRUCTION;
+        case 0xC8:    // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
             printf("Invalid instruction: 0x%02X\n", memory[0]);
             break;
-        case 0xC9:
-            // INVALID_INSTRUCTION;
+        case 0xC9:     // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
             printf("Invalid instruction: 0x%02X\n", memory[0]);
             break;
@@ -3003,60 +2887,27 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0xCB:  // RET (intersegment)
         //     REGS->IP += ret_op(memory[1], &memory[2]);
         //     break;
-        // case 0xCC:  // INT 3
-        //     REGS->IP += int_op(3);
-        //     break;
+        case 0xCC:  // INT 3
+            set_int_vector(3);
+            ret_val = 1;
+            break;
         case 0xCD:  // INT IMMED8
             set_int_vector(memory[1]);
             ret_val = 2;
             break;
-        // case 0xCE:  // INTO
-        //     REGS->IP += into_op();
-        //     break;
+        case 0xCE:  // INT0
+            set_int_vector(0);
+            ret_val = 1;
+            break;
         case 0xCF:  // IRET
             ret_val = jmp_instr(memory[0], &memory[1]);
             break;
-        case 0xD0:
-            // 8-bit operations
+        case 0xD0:  // 8-bit operations
+        case 0xD1:  // 16-bit operations
+        case 0xD2:  // 8-bit operations
+        case 0xD3:  // 16-bit operations
             ret_val = shift_instr(memory[0], &memory[1]);
             break;
-        case 0xD1:
-            // 16-bit operations
-            ret_val = shift_instr(memory[0], &memory[1]);
-            break;
-        case 0xD2:
-            // 8-bit operations
-            ret_val = shift_instr(memory[0], &memory[1]);
-            break;
-        // case 0xD3:
-        //     // 16-bit operations
-        //     switch(get_register_field(memory[1])) {
-        //         case 0: // ROL REG16/MEM16, CL
-        //             REGS->IP += rol_op(memory[1], &memory[2]);  // MOD 000 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 1: // ROR REG16/MEM16, CL
-        //             REGS->IP += ror_op(memory[1], &memory[2]);  // MOD 001 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 2: // RCL REG16/MEM16, CL
-        //             REGS->IP += rcl_op(memory[1], &memory[2]);  // MOD 010 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 3: // RCR REG16/MEM16, CL
-        //             REGS->IP += rcr_op(memory[1], &memory[2]);  // MOD 011 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 4: // SAL/SHL REG16/MEM16, CL
-        //             REGS->IP += shl_op(memory[1], &memory[2]);  // MOD 100 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 5: // SHR REG16/MEM16, CL
-        //             REGS->IP += shr_op(memory[1], &memory[2]);  // MOD 101 R/M, DISP-LO, DISP-HI
-        //             break;
-        //         case 6:
-        //             INVALID_INSTRUCTION;    // MOD 110 R/M,
-        //             break;
-        //         case 7: // SAR REG16/MEM16, CL
-        //             REGS->IP += sar_op(memory[1], &memory[2]);  // MOD 111 R/M, DISP-LO, DISP-HI
-        //             break;
-        //     }
-        //     break;
         // case 0xD4:
         //     if(memory[1] == 0b00001010) {  // AAM
         //         REGS->IP += aam_op(memory[1]);  // memory[1] == 0b00001010
