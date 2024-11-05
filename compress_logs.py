@@ -89,19 +89,19 @@ def main(logfile):
                     best_len = j
         # print(f"{best_count = }, {best_len = }")
         if best_len * best_count > 1:
-            if best_count > 2:
-                clean_lines.append("{{{")
-                for j in range(best_len):
-                    clean_lines.append(f" {lines[i+j]}")
-                clean_lines.append(f" [x{best_count} times]")
-                for j in range(best_len):
-                    clean_lines.append(f" {lines[i+((best_count-1)*best_len)+j]}")
-                clean_lines.append("}}}")
-            else:
-                for j in range(best_len):
-                    clean_lines.append(f"{lines[i+j]}")
-                for j in range(best_len):
-                    clean_lines.append(f"{lines[i+((best_count-1)*best_len)+j]}")
+            # if best_count > 2:
+            # clean_lines.append("{{{")
+            for j in range(best_len):
+                clean_lines.append(f" {lines[i+j]}")
+            clean_lines[-1] += f" [x{best_count} times]"
+            # for j in range(best_len):
+            #     clean_lines.append(f" {lines[i+((best_count-1)*best_len)+j]}")
+            # clean_lines.append("}}}")
+            # else:
+            #     for j in range(best_len):
+            #         clean_lines.append(f"{lines[i+j]}")
+            #     for j in range(best_len):
+            #         clean_lines.append(f"{lines[i+((best_count-1)*best_len)+j]}")
         else:
             clean_lines.append(lines[i])
         i += best_count * best_len
@@ -122,9 +122,6 @@ def main(logfile):
         f.write('\n'.join(clean_lines))
     print("done")
 
-
-
-    
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2:

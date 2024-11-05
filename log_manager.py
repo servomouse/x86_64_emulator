@@ -10,6 +10,10 @@ buffers = {}
 buffer_size = 1 * 1024 * 1024  # 1 MB
 buffer_mutex = threading.Lock()
 
+ignore_files = [
+	'code_mem_log.txt'
+]
+
 
 print_callback_t = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_char_p)
 
@@ -19,6 +23,8 @@ def print_logs(filename, logstring):
 	encoding = 'utf-8'
 	# print(f"{filename.decode(encoding)} <= {logstring.decode(encoding)}")
 	filename = filename.decode(encoding)
+	if filename in ignore_files:
+		return
 	log_string = logstring.decode(encoding)
 	try:
 		with buffer_mutex:

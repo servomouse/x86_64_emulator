@@ -2106,10 +2106,10 @@ int16_t dec_instr(uint8_t opcode, uint8_t *data) {
 }
 
 void print_registers(void) {
-    mylog("logs/main.log", "Registers values:\n");
-    mylog("logs/main.log", "\tAX = 0x%04X, BX = 0x%04X, CX = 0x%04X, DX = 0x%04X;\n", REGS->AX, REGS->BX, REGS->CX, REGS->DX);
-    mylog("logs/main.log", "\tSI = 0x%04X, DI = 0x%04X, BP = 0x%04X, SP = 0x%04X;\n", REGS->SI, REGS->DI, REGS->BP, REGS->SP);
-    mylog("logs/main.log", "\tCS = 0x%04X, DS = 0x%04X, SS = 0x%04X, ES = 0x%04X;\n", REGS->CS, REGS->DS, REGS->SS, REGS->ES);
+    mylog("logs/main.log", "Registers values: ");
+    mylog("logs/main.log", "\tAX = 0x%04X, BX = 0x%04X, CX = 0x%04X, DX = 0x%04X, ", REGS->AX, REGS->BX, REGS->CX, REGS->DX);
+    mylog("logs/main.log", "\tSI = 0x%04X, DI = 0x%04X, BP = 0x%04X, SP = 0x%04X, ", REGS->SI, REGS->DI, REGS->BP, REGS->SP);
+    mylog("logs/main.log", "\tCS = 0x%04X, DS = 0x%04X, SS = 0x%04X, ES = 0x%04X, ", REGS->CS, REGS->DS, REGS->SS, REGS->ES);
     mylog("logs/main.log", "\tIP = 0x%04X, FL = 0x%04X;\n", REGS->IP, REGS->flags);
 }
 
@@ -2315,7 +2315,7 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
 }
 
 int16_t process_instruction(uint8_t * memory) {
-    mylog("logs/main.log", "===============================================================\n");
+    // mylog("logs/main.log", "===============================================================\n");
     mylog("logs/main.log", "Step %d, processing bytes: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X:\n",
            REGS->ticks, memory[0], memory[1], memory[2], memory[3], memory[4], memory[5]);
     print_registers();
