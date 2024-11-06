@@ -1235,7 +1235,7 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                     if(operands.src_val > 16) {
                         operands.src_val = operands.src_val % 16;
                     }
-                    operands.dst_val = (operands.dst_val << operands.src_val) | (operands.dst_val >> (16 - operands.src_val));
+                    res_val = (operands.dst_val << operands.src_val) | (operands.dst_val >> (16 - operands.src_val));
                     update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SHIFT_L_OP);
                     mylog("logs/main.log", "Instruction 0x%02X: ROL %s (0x%04X), %d: result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     break;
@@ -2107,10 +2107,10 @@ int16_t dec_instr(uint8_t opcode, uint8_t *data) {
 
 void print_registers(void) {
     mylog("logs/main.log", "Registers values: ");
-    mylog("logs/main.log", "\tAX = 0x%04X, BX = 0x%04X, CX = 0x%04X, DX = 0x%04X, ", REGS->AX, REGS->BX, REGS->CX, REGS->DX);
-    mylog("logs/main.log", "\tSI = 0x%04X, DI = 0x%04X, BP = 0x%04X, SP = 0x%04X, ", REGS->SI, REGS->DI, REGS->BP, REGS->SP);
-    mylog("logs/main.log", "\tCS = 0x%04X, DS = 0x%04X, SS = 0x%04X, ES = 0x%04X, ", REGS->CS, REGS->DS, REGS->SS, REGS->ES);
-    mylog("logs/main.log", "\tIP = 0x%04X, FL = 0x%04X;\n", REGS->IP, REGS->flags);
+    mylog("logs/main.log", "AX=0x%04X,BX=0x%04X,CX=0x%04X,DX=0x%04X,", REGS->AX, REGS->BX, REGS->CX, REGS->DX);
+    mylog("logs/main.log", "SI=0x%04X,DI=0x%04X,BP=0x%04X,SP=0x%04X,", REGS->SI, REGS->DI, REGS->BP, REGS->SP);
+    mylog("logs/main.log", "CS=0x%04X,DS=0x%04X,SS=0x%04X,ES=0x%04X,", REGS->CS, REGS->DS, REGS->SS, REGS->ES);
+    mylog("logs/main.log", "IP=0x%04X,FL=0x%04X;\n", REGS->IP, REGS->flags);
 }
 
 int16_t inc_dec_instr(uint8_t opcode, uint8_t *data) {
@@ -2316,7 +2316,7 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
 
 int16_t process_instruction(uint8_t * memory) {
     // mylog("logs/main.log", "===============================================================\n");
-    mylog("logs/main.log", "Step %d, processing bytes: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X:\n",
+    mylog("logs/main.log", ">>>Step %d, processing bytes: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X:\n",
            REGS->ticks, memory[0], memory[1], memory[2], memory[3], memory[4], memory[5]);
     print_registers();
     mylog("logs/short.log", "Step: %d, IP: 0x%04X, data: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n",
@@ -3262,51 +3262,56 @@ uint8_t cpu_is_halted(void) {
 
 // uint8_t ip_inc = 0;
 
-int cpu_tick(void) {
-    if(delayed_int_timeout > 0) {
-        delayed_int_timeout --;
-        if((delayed_int_timeout == 0) && (delayed_int_vector != 0xFFFF)) {
-            set_int_vector(delayed_int_vector);
-            delayed_int_vector = 0xFFFF;
-        }
-    }
-    if(REGS->int_vector != 0xFFFF) {
-        if(get_flag(IF)) {
-            printf("CPU interrupt %d\n", REGS->int_vector);
-            push_register(REGS->flags);
-            push_register(REGS->CS);
-            push_register(REGS->IP);
-            set_register_value(IP_register, mem_read(4 * REGS->int_vector, 2));
-            set_register_value(CS_register, mem_read((4 * REGS->int_vector) + 2, 2));
-            REGS->int_vector = 0xFFFF;
-            set_flag(IF, 0);
-            set_flag(TF, 0);}
-        }
-    uint32_t addr = ((uint32_t)REGS->CS << 4) + REGS->IP;
-    static uint8_t code[10];
-    for(uint8_t i=0; i<sizeof(code); i++) {
-        code[i] = mem_read(addr+i, 1);
-    }
-    uint8_t inc = process_instruction(code);
-    if (cpu_is_halted()) {
-        printf("ERROR: CPU is halted!\n");
-        print_proc_commands();
-        return EXIT_FAILURE;
-    }
-    if ((REGS->invalid_operations < 1)) {
-        REGS->ticks++;
-        REGS->IP += inc;
-        // if(REGS->ticks & 0x0001) {
-        //     timer_tick();
-        // }
-        return EXIT_SUCCESS;
-    }
-    // store_registers(REGISTERS_FILE, REGS);
-    cpu_save_state();
-    mylog("logs/main.log", "Processed commands: %d\n", REGS->ticks);
-    print_proc_commands();
-    return EXIT_FAILURE;
-}
+// int cpu_tick(void) {
+//     if(delayed_int_timeout > 0) {
+//         delayed_int_timeout --;
+//         if((delayed_int_timeout == 0) && (delayed_int_vector != 0xFFFF)) {
+//             set_int_vector(delayed_int_vector);
+//             delayed_int_vector = 0xFFFF;
+//         }
+//     }
+//     if(REGS->int_vector != 0xFFFF) {
+//         if(get_flag(IF)) {
+//             printf("CPU interrupt %d\n", REGS->int_vector);
+//             push_register(REGS->flags);
+//             push_register(REGS->CS);
+//             push_register(REGS->IP);
+//             set_register_value(IP_register, mem_read(4 * REGS->int_vector, 2));
+//             set_register_value(CS_register, mem_read((4 * REGS->int_vector) + 2, 2));
+//             REGS->int_vector = 0xFFFF;
+//             set_flag(IF, 0);
+//             set_flag(TF, 0);}
+//         }
+//     uint32_t addr = ((uint32_t)REGS->CS << 4) + REGS->IP;
+//     static uint8_t code[10];
+//     for(uint8_t i=0; i<sizeof(code); i++) {
+//         code[i] = mem_read(addr+i, 1);
+//     }
+//     uint8_t inc = process_instruction(code);
+//     if(REGS->ticks >= 1053807) {
+//         printf("ERROR: CPU has reached 1053807 ticks, stop\n");
+//         print_proc_commands();
+//         return EXIT_FAILURE;
+//     }
+//     if (cpu_is_halted()) {
+//         printf("ERROR: CPU is halted!\n");
+//         print_proc_commands();
+//         return EXIT_FAILURE;
+//     }
+//     if ((REGS->invalid_operations < 1)) {
+//         REGS->ticks++;
+//         REGS->IP += inc;
+//         // if(REGS->ticks & 0x0001) {
+//         //     timer_tick();
+//         // }
+//         return EXIT_SUCCESS;
+//     }
+//     // store_registers(REGISTERS_FILE, REGS);
+//     cpu_save_state();
+//     mylog("logs/main.log", "Processed commands: %d\n", REGS->ticks);
+//     print_proc_commands();
+//     return EXIT_FAILURE;
+// }
 
 __declspec(dllexport)
 /* Set space_type to 0 for IO_SPACE and to 1 for MEM_SPACE */
@@ -3374,6 +3379,11 @@ int module_tick(void) {
         code[i] = code_read(addr+i, 1);
     }
     uint8_t inc = process_instruction(code);
+    // if(REGS->ticks >= 1053807) {
+    //     printf("ERROR: CPU has reached 1053807 ticks, stop\n");
+    //     print_proc_commands();
+    //     return EXIT_FAILURE;
+    // }
     if (cpu_is_halted()) {
         printf("ERROR: CPU is halted!\n");
         return EXIT_FAILURE;

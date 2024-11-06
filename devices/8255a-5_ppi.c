@@ -44,13 +44,13 @@ wire_t int1_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
 
 void update_portc(void) {
     regs.portc_reg = 0;
-    if((regs.portb_reg & 0x08) == 0) {
+    if((regs.portb_reg & 0x08) == 0) {  // 4 LSBits
         regs.portc_reg |= SW1;
         regs.portc_reg |= SW2 << 1;
         regs.portc_reg |= SW3 << 2;
         regs.portc_reg |= SW4 << 3;
     } else {
-        regs.portc_reg |= SW5;
+        regs.portc_reg |= SW5;          // 4 MSBits
         regs.portc_reg |= SW6 << 1;
         regs.portc_reg |= SW7 << 2;
         regs.portc_reg |= SW8 << 3;
