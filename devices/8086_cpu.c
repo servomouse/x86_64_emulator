@@ -1046,7 +1046,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             } else {
                 printf("ERROR: Incorrect reg field: opcode = 0x%02X, reg_field = 0x%02X\n", opcode, reg_field);
             }
-            mylog("logs/main.log", "Instruction 0x%02X: MOV %s, %s\n", opcode, operands.destination, operands.source);
+            mylog("logs/main.log", "Instruction 0x%02X: MOV SEGREG, %s\n", opcode, operands.source);
             set_register_value(operands.dst.register_name, get_register_value(operands.src.register_name));
             break;
         }
@@ -2979,10 +2979,12 @@ int16_t process_instruction(uint8_t * memory) {
             printf("Invalid instruction: 0x%02X\n", memory[0]);
             break;
         case 0xF2:  // REPNE/REPNZ
+            mylog("logs/main.log", "Instruction 0xF2: REPNE/REPNZ, setting prefix\n");
             printf("Instruction 0xF2: REPNE/REPNZ, setting prefix\n");
             set_prefix(REPNE, 1);
             break;
         case 0xF3:  // REP/REPE/REPZ
+            mylog("logs/main.log", "Instruction 0xF3: REP/REPE/REPZ, setting prefix\n");
             printf("Instruction 0xF3: REP/REPE/REPZ, setting prefix\n");
             set_prefix(REPE, 1);
             break;
@@ -3378,9 +3380,40 @@ int module_tick(void) {
     for(uint8_t i=0; i<sizeof(code); i++) {
         code[i] = code_read(addr+i, 1);
     }
+    if(REGS->IP == 0xE329) {
+        mylog("logs/short.log", "Start 8259 Interrupt Controller Test\n");
+        printf("Start 8259 Interrupt Controller Test\n");
+    } else if(REGS->IP == 0xE2F0) {
+        mylog("logs/short.log", "CRT Error at 0xE2F0\n");
+        printf("CRT Error 0xE2F0\n");
+    } else if(REGS->IP == 0xE354) {
+        mylog("logs/short.log", "Interrupt Controller  or Timer Error at 0xE354\n");
+        printf("Interrupt Controller or Timer Error at 0xE354\n");
+    } else if(REGS->IP == 0xE3D7) {
+        mylog("logs/short.log", "Keyboard Test Error at 0xE3D7\n");
+        printf("Keyboard Test Error at 0xE3D7\n");
+    } else if(REGS->IP == 0xE35D) {
+        mylog("logs/short.log", "Start 8253 Timer Test\n");
+        printf("Start 8253 Timer Test\n");
+    } else if(REGS->IP == 0xE3A2) {
+        mylog("logs/short.log", "Start Keyboard Test\n");
+        printf("Start Keyboard Test\n");
+    } else if(REGS->IP == 0xE3DE) {
+        mylog("logs/short.log", "Setting Up Interrupt Vector Table\n");
+        printf("Setting Up Interrupt Vector Table\n");
+    } else if(REGS->IP == 0xE418) {
+        mylog("logs/short.log", "Start IO Box Test\n");
+        printf("Start IO Box Test\n");
+    } else if(REGS->IP == 0xE46A) {
+        mylog("logs/short.log", "Start Additional Read/Write Storage Test\n");
+        printf("Start Additional Read/Write Storage Test\n");
+    } else if(REGS->IP == 0xE1CE) {
+        mylog("logs/short.log", "Initialize the 8259 Interrupt Controller\n");
+        printf("Initialize the 8259 Interrupt Controller\n");
+    }
     uint8_t inc = process_instruction(code);
     // if(REGS->ticks >= 1053807) {
-    //     printf("ERROR: CPU has reached 1053807 ticks, stop\n");
+    //     printf("ERROR: CPU has reached 1053807 ticks, stop\n"); 
     //     print_proc_commands();
     //     return EXIT_FAILURE;
     // }
