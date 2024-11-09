@@ -1412,16 +1412,12 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     int16_t res_val = 0;
     switch(opcode) {
+        case 0x80:    // ADD REG16/MEM16, IMMED16: [0x80, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-8]
         case 0x81: {  // ADD REG16/MEM16, IMMED16: [0x81, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
             operands_t operands = decode_operands(opcode, data, 1);
-            ret_val += operands.num_bytes + 2;
-            uint8_t reg_field = get_register_field(data[0]);
-            if(reg_field != 0) {
-                REGS->invalid_operations ++;
-                printf("Error: Invalid ADD instruction: 0x%02X, reg_field = %d\n", opcode, reg_field);
-            }
+            ret_val += operands.num_bytes + operands.width;
             res_val = operands.src_val + operands.dst_val;
-            mylog("logs/main.log", "Instruction 0x%02X: ADD %s (0x%04X), immed16 (0x%04X); res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+            mylog("logs/main.log", "Instruction 0x%02X: ADD %s (0x%04X), immed (0x%04X); res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, ADD_OP);
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
@@ -1559,47 +1555,24 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     int16_t res_val = 0;
     switch(opcode) {
-        case 0x80: {    // INSTR REG8/MEM8, IMMED8: [0x80, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-8]
-            operands_t operands = decode_operands(opcode, data, 1);
-            ret_val += operands.num_bytes + operands.width;
-            res_val = operands.dst_val - operands.src_val;
-            uint8_t reg_field = get_register_field(data[0]);
-            if(reg_field == 3) {  // SBB REG8/MEM8, IMMED8: [0x80, MOD 011 R/M, (DISP-LO), (DISP-HI), DATA-8]
-                if(get_flag(CF)) {
-                    res_val -= 1;
-                }
-                mylog("logs/main.log", "Instruction 0x80[3] SBB %s (0x%02X), immed8 (0x%02X), CF = %d; res = 0x%02X\n", operands.destination, operands.dst_val, operands.src_val, get_flag(CF), res_val);
-                if(operands.dst_type == 0) {    // Register mode
-                    set_register_value(operands.dst.register_name, res_val);
-                } else {    // Memory mode
-                    mem_write(operands.dst.address, res_val, operands.width);
-                }
-            } else if(reg_field == 7) { // CMP REG8/MEM8, IMMED8: [0x80, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-8]
-                mylog("logs/main.log", "Instruction 0x80[7]: CMP %s (0x%02X), immed8 (0x%02X); res = 0x%02X\n", operands.destination, operands.dst_val, operands.src_val, res_val);
-            } else {
-                REGS->invalid_operations ++;
-                printf("Error: Invalid SUB instruction: 0x%02X, reg_field = %d\n", opcode, reg_field);
-            }
-            update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
-            break;
-        }
-        case 0x81: { // INSTR REG16/MEM16, IMMED16: [0x81, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+        case 0x80:   // INSTR REG8/MEM8, IMMED8: [0x80, MOD XXX R/M, (DISP-LO), (DISP-HI), DATA-8]
+        case 0x81: { // INSTR REG16/MEM16, IMMED16: [0x81, MOD XXX R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
             operands_t operands = decode_operands(opcode, data, 1);
             ret_val += operands.num_bytes + operands.width;
             res_val = operands.dst_val - operands.src_val;
             uint8_t reg_field = get_register_field(data[0]);
             char *operation;
-            if(reg_field == 3) {  // SBB REG16/MEM16,IMMED16: [0x81, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+            if(reg_field == 3) {  // SBB REG16/MEM16,IMMED16: [opcode, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
                 operation = "SBB";
                 if(get_flag(CF)) {
                     res_val -= 1;
                 }
-            } else if(reg_field == 5) { // SUB REG16/MEM16, IMMED8: [0x83, MOD 101 RIM, (DISP-LO),(DISP-HI), DATA-SX]
+            } else if(reg_field == 5) { // SUB REG16/MEM16, IMMED8: [opcode, MOD 101 RIM, (DISP-LO),(DISP-HI), DATA-SX]
                 operation = "SUB";
-            } else if(reg_field == 7) { // CMP REG16/MEM16,IMMED16: [0x81, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+            } else if(reg_field == 7) { // CMP REG16/MEM16,IMMED16: [opcode, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
                 operation = "CMP";
             }
-            mylog("logs/main.log", "Instruction 0x%02X[%d] %s %s (0x%04X), immed16 (0x%04X), CF = %d; res = 0x%02X\n", opcode, reg_field, operation, operands.destination, operands.dst_val, operands.src_val, get_flag(CF), res_val);
+            mylog("logs/main.log", "Instruction 0x%02X[%d] %s %s (0x%04X), immed (0x%04X), CF = %d; res = 0x%02X\n", opcode, reg_field, operation, operands.destination, operands.dst_val, operands.src_val, get_flag(CF), res_val);
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
             if(reg_field != 7) {
                 if(operands.dst_type == 0) {    // Register mode
@@ -2582,23 +2555,23 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x81: {// 16-bit operations
             uint8_t reg_field = get_register_field(memory[1]);
             if(reg_field == 0) { // ADD REG8/MEM8, IMMED8: [0x80, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-8]
-                    ret_val = add_instr(memory[0], &memory[1]);
+                ret_val = add_instr(memory[0], &memory[1]);
             } else if(reg_field == 1) { // OR REG8/MEM8, IMMED8: [0x80, MOD 001 R/M, (DISP-LO), (DISP-HI), DATA-8]
-                    ret_val = or_instr(memory[0], &memory[1]);
+                ret_val = or_instr(memory[0], &memory[1]);
             } else if(reg_field == 2) { // ADC REG8/MEM8, IMMED8: [0x80, MOD 010 R/M, (DISP-LO), (DISP-HI), DATA-8]
-                    printf("ERROR: Unimplemented ADC (0x80) instruction!\n");
-                    REGS->invalid_operations ++;
+                printf("ERROR: Unimplemented ADC (0x80) instruction!\n");
+                REGS->invalid_operations ++;
             } else if(reg_field == 3) { // SBB REG8/MEM8, IMMED8: [0x80, MOD 011 R/M, (DISP-LO), (DISP-HI), DATA-8]
-                    ret_val = sub_instr(memory[0], &memory[1]);
+                ret_val = sub_instr(memory[0], &memory[1]);
             } else if(reg_field == 4) { // AND REG8/MEM8, IMMED8: [0x80, MOD 100 R/M, (DISP-LO), (DISP-HI), DATA-8]
-                    ret_val = and_instr(memory[0], &memory[1]);
+                ret_val = and_instr(memory[0], &memory[1]);
             } else if(reg_field == 5) { // SUB REG8/MEM8, IMMED8: [0x80, MOD 101 R/M, (DISP-LO), (DISP-HI), DATA-8]
-                    ret_val = sub_instr(memory[0], &memory[1]);
+                ret_val = sub_instr(memory[0], &memory[1]);
             } else if(reg_field == 6) { // XOR REG8/MEM8, IMMED8: [0x80, MOD 110 R/M, (DISP-LO), (DISP-HI), DATA-8]
-                    printf("ERROR: Unimplemented XOR (0x80) instruction!\n");
-                    REGS->invalid_operations ++;
+                printf("ERROR: Unimplemented XOR (0x80) instruction!\n");
+                REGS->invalid_operations ++;
             } else if(reg_field == 7) { // CMP REG8/MEM8, IMMED8: [0x80, MOD 111 R/M, (DISP-LO), (DISP-HI), DATA-8]
-                    ret_val = sub_instr(memory[0], &memory[1]);
+                ret_val = sub_instr(memory[0], &memory[1]);
             }
             break;
         }
@@ -2606,25 +2579,25 @@ int16_t process_instruction(uint8_t * memory) {
         case 0x83: {  // 16-bit operations
             uint8_t reg_field = get_register_field(memory[1]);
             if(reg_field == 0) { // ADD REG/MEM, IMMED8: [opcode, MOD 000 RIM, (DISP-LO),(DISP-HI), DATA-SX]
-                    ret_val = add_instr(memory[0], &memory[1]);
+                ret_val = add_instr(memory[0], &memory[1]);
             } else if(reg_field == 1) { // Invalid intruction
-                    printf("ERROR: Invalid instruction: 0x83 REG = 1\n");
-                    REGS->invalid_operations ++;
+                printf("ERROR: Invalid instruction: 0x83 REG = 1\n");
+                REGS->invalid_operations ++;
             } else if(reg_field == 2) { // ADC REG/MEM, IMMED8: [opcode, MOD 010 RIM, (DISP-LO),(DISP-HI), DATA-SX]
-                    printf("ERROR: Unimplemented ADC (0x83) instruction!\n");
-                    REGS->invalid_operations ++;
+                printf("ERROR: Unimplemented ADC (0x83) instruction!\n");
+                REGS->invalid_operations ++;
             } else if(reg_field == 3) { // SBB REG/MEM, IMMED8: [opcode, MOD 011 RIM, (DISP-LO),(DISP-HI), DATA-SX]
-                    ret_val = sub_instr(memory[0], &memory[1]);
+                ret_val = sub_instr(memory[0], &memory[1]);
             } else if(reg_field ==4) { // Invalid intruction
-                    printf("ERROR: Invalid instruction: 0x83 REG = 4\n");
-                    REGS->invalid_operations ++;
+                printf("ERROR: Invalid instruction: 0x83 REG = 4\n");
+                REGS->invalid_operations ++;
             } else if(reg_field == 5) { // SUB REG/MEM, IMMED8: [opcode, MOD 101 RIM, (DISP-LO),(DISP-HI), DATA-SX]
-                    ret_val = sub_instr(memory[0], &memory[1]);
+                ret_val = sub_instr(memory[0], &memory[1]);
             } else if(reg_field == 6) { // Invalid intruction
-                    printf("ERROR: Invalid instruction: 0x83 REG = 6\n");
-                    REGS->invalid_operations ++;
+                printf("ERROR: Invalid instruction: 0x83 REG = 6\n");
+                REGS->invalid_operations ++;
             } else if(reg_field == 7) { // CMP REG/MEM, IMMED8: [opcode, MOD 111 RIM, (DISP-LO),(DISP-HI), DATA-SX]
-                    ret_val = sub_instr(memory[0], &memory[1]);
+                ret_val = sub_instr(memory[0], &memory[1]);
             }
             break;
         }
