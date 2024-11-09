@@ -963,6 +963,20 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             mylog("logs/main.log", "Instruction 0xE9: Relative jump to 0x%04X\n", offset);
             break;
         }
+        case 0xFF: {
+            ip_inc = 0;
+            if(get_register_field(data[0]) == 4) {  // JMP REG16/MEM16 (intra): [0xFE, MOD 100 R/M, (DISP-LO), (DISP-HI)]
+                operands_t operands = decode_operands(opcode, data, 0);
+                set_register_value(IP_register, operands.src_val);
+            } else {    // case 5: // JMP REG16/MEM16 (inter): [0xFE, MOD 101 R/M, DISP-LO, DISP-HI] (only memory)
+                uint16_t addr = data[0] + (data[1] << 8);
+                addr = get_addr(DS_register, addr);
+                set_register_value(IP_register, mem_read(addr, 2));
+                set_register_value(CS_register, mem_read(addr+2, 2));
+            }
+            mylog("logs/main.log", "Instruction 0xFF: intrasegment indirect JMP 0x%04X\n", get_register_value(IP_register));
+            break;
+        }
         case 0xEA: {    // JMP far label: [0xEA, IP-LO, IP-HI, CS-LO, CS-HI]
             set_register_value(IP_register, data[0] + (data[1] << 8));
             set_register_value(CS_register, data[2] + (data[3] << 8));
@@ -996,10 +1010,8 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             ret_val += operands.num_bytes;
             if (operands.dst_type == 0) {   // Register_mode
                 set_register_value(operands.dst.register_name, operands.src_val);
-                ret_val = 2;
             } else {    // Memory mode
                 mem_write(operands.dst.address, operands.src_val, operands.width);
-                ret_val = 4;
             }
             break;
         }
@@ -1859,7 +1871,7 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
                 mem_write(operands.dst.address, res_val, 2);
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
-            mylog("logs/main.log", "Instruction 0x%02X: AND %s (0x%02X), %s (0x%02X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
+            mylog("logs/main.log", "Instruction 0x%02X: AND %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             break;
         }
         case 0x24: {  // AND AL, IMMED8: [0x24, DATA-8]
@@ -1882,6 +1894,20 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             update_flags(operands.dst_val, operands.src_val, res_val, 2, LOGIC_OP);
             mylog("logs/main.log", "Instruction 0x%02X: AND AL (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
             ret_val = 3;
+            break;
+        }
+        case 0x80:  // AND REG8/MEM8, IMMED8: [0x80, MOD 100 R/M, (DISP-LO), (DISP-HI), DATA-8]
+        case 0x81: {// AND REG16/MEM16,IMMED16: [0x81, MOD 100 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
+            operands_t operands = decode_operands(opcode, data, 1);
+            ret_val += operands.num_bytes + operands.width;
+            res_val = operands.src_val & operands.dst_val;
+            if(operands.dst_type == 0) {    // Register mode
+                set_register_value(operands.dst.register_name, res_val);
+            } else {    // Memory mode
+                mem_write(operands.dst.address, res_val, operands.width);
+            }
+            update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
+            mylog("logs/main.log", "Instruction 0x%02X: AND %s (0x%04X), IMMED (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             break;
         }
         case 0xF6: {    // TEST REG8/MEM8, IMMED8: [0xF6, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-8]
@@ -2575,8 +2601,7 @@ int16_t process_instruction(uint8_t * memory) {
                     ret_val = sub_instr(memory[0], &memory[1]);
                     break;
                 case 4: // AND REG8/MEM8, IMMED8: [0x80, MOD 100 R/M, (DISP-LO), (DISP-HI), DATA-8]
-                    printf("ERROR: Unimplemented AND (0x80) instruction!\n");
-                    REGS->invalid_operations ++;
+                    ret_val = and_instr(memory[0], &memory[1]);
                     break;
                 case 5: // SUB REG8/MEM8, IMMED8: [0x80, MOD 101 R/M, (DISP-LO), (DISP-HI), DATA-8]
                     printf("ERROR: Unimplemented SUB (0x80) instruction!\n");
@@ -2609,8 +2634,7 @@ int16_t process_instruction(uint8_t * memory) {
                     ret_val = sub_instr(memory[0], &memory[1]);
                     break;
                 case 4: // AND REG16/MEM16,IMMED16: [0x81, MOD 100 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
-                    printf("ERROR: Unimplemented AND (0x81) instruction!\n");
-                    REGS->invalid_operations ++;
+                    ret_val = and_instr(memory[0], &memory[1]);
                     break;
                 case 5: // SUB REG16/MEM16,IMMED16: [0x81, MOD 101 R/M, (DISP-LO), (DISP-HI), DATA-LO, DATA-HI]
                     ret_val = sub_instr(memory[0], &memory[1]);
@@ -2970,10 +2994,9 @@ int16_t process_instruction(uint8_t * memory) {
         //     set_io_16bit(REGS->DX, REGS->AX); // DATA-8
         //     REGS->IP += 1;
         //     break;
-        // case 0xF0:  // LOCK (prefix)
-        //     assert_LOCK_pin();
-        //     REGS->IP += 1;
-        //     break;
+        case 0xF0:  // LOCK (prefix)
+            mylog("logs/main.log", "Instruction 0xF0: LOCK\n");
+            break;
         case 0xF1:  // INVALID_INSTRUCTION;
             REGS->invalid_operations ++;
             printf("Invalid instruction: 0x%02X\n", memory[0]);
@@ -3112,9 +3135,55 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0xFE:
             ret_val = inc_dec_instr(memory[0], &memory[1]);
+            switch(get_register_field(memory[1])) {
+                case 0: // INC REG8/MEM8: [0xFE, MOD 000 R/M, (DISP-LO), (DISP-HI)]
+                    ret_val = inc_dec_instr(memory[0], &memory[1]);
+                    break;
+                case 1: // DEC REG8/MEM8: [0xFE, MOD 001 R/M, (DISP-LO), (DISP-HI)]
+                    ret_val = inc_dec_instr(memory[0], &memory[1]);
+                    break;
+                case 2: // NOT USED
+                case 3: // NOT USED
+                case 4: // NOT USED
+                case 5: // NOT USED
+                case 6: // NOT USED
+                case 7: // NOT USED
+                    printf("Error: Invalid Instruction: 0x%02X\n", memory[0]);
+                    REGS->invalid_operations ++;
+                    break;
+            }
             break;
         case 0xFF:
             ret_val = inc_dec_instr(memory[0], &memory[1]);
+            switch(get_register_field(memory[1])) {
+                case 0: // INC REG16/MEM16: [0xFE, MOD 000 R/M, (DISP-LO), (DISP-HI)]
+                    ret_val = inc_dec_instr(memory[0], &memory[1]);
+                    break;
+                case 1: // DEC REG16/MEM16: [0xFE, MOD 001 R/M, (DISP-LO), (DISP-HI)]
+                    ret_val = inc_dec_instr(memory[0], &memory[1]);
+                    break;
+                case 2: // CALL REG16/MEM16 (intra): [0xFE, MOD 010 R/M, (DISP-LO), (DISP-HI)]
+                    printf("Error: Invalid Instruction: 0x%02X 001\n", memory[0]);
+                    REGS->invalid_operations ++;
+                    break;
+                case 3: // CALL REG16/MEM16 (inter): [0xFE, MOD 011 R/M, (DISP-LO), (DISP-HI)]
+                    printf("Error: Invalid Instruction: 0x%02X 001\n", memory[0]);
+                    REGS->invalid_operations ++;
+                    break;
+                case 4: // JMP REG16/MEM16 (intra): [0xFE, MOD 100 R/M, (DISP-LO), (DISP-HI)]
+                    ret_val = jmp_instr(memory[0], &memory[1]);
+                    break;
+                case 5: // JMP REG16/MEM16 (inter): [0xFE, MOD 101 R/M, (DISP-LO), (DISP-HI)]
+                    ret_val = jmp_instr(memory[0], &memory[1]);
+                    break;
+                case 6: // PUSH MEM16: [0xFE, MOD 110 R/M, (DISP-LO), (DISP-HI)]
+                    ret_val = div_instr(memory[0], &memory[1]);
+                    break;
+                case 7: // Not used
+                    printf("Error: Invalid Instruction: 0x%02X 001\n", memory[0]);
+                    REGS->invalid_operations ++;
+                    break;
+            }
             break;
         default:
             printf("Unknown instruction: 0x%02X\n", memory[0]);

@@ -92,16 +92,18 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     }else {
         mylog(MEMORY_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     }
-    if((addr == 0x0040) && (value == 0xFF23)) {
-        value = 0xF045;
-        printf("MEMORY: Setting VIDEO_IO address to 0x%04X", value);
+    if(addr == 0x0040) {
+        if(value == 0xFF23) {
+            value = 0xF065;
+        }
+        printf("MEMORY: Setting VIDEO_IO address to 0x%04X\n", value);
     }
     if(width == 1) {
         MEMORY[addr] = value;
     } else if (width == 2) {
         *((uint16_t*)&(MEMORY[addr])) = value;
     } else {
-        printf("MEM WRITE ERROR: Incorrect width: %d", width);
+        printf("MEM WRITE ERROR: Incorrect width: %d\n", width);
     }
 }
 
