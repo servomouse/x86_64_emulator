@@ -1430,6 +1430,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
+        case 0x82:      // ADD REG8/MEM8, IMMED8: [0x82, MOD 000 R/M, (DISP-LO),(DISP-HI), DATA-8]
         case 0x83: {    // ADD REG16/MEM16, IMMED8: [0x83, MOD 000 R/M, (DISP-LO),(DISP-HI), DATA-SX]
             operands_t operands = decode_operands(opcode, data, 1);
             ret_val += operands.num_bytes + 1;
@@ -1609,6 +1610,7 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
+        case 0x82:
         case 0x83: {
             // DATA-SX: 8-bit immediate value that is automatically sign-extended to 16-bits before use.
             uint8_t reg_field = get_register_field(data[0]);
@@ -1631,7 +1633,7 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
                 printf("Error: Invalid SUB instruction: 0x%02X, reg_field = %d\n", opcode, reg_field);
                 return res_val;
             }
-            mylog("logs/main.log", "Instruction 0x%02X: %s %s (0x%04X), immed8 (DATA-SX) (0x%04X), res = 0x%04X\n", opcode, operation, operands.destination, operands.dst_val, operands.src_val, res_val);
+            mylog("logs/main.log", "Instruction 0x%02X: %s %s (0x%04X), immed8 (DATA-SX for 16-bit) (0x%04X), res = 0x%04X\n", opcode, operation, operands.destination, operands.dst_val, operands.src_val, res_val);
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
             if(reg_field != 7) {
                 if(operands.dst_type == 0) {    // Register mode
@@ -2641,56 +2643,28 @@ int16_t process_instruction(uint8_t * memory) {
                     break;
             }
             break;
-        // case 0x82:
-        //     // 8-bit operations
-        //     switch(get_register_field(memory[1])) {
-        //         case 0:
-        //             REGS->IP += add_op(memory);
-        //             break;
-        //         case 1:
-        //             INVALID_INSTRUCTION;
-        //             break;
-        //         case 2:
-        //             REGS->IP += adc_op(memory);
-        //             break;
-        //         case 3:
-        //             REGS->IP += sbb_op(memory);
-        //             break;
-        //         case 4:
-        //             INVALID_INSTRUCTION;
-        //             break;
-        //         case 5:
-        //             REGS->IP += sub_op(memory[1], &memory[2]);
-        //             break;
-        //         case 6:
-        //             INVALID_INSTRUCTION;
-        //             break;
-        //         case 7:
-        //             REGS->IP += cmp_op(memory);
-        //             break;
-        //     }
-        //     break;
+        case 0x82:    // 8-bit operations
         case 0x83: {  // 16-bit operations
             uint8_t reg_field = get_register_field(memory[1]);
-            if(reg_field == 0) { // ADD REG16/MEM16, IMMED8: [0x83, MOD 000 RIM, (DISP-LO),(DISP-HI), DATA-SX]
+            if(reg_field == 0) { // ADD REG/MEM, IMMED8: [opcode, MOD 000 RIM, (DISP-LO),(DISP-HI), DATA-SX]
                     ret_val = add_instr(memory[0], &memory[1]);
-            } else if(reg_field == 1) {
+            } else if(reg_field == 1) { // Invalid intruction
                     printf("ERROR: Invalid instruction: 0x83 REG = 1\n");
                     REGS->invalid_operations ++;
-            } else if(reg_field == 2) { // ADC REG16/MEM16, IMMED8: [0x83, MOD 010 RIM, (DISP-LO),(DISP-HI), DATA-SX]
+            } else if(reg_field == 2) { // ADC REG/MEM, IMMED8: [opcode, MOD 010 RIM, (DISP-LO),(DISP-HI), DATA-SX]
                     printf("ERROR: Unimplemented ADC (0x83) instruction!\n");
                     REGS->invalid_operations ++;
-            } else if(reg_field == 3) { // SBB REG16/MEM16, IMMED8: [0x83, MOD 011 RIM, (DISP-LO),(DISP-HI), DATA-SX]
+            } else if(reg_field == 3) { // SBB REG/MEM, IMMED8: [opcode, MOD 011 RIM, (DISP-LO),(DISP-HI), DATA-SX]
                     ret_val = sub_instr(memory[0], &memory[1]);
-            } else if(reg_field ==4) {
+            } else if(reg_field ==4) { // Invalid intruction
                     printf("ERROR: Invalid instruction: 0x83 REG = 4\n");
                     REGS->invalid_operations ++;
-            } else if(reg_field == 5) { // SUB REG16/MEM16, IMMED8: [0x83, MOD 101 RIM, (DISP-LO),(DISP-HI), DATA-SX]
+            } else if(reg_field == 5) { // SUB REG/MEM, IMMED8: [opcode, MOD 101 RIM, (DISP-LO),(DISP-HI), DATA-SX]
                     ret_val = sub_instr(memory[0], &memory[1]);
             } else if(reg_field == 6) { // Invalid intruction
                     printf("ERROR: Invalid instruction: 0x83 REG = 6\n");
                     REGS->invalid_operations ++;
-            } else if(reg_field == 7) { // CMP REG16/MEM16, IMMED8: [0x83, MOD 111 RIM, (DISP-LO),(DISP-HI), DATA-SX]
+            } else if(reg_field == 7) { // CMP REG/MEM, IMMED8: [opcode, MOD 111 RIM, (DISP-LO),(DISP-HI), DATA-SX]
                     ret_val = sub_instr(memory[0], &memory[1]);
             }
             break;
