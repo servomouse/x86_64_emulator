@@ -1,9 +1,5 @@
-// https://en.wikipedia.org/wiki/Intel_8086
 #include "8086_cpu.h"
 #include "wires.h"
-// #include "8086_io.h"
-// #include "8086_mem.h"
-// #include "8253_timer.h"
 #include <string.h>
 
 #define COMMON_LOG_FILE "logs/cpu_log.txt"
@@ -16,32 +12,32 @@ WRITE_FUNC_PTR(io_write);
 READ_FUNC_PTR(io_read);
 uint16_t(*code_read)(uint32_t, uint8_t);
 
-typedef enum {
-    invalid_register = 0,
-    AX_register,
-    AL_register,
-    AH_register,
-    BX_register,
-    BL_register,
-    BH_register,
-    CX_register,
-    CL_register,
-    CH_register,
-    DX_register,
-    DL_register,
-    DH_register,
-    SI_register,
-    DI_register,
-    BP_register,
-    SP_register,
-    IP_register,
-    CS_register,
-    DS_register,
-    ES_register,
-    SS_register,
-    FLAGS_register,
-    override_segment,
-} register_name_t;
+// typedef enum {
+//     invalid_register = 0,
+//     AX_register,
+//     AL_register,
+//     AH_register,
+//     BX_register,
+//     BL_register,
+//     BH_register,
+//     CX_register,
+//     CL_register,
+//     CH_register,
+//     DX_register,
+//     DL_register,
+//     DH_register,
+//     SI_register,
+//     DI_register,
+//     BP_register,
+//     SP_register,
+//     IP_register,
+//     CS_register,
+//     DS_register,
+//     ES_register,
+//     SS_register,
+//     FLAGS_register,
+//     override_segment,
+// } register_name_t;
 
 typedef struct {
     // Helper registers
@@ -106,24 +102,24 @@ typedef enum {
     DIV_OP,
 } operation_t;
 
-typedef struct {
-    union {
-        register_name_t register_name;
-        uint32_t address;
-    } src;
-    union {
-        register_name_t register_name;
-        uint32_t address;
-    } dst;
-    int16_t src_val;
-    int16_t dst_val;
-    uint8_t width;      // operand width in bytes: 1 or 2
-    uint8_t src_type;   // 0 - register, 1 - memory
-    uint8_t dst_type;   // 0 - register, 1 - memory
-    uint8_t num_bytes;  // How many bytes does instruction take
-    char * source;
-    char * destination;
-} operands_t;
+// typedef struct {
+//     union {
+//         register_name_t register_name;
+//         uint32_t address;
+//     } src;
+//     union {
+//         register_name_t register_name;
+//         uint32_t address;
+//     } dst;
+//     int16_t src_val;
+//     int16_t dst_val;
+//     uint8_t width;      // operand width in bytes: 1 or 2
+//     uint8_t src_type;   // 0 - register, 1 - memory
+//     uint8_t dst_type;   // 0 - register, 1 - memory
+//     uint8_t num_bytes;  // How many bytes does instruction take
+//     char * source;
+//     char * destination;
+// } operands_t;
 
 uint32_t processed_commands[0xFF];
 
@@ -572,8 +568,8 @@ void set_register_value(register_name_t reg_name, uint16_t value) {
 uint32_t get_addr(register_name_t segment_reg, uint16_t addr) {
     // override_segment
     uint32_t ret_val = 0;
-    if(get_register_value(override_segment) != invalid_register) {
-        ret_val = get_register_value(override_segment);
+    if((segment_reg == DS_register) && (get_register_value(override_segment) != invalid_register)) {
+        ret_val = get_register_value(get_register_value(override_segment));
         set_register_value(override_segment, invalid_register);
     } else {
         ret_val = get_register_value(segment_reg);
@@ -653,7 +649,7 @@ operands_t decode_operands(uint8_t opcode, uint8_t *data, uint8_t single) {
         operands.num_bytes += 2;
     }
     addr = get_addr(DS_register, addr);
-    if(((opcode & 0x02) == 0) || single) {  // Destination bit == 0 or REG field is used as an opcode extension
+    if(((opcode & 0x02) == 0) || (single == 1)) {  // Destination bit == 0 or REG field is used as an opcode extension
         if(single) {
             // REG field is used as an opcode extension
             operands.src_type = 2;  // Immed
@@ -966,15 +962,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0xFF: {
             ip_inc = 0;
             if(get_register_field(data[0]) == 4) {  // JMP REG16/MEM16 (intra): [0xFE, MOD 100 R/M, (DISP-LO), (DISP-HI)]
-                operands_t operands = decode_operands(opcode, data, 0);
+                operands_t operands = decode_operands(opcode, data, 8);
                 set_register_value(IP_register, operands.src_val);
+                mylog("logs/main.log", "Instruction 0xFF: intrasegment indirect JMP 0x%04X\n", get_register_value(IP_register));
             } else {    // if 5: // JMP REG16/MEM16 (inter): [0xFE, MOD 101 R/M, DISP-LO, DISP-HI] (only memory)
                 uint16_t addr = data[0] + (data[1] << 8);
                 addr = get_addr(DS_register, addr);
                 set_register_value(IP_register, mem_read(addr, 2));
                 set_register_value(CS_register, mem_read(addr+2, 2));
+                mylog("logs/main.log", "Instruction 0xFF: intersegment indirect JMP 0x%04X\n", get_register_value(IP_register));
             }
-            mylog("logs/main.log", "Instruction 0xFF: intrasegment indirect JMP 0x%04X\n", get_register_value(IP_register));
             break;
         }
         case 0xEA: {    // JMP far label: [0xEA, IP-LO, IP-HI, CS-LO, CS-HI]
@@ -991,6 +988,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             break;
         }
         default:
+            REGS->invalid_operations ++;
             printf("Error: Unknown JMP instruction: 0x%02X\n", opcode);
     }
     uint16_t new_ip = (int32_t)get_register_value(IP_register) + ip_inc;
@@ -1221,6 +1219,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             break;
         }
         default:
+            REGS->invalid_operations ++;
             printf("Error: Unknown MOV instruction: 0x%02X\n", opcode);
     }
     return ret_val;
@@ -2889,12 +2888,12 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0xF2:  // REPNE/REPNZ
             mylog("logs/main.log", "Instruction 0xF2: REPNE/REPNZ, setting prefix\n");
-            printf("Instruction 0xF2: REPNE/REPNZ, setting prefix\n");
+            // printf("Instruction 0xF2: REPNE/REPNZ, setting prefix\n");
             set_prefix(REPNE, 1);
             break;
         case 0xF3:  // REP/REPE/REPZ
             mylog("logs/main.log", "Instruction 0xF3: REP/REPE/REPZ, setting prefix\n");
-            printf("Instruction 0xF3: REP/REPE/REPZ, setting prefix\n");
+            // printf("Instruction 0xF3: REP/REPE/REPZ, setting prefix\n");
             set_prefix(REPE, 1);
             break;
         case 0xF4:  // HLT
@@ -3008,9 +3007,9 @@ int16_t process_instruction(uint8_t * memory) {
         case 0xFE: {
             uint8_t reg_field = get_register_field(memory[1]);
             if(reg_field == 0) {        // INC REG8/MEM8: [0xFE, MOD 000 R/M, (DISP-LO), (DISP-HI)]
-                ret_val = inc_dec_instr(memory[0], &memory[1]);
+                ret_val = inc_instr(memory[0], &memory[1]);
             } else if(reg_field == 1) { // DEC REG8/MEM8: [0xFE, MOD 001 R/M, (DISP-LO), (DISP-HI)]
-                ret_val = inc_dec_instr(memory[0], &memory[1]);
+                ret_val = dec_instr(memory[0], &memory[1]);
             } else {                    // NOT USED
                 printf("Error: Invalid Instruction: 0x%02X\n", memory[0]);
                 REGS->invalid_operations ++;
@@ -3187,60 +3186,7 @@ uint8_t cpu_is_halted(void) {
     return (REGS->halt == 1) && (get_flag(IF) == 0);
 }
 
-// uint8_t ip_inc = 0;
-
-// int cpu_tick(void) {
-//     if(delayed_int_timeout > 0) {
-//         delayed_int_timeout --;
-//         if((delayed_int_timeout == 0) && (delayed_int_vector != 0xFFFF)) {
-//             set_int_vector(delayed_int_vector);
-//             delayed_int_vector = 0xFFFF;
-//         }
-//     }
-//     if(REGS->int_vector != 0xFFFF) {
-//         if(get_flag(IF)) {
-//             printf("CPU interrupt %d\n", REGS->int_vector);
-//             push_register(REGS->flags);
-//             push_register(REGS->CS);
-//             push_register(REGS->IP);
-//             set_register_value(IP_register, mem_read(4 * REGS->int_vector, 2));
-//             set_register_value(CS_register, mem_read((4 * REGS->int_vector) + 2, 2));
-//             REGS->int_vector = 0xFFFF;
-//             set_flag(IF, 0);
-//             set_flag(TF, 0);}
-//         }
-//     uint32_t addr = ((uint32_t)REGS->CS << 4) + REGS->IP;
-//     static uint8_t code[10];
-//     for(uint8_t i=0; i<sizeof(code); i++) {
-//         code[i] = mem_read(addr+i, 1);
-//     }
-//     uint8_t inc = process_instruction(code);
-//     if(REGS->ticks >= 1053807) {
-//         printf("ERROR: CPU has reached 1053807 ticks, stop\n");
-//         print_proc_commands();
-//         return EXIT_FAILURE;
-//     }
-//     if (cpu_is_halted()) {
-//         printf("ERROR: CPU is halted!\n");
-//         print_proc_commands();
-//         return EXIT_FAILURE;
-//     }
-//     if ((REGS->invalid_operations < 1)) {
-//         REGS->ticks++;
-//         REGS->IP += inc;
-//         // if(REGS->ticks & 0x0001) {
-//         //     timer_tick();
-//         // }
-//         return EXIT_SUCCESS;
-//     }
-//     // store_registers(REGISTERS_FILE, REGS);
-//     cpu_save_state();
-//     mylog("logs/main.log", "Processed commands: %d\n", REGS->ticks);
-//     print_proc_commands();
-//     return EXIT_FAILURE;
-// }
-
-__declspec(dllexport)
+DLL_PREFIX
 /* Set space_type to 0 for IO_SPACE and to 1 for MEM_SPACE */
 void connect_address_space(uint8_t space_type, WRITE_FUNC_PTR(write_func), READ_FUNC_PTR(read_func)) {
     if(space_type == 0) {   // IO_SPACE
@@ -3252,12 +3198,12 @@ void connect_address_space(uint8_t space_type, WRITE_FUNC_PTR(write_func), READ_
     }
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void set_code_read_func(READ_FUNC_PTR(read_func)) {
     code_read = read_func;
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_reset(void) {
     REGS = (registers_t*)calloc(1, sizeof(registers_t));
     REGS->int_vector = 0xFFFF;
@@ -3266,12 +3212,12 @@ void module_reset(void) {
     printf("REGS->IP = 0x%04X, REGS->CS = 0x%04X\n", REGS->IP, REGS->CS);
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_save(void) {
     store_data(REGS, sizeof(registers_t), CPU_DUMP_FILE);
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_restore(void) {
     registers_t *temp_regs = calloc(1, sizeof(registers_t));
     if(EXIT_SUCCESS == restore_data(temp_regs, sizeof(registers_t), CPU_DUMP_FILE)) {
@@ -3279,15 +3225,8 @@ void module_restore(void) {
     }
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 int module_tick(void) {
-    // if(delayed_int_timeout > 0) {
-    //     delayed_int_timeout --;
-    //     if((delayed_int_timeout == 0) && (delayed_int_vector != 0xFFFF)) {
-    //         set_int_vector(delayed_int_vector);
-    //         delayed_int_vector = 0xFFFF;
-    //     }
-    // }
     if(REGS->int_vector != 0xFFFF) {
         if(get_flag(IF)) {
             printf("CPU interrupt %d\n", REGS->int_vector);
@@ -3377,8 +3316,8 @@ void int_cb(wire_state_t new_state) {
     return;
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 wire_t nmi_wire = WIRE_T(WIRE_INPUT, &dummy_nmi_cb);
 
-__declspec(dllexport)
+DLL_PREFIX
 wire_t int_wire = WIRE_T(WIRE_INPUT, &int_cb);

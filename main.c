@@ -2,37 +2,30 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "utils.h"
-#include "8086.h"
-#include "8086_io.h"
-#include "devices/8259a_interrupt_controller.h"
+// #include "utils.h"
+#include "devices/8086_cpu.h"
+// #include "8086_io.h"
+// #include "devices/8259a_interrupt_controller.h"
 
-#include "log_server_iface/logs_win.h"
+// #include "log_server_iface/logs_win.h"
+
+void test_mem_write(uint32_t addr, uint16_t value, uint8_t width) {
+    printf("TEST_MEM_WRITE: addr = 0x%06X, value: 0x%04X, width: %d\n", addr, value, width);
+}
+
+uint16_t test_mem_read(uint32_t addr, uint8_t width) {
+    printf("TEST_MEM_READ: addr = 0x%06X, width: %d\n", addr, width);
+    return 0x1234;
+}
 
 int main(int argc, char *argv[]) {
-    uint8_t continue_simulation = 0;
-    if(argc > 1) {
-        for(int i=1; i<argc; i++) {
-            if(strcmp(argv[i], "--continue") == 0) {
-                continue_simulation = 1;
-            }
-        }
-    }
-    log_server_init(8765);
-    if (EXIT_FAILURE == init_cpu(continue_simulation)) {
-        return EXIT_FAILURE;
-    }
-    if(EXIT_FAILURE == module_reset(continue_simulation)) {
-        return EXIT_FAILURE;
-    }
-    int_controller_reset();
-    // map_device(0xA0, 0xAF, &int_controller_write, &int_controller_read);
-    while (EXIT_SUCCESS == cpu_tick()) { // Run CPU
-        // sleep_ms(5);
-		// clear_console();
-    }
-    log_server_close();
-    sleep_ms(10000);
-    // cpu_save_state();
+    uint8_t data[6] = {0xFF, 0xA4, 0x45, 0xF0, 0xFF, 0xFF};
+    module_reset();
+    connect_address_space(0, &test_mem_write, &test_mem_read);
+    connect_address_space(1, &test_mem_write, &test_mem_read);
+    operands_t operands = decode_operands(data[0], &(data[1]), 0);
+    printf("Instruction 0xFF: operands.src_val = 0x%04X\n", operands.src_val);
+    printf("Instruction 0xFF: operands.src_addr = 0x%06X\n", operands.src.address);
+    printf("Instruction 0xFF: operands.src_type = %d\n", operands.src_type);
     return 0;
 }
