@@ -16,6 +16,7 @@ char *BIOS_FILENAME_0XF8000 = "BIOS/08NOV82_F8000.BIN";
 #define MEMORY_SIZE 0x100000
 
 static uint8_t *MEMORY = NULL;
+static uint8_t error = 0;
 
 size_t get_file_size(FILE *file) {
     size_t init_location = ftell(file);
@@ -128,6 +129,10 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
 __declspec(dllexport)
 uint16_t code_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
+    if(addr < 0xE0000) {
+        printf("CODE READ ERROR: Read outside of code sector: 0x%08X\n", addr);
+        error = 1;
+    }
     if(width == 1) {
         ret_val = MEMORY[addr];
     } else if (width == 2) {
@@ -179,5 +184,5 @@ uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR(write
 
 __declspec(dllexport)
 int module_tick(void) {
-    return 0;
+    return error;
 }

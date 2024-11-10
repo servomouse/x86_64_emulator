@@ -2739,9 +2739,14 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0xC4:  // LES REG16, MEM16
         //     REGS->IP += les_op(memory[1], &memory[2]);  // MOD REG R/M, DISP-LO, DISP-HI
         //     break;
-        // case 0xC5:  // LDS REG16, MEM16
-        //     REGS->IP += lds_op(memory[1], &memory[2]);  // MOD REG R/M, DISP-LO, DISP-HI
-        //     break;
+        case 0xC5: {  // LDS REG16, MEM16: [opcode, MOD REG R/M, DISP-LO, DISP-HI]
+            operands_t operands = decode_operands(memory[0] | 0x02, &memory[1], 0); // Swap source and destination
+            ret_val += operands.num_bytes;
+            set_register_value(operands.dst.register_name, mem_read(operands.src.address, 2));
+            set_register_value(DS_register, mem_read(operands.src.address+2, 2));
+            mylog("logs/main.log", "Instruction 0xC5: LDS REG16 (%s), MEM16 (0x%04X @ 0x%08X);\n", operands.destination, mem_read(operands.src.address, 2), operands.src.address);
+            break;
+        }
         case 0xC6:  // MOV MEM8, IMMED8: [0xC6, MOD 000 R/M, (DISP-LO), (DISP-HI), DATA-8]
         case 0xC7:  // MOV MEM16, IMMED16
             ret_val = mov_instr(memory[0], &memory[1]);
