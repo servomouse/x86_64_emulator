@@ -99,6 +99,7 @@ typedef enum {
     ADD_OP,
     SUB_OP,
     MUL_OP,
+    IMUL_OP,
     DIV_OP,
 } operation_t;
 
@@ -244,17 +245,42 @@ void update_flags(uint32_t dst, uint32_t src, uint32_t res, uint8_t width, opera
             }
             break;
         }
+        case IMUL_OP:
         case MUL_OP: {
+            // p 60(2-36) If the upper half of the result (AH for byte source, DX for word source)
+            // is nonzero, CF and OF are set; otherwise they are cleared. When CF and OF are set,
+            // they indicate that AH or DX contains significant digits of the result. The content
+            // of AF, PF, SF and ZF is undefined following execution of MUL.
+            // IMUL: If the upper half of the result (AH for byte source, DX for word source) is not
+            // the sign extension of the lower half of the result, CF and OF are set; otherwise they are cleared.
             if(width == 1) {
-                set_flag(CF, (res & 0xFF00) != 0);
+                if((res & 0xFF00) > 0) {
+                    if  ((op_type == IMUL_OP)
+                      && (((src & 0x80) ^ (dst & 0x80)) > 0)   // If exactly one operand is negative
+                      && ((res & 0xFF00) == 0xFF00)) {
+                        set_flag(CF, 0);
+                        set_flag(OF, 0);
+                    }
+                    set_flag(CF, 1);
+                    set_flag(OF, 1);
+                } else {
+                    set_flag(CF, 0);
+                    set_flag(OF, 0);
+                }
             } else if (width == 2) {
-                set_flag(CF, (res & 0xFFFF0000) != 0);
-            }
-            // AF is not affected
-            if(width == 1) {    // The same as for CF
-                set_flag(OF, (res & 0xFF00) != 0);
-            } else if (width == 2) {
-                set_flag(OF, (res & 0xFFFF0000) != 0);
+                if((res & 0xFFFF0000) > 0) {
+                    if  ((op_type == IMUL_OP)
+                      && (((src & 0x8000) ^ (dst & 0x8000)) > 0)   // If exactly one operand is negative
+                      && ((res & 0xFFFF0000) == 0xFFFF0000)) {
+                        set_flag(CF, 0);
+                        set_flag(OF, 0);
+                    }
+                    set_flag(CF, 1);
+                    set_flag(OF, 1);
+                } else {
+                    set_flag(CF, 0);
+                    set_flag(OF, 0);
+                }
             }
             break;
         }
@@ -1276,10 +1302,27 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                     REGS->invalid_operations ++;
                     printf("Invalid instruction: 0x%02X, REG field 110\n", opcode);
                     break;
-                case 7: // SAR REG/MEM, 1/CL: [opcode, MOD 111 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented SAR REG/MEM, 1/CL operation\n");
-                    REGS->invalid_operations ++;
+                case 7: { // SAR REG/MEM, 1/CL: [opcode, MOD 111 R/M, DISP-LO, DISP-HI]
+                    uint8_t sign = 0;
+                    if(((opcode & 0x01) == 1) && ((operands.dst_val & 0x8000) > 0)) {   // 16-bit
+                        sign = 1;
+                    } else if(((opcode & 0x01) == 0) && ((operands.dst_val & 0x80) > 0)) {  // 8-bit
+                        sign = 1;
+                    }
+                    uint8_t count = operands.src_val;
+                    res_val = operands.dst_val;
+                    while(count) {
+                        res_val >>= 1;
+                        if(sign && ((opcode & 0x01) == 1)) {
+                            res_val |= 0x8000;
+                        } else if(sign && ((opcode & 0x01) == 0)) {
+                            res_val |= 0x80;
+                        }
+                    }
+                    update_flags(operands.dst_val, operands.src_val, res_val, 2, SHIFT_R_OP);
+                    mylog("logs/main.log", "Instruction 0x%02X: SAR %s (0x%04X), CL %d; result = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     break;
+                }
             }
             if(operands.dst_type == 0) {    // Register mode
                 set_register_value(operands.dst.register_name, res_val);
@@ -1380,23 +1423,23 @@ uint8_t div_instr(uint8_t opcode, uint8_t *data) {
 uint8_t mul_instr(uint8_t opcode, uint8_t *data) {
     uint8_t ret_val = 1;
     switch(opcode) {
-        case 0xF6: {
+        case 0xF6:      // 8-bit operations
+        case 0xF7: {    // 16-bit operations
             uint8_t reg_field = get_register_field(data[0]);
-            if(reg_field == 5) { // IMUL REG8/MEM8 (signed): [0xF6, MOD 101 R/M, (DISP-LO), (DISP-HI)]
-                operands_t operands = decode_operands(opcode, data, 0);
-                ret_val += operands.num_bytes;
-                int16_t res_val = (int16_t)get_register_value(AL_register) * operands.src_val;
+            operands_t operands = decode_operands(opcode, data, 0);
+            ret_val += operands.num_bytes;
+            if(reg_field == 4) { // MUL REG/MEM: [opcode, MOD 100 R/M, DISP-LO, DISP-HI]
+                    // p60 (2.36) If the source is a byte, then it is multiplied by register AL, and the double-length
+                    // result is returned in AH and AL. If the source operand is a word, then it is multiplied by register
+                    // AX, and the double-length result is returned in registers DX and AX. The operands are treated as
+                    // unsigned binary numbers (see AAM).
+                uint32_t res_val = get_register_value(AL_register) * (uint16_t)operands.src_val;
                 set_register_value(AX_register, res_val);
-                if(get_register_value(AH_register) == 0) {
-                    set_flag(CF, 0);
-                    set_flag(OF, 0);
-                } else if((get_register_value(AH_register) == 0xFF) && ((get_register_value(AL_register) & 0x80) > 0)) {
-                    set_flag(CF, 0);
-                    set_flag(OF, 0);
-                } else {
-                    set_flag(CF, 1);
-                    set_flag(OF, 1);
-                }
+                update_flags(operands.dst_val, operands.src_val, res_val, operands.width, MUL_OP);
+            } else if(reg_field == 5) { // IMUL REG/MEM (signed): [opcode, MOD 101 R/M, (DISP-LO), (DISP-HI)]
+                int32_t res_val = (int16_t)get_register_value(AL_register) * operands.src_val;
+                set_register_value(AX_register, res_val);
+                update_flags(operands.dst_val, operands.src_val, res_val, operands.width, IMUL_OP);
             }
             break;
         }
@@ -1848,23 +1891,29 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             mylog("logs/main.log", "Instruction 0x%02X: AND %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             break;
         }
-        case 0x24: {  // AND AL, IMMED8: [0x24, DATA-8]
+        case 0xA8:      // TEST AL, IMMED8
+        case 0x24: {    // AND AL, IMMED8: [0x24, DATA-8]
             operands_t operands = {0};
             operands.dst_val = get_register_value(AL_register);
             operands.src_val = data[0];
             res_val = operands.src_val & operands.dst_val;
-            set_register_value(AL_register, res_val);
+            if(opcode == 0x24) {
+                set_register_value(AL_register, res_val);
+            }
             update_flags(operands.dst_val, operands.src_val, res_val, 1, LOGIC_OP);
             mylog("logs/main.log", "Instruction 0x%02X: AND AL (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
             ret_val = 2;
             break;
         }
-        case 0x25: {  // AND AX, immed16: [DATA-LO, DATA-HI]
+        case 0xA9:      // TEST AX, IMMED16
+        case 0x25: {    // AND AX, immed16: [DATA-LO, DATA-HI]
             operands_t operands = {0};
             operands.dst_val = get_register_value(AL_register);
             operands.src_val = data[0] + (data[1] << 8);
             res_val = operands.src_val & operands.dst_val;
-            set_register_value(AL_register, res_val);
+            if(opcode == 0x24) {
+                set_register_value(AX_register, res_val);
+            }
             update_flags(operands.dst_val, operands.src_val, res_val, 2, LOGIC_OP);
             mylog("logs/main.log", "Instruction 0x%02X: AND AL (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
             ret_val = 3;
@@ -2683,12 +2732,10 @@ int16_t process_instruction(uint8_t * memory) {
         // case 0xA7:  // CMPSS DEST-STR16, SRC-STR16
         //     REGS->IP += cmps_str_op(memory[1], &memory[2]);
         //     break;
-        // case 0xA8:  // TEST AL, IMMED8
-        //     REGS->IP += cmps_str_op(memory[1], &memory[2]); // DATA8
-        //     break;
-        // case 0xA9:  // TEST AX, IMMED16
-        //     REGS->IP += cmps_str_op(memory[1], &memory[2]); // DATA_LO, DATA-HI
-        //     break;
+        case 0xA8:  // TEST AL, IMMED8
+        case 0xA9:  // TEST AX, IMMED16
+            ret_val = and_instr(memory[0], &memory[1]);
+            break;
         case 0xAA:  // STOS DEST-STR8
             ret_val = string_instr(memory[0], &memory[1]);
             break;
@@ -2937,11 +2984,11 @@ int16_t process_instruction(uint8_t * memory) {
                     printf("Error: Unimplemented NEG instruction: 0x%02X\n", memory[0]);
                     REGS->invalid_operations ++;
             } else if(reg_field == 4) { // MUL REG8/MEM8: [0xF6, MOD 100 R/M, DISP-LO, DISP-HI]
-                    // the source operand (in a general-purpose register or memory location) is multiplied by the value in the AL, AX, EAX, or RAX
-                    // register (depending on the operand size) and the product (twice the size of the input operand) is stored in the
-                    // AX, DX:AX, EDX:EAX, or RDX:RAX registers, respectively
-                    printf("Error: Unimplemented MUL instruction: 0x%02X\n", memory[0]);
-                    REGS->invalid_operations ++;
+                    // p60 (2.36) If the source is a byte, then it is multiplied by register AL, and the double-length
+                    // result is returned in AH and AL. If the source operand is a word, then it is multiplied by register
+                    // AX, and the double-length result is returned in registers DX and AX. The operands are treated as
+                    // unsigned binary numbers (see AAM).
+                    ret_val = mul_instr(memory[0], &memory[1]);
             } else if(reg_field == 5) { // IMUL REG8/MEM8 (signed): [0xF6, MOD 101 R/M, DISP-LO, DISP-HI]
                     ret_val = mul_instr(memory[0], &memory[1]);
             } else if(reg_field == 6) { // DIV REG8/MEM8: [0xF6, MOD 110 R/M, DISP-LO, DISP-HI]
@@ -2968,11 +3015,13 @@ int16_t process_instruction(uint8_t * memory) {
                     printf("Error: Invalid Instruction: 0x%02X 001\n", memory[0]);
                     REGS->invalid_operations ++;
             } else if(reg_field == 4) { // MUL REG16/MEM16
-                    printf("Error: Invalid Instruction: 0x%02X 001\n", memory[0]);
-                    REGS->invalid_operations ++;
+                    // p60 (2.36) If the source is a byte, then it is multiplied by register AL, and the double-length
+                    // result is returned in AH and AL. If the source operand is a word, then it is multiplied by register
+                    // AX, and the double-length result is returned in registers DX and AX. The operands are treated as
+                    // unsigned binary numbers (see AAM).
+                    ret_val = mul_instr(memory[0], &memory[1]);
             } else if(reg_field == 5) { // IMUL REG16/MEM16 (signed)
-                    printf("Error: Invalid Instruction: 0x%02X 001\n", memory[0]);
-                    REGS->invalid_operations ++;
+                    ret_val = mul_instr(memory[0], &memory[1]);
             } else if(reg_field == 6) { // DIV REG16/MEM16
                     ret_val = div_instr(memory[0], &memory[1]);
             } else if(reg_field == 7) { // IDIV REG16/MEM16
