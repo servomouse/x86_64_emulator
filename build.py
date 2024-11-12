@@ -22,26 +22,28 @@ output_file_name = "main"
 flags = ["-lm", "-g", "-Wall", "-lws2_32", "-I.", "-I./devices"]
 
 
+def build_all():
+    files = glob.glob('./bin/*')
+    for f in files:
+        os.remove(f)
+    files = glob.glob('./devices/*.c')
+    for f in files:
+        fname = os.path.basename(f).replace(".c", "")
+        print(f"Building {fname} . . . ", end='', flush=True)
+        output = subprocess.getoutput(f"gcc -shared -o bin/{fname}.dll devices/{fname}.c utils.c -I. -I./devices -Wall")
+        if len(output) == 0:
+            print("Done")
+        else:
+            print(f"Failed\nERROR: {output}")
+            sys.exit(-1)
+
+
 def main():
     if len(sys.argv) > 1:
         if sys.argv[1] == "all":
-            files = glob.glob('./bin/*')
-            for f in files:
-                os.remove(f)
-            files = glob.glob('./devices/*.c')
-            for f in files:
-                fname = os.path.basename(f).replace(".c", "")
-                print(f"Building {fname} . . . ", end='', flush=True)
-                # fname = "8259a_interrupt_controller"
-                output = subprocess.getoutput(f"gcc -shared -o bin/{fname}.dll devices/{fname}.c utils.c -I. -I./devices -Wall")
-                if len(output) == 0:
-                    print("Done")
-                else:
-                    print(output)
+            build_all()
     else:
-        os.remove(output_file_name) if os.path.exists(output_file_name) else None
-        os.remove(f"{output_file_name}.exe") if os.path.exists(f"{output_file_name}.exe") else None
-        print(subprocess.getoutput(f"gcc {' '.join(files_to_build)} {' '.join(flags)} -o {output_file_name}"))
+        build_all()
 
 
 if __name__ == "__main__":
