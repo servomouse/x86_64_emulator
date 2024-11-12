@@ -2238,22 +2238,22 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
     }
     switch(opcode) {
         case 0xA5: {  // MOVS DEST-STR16, SRC-STR16
-            uint32_t dst_addr = get_addr(DS_register, get_register_value(DI_register));
+            uint32_t dst_addr = get_addr(ES_register, get_register_value(DI_register));
             uint32_t src_addr = get_addr(DS_register, get_register_value(SI_register));
             uint16_t val = mem_read(src_addr, 2);
             mem_write(dst_addr, val, 2);
             if(get_flag(DF)) {
-                set_register_value(DI_register, get_register_value(DI_register) - 1);
-                set_register_value(SI_register, get_register_value(SI_register) - 1);
+                set_register_value(DI_register, get_register_value(DI_register) - 2);
+                set_register_value(SI_register, get_register_value(SI_register) - 2);
             } else {
-                set_register_value(DI_register, get_register_value(DI_register) + 1);
-                set_register_value(SI_register, get_register_value(SI_register) + 1);
+                set_register_value(DI_register, get_register_value(DI_register) + 2);
+                set_register_value(SI_register, get_register_value(SI_register) + 2);
             }
             mylog("logs/main.log", "Instruction 0x%02X: MOVS DEST-STR16, SRC-STR16 (0x%08X <= 0x%04X @ 0x%08X)\n", opcode, dst_addr, val, src_addr);
             break;
         }
         case 0xAA: {  // STOS DEST-STR8
-            uint32_t addr = get_addr(DS_register, get_register_value(DI_register));
+            uint32_t addr = get_addr(ES_register, get_register_value(DI_register));
             mem_write(addr, get_register_value(AL_register), 1);
             if(get_flag(DF)) {
                 set_register_value(DI_register, get_register_value(DI_register) - 1);
@@ -2264,7 +2264,7 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
             break;
         }
         case 0xAB: {  // STOS DEST-STR16
-            uint32_t addr = get_addr(DS_register, get_register_value(DI_register));
+            uint32_t addr = get_addr(ES_register, get_register_value(DI_register));
             mem_write(addr, get_register_value(AX_register), 2);
             if(get_flag(DF)) {
                 set_register_value(DI_register, get_register_value(DI_register) - 2);
@@ -3264,6 +3264,9 @@ int module_tick(void) {
     } else if(REGS->IP == 0xE35D) {
         mylog("logs/short.log", "Start 8253 Timer Test\n");
         printf("Start 8253 Timer Test\n");
+    } else if(REGS->IP == 0xE242) {
+        mylog("logs/short.log", "Initialize and start CRT controller\n");
+        printf("Initialize and start CRT controller\n");
     } else if(REGS->IP == 0xE3A2) {
         mylog("logs/short.log", "Start Keyboard Test\n");
         printf("Start Keyboard Test\n");
