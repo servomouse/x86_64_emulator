@@ -89,15 +89,9 @@ uint8_t * mem_init(uint8_t continue_simulation) {
 __declspec(dllexport)
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     if((addr >= 0xA0000) && (addr < 0xC0000)) {
-        mylog(VIDEO_MEM_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+        mylog(VIDEO_MEM_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d byte(s)\n", addr, value, width);
     }else {
-        mylog(MEMORY_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
-    }
-    if(addr == 0x0040) {
-        if(value == 0xFF23) {
-            value = 0xF065;
-        }
-        printf("MEMORY: Setting VIDEO_IO address to 0x%04X\n", value);
+        mylog(MEMORY_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d byte(s)\n", addr, value, width);
     }
     if(width == 1) {
         MEMORY[addr] = value;
@@ -119,9 +113,9 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
         printf("MEM READ ERROR: Incorrect width: %d", width);
     }
     if((addr >= 0xA0000) && (addr < 0xC0000)) {
-        mylog(VIDEO_MEM_LOG_FILE, "MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+        mylog(VIDEO_MEM_LOG_FILE, "MEM_READ  addr = 0x%06X, width = %d byte(s), data = 0x%04X\n", addr, width, ret_val);
     }else {
-        mylog(MEMORY_LOG_FILE, "MEM_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+        mylog(MEMORY_LOG_FILE, "MEM_READ  addr = 0x%06X, width = %d byte(s), data = 0x%04X\n", addr, width, ret_val);
     }
     return ret_val;
 }
