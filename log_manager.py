@@ -4,6 +4,8 @@ import threading
 import time
 import os
 import glob
+import ws_server as ws
+import json
 
 
 buffers = {}
@@ -11,7 +13,7 @@ buffer_size = 1 * 1024 * 1024  # 1 MB
 buffer_mutex = threading.Lock()
 
 ignore_files = [
-	'code_mem_log.txt'
+	'logs/code_mem_log.txt'
 ]
 
 
@@ -21,11 +23,17 @@ print_callback_t = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_char_p)
 def print_logs(filename, logstring):
 	global buffer_mutex, stop_thread
 	encoding = 'utf-8'
-	# print(f"{filename.decode(encoding)} <= {logstring.decode(encoding)}")
-	filename = filename.decode(encoding)
+	filename = str(filename.decode(encoding))
+	logstring = str(logstring.decode(encoding))
 	if filename in ignore_files:
 		return
-	log_string = logstring.decode(encoding)
+	if filename == "logs/video_mem_log.txt" and logstring.startswith("VIDEO_BUF"):
+		# print(f"Sending string: {logstring}")
+		data = {'text': logstring[11:]}
+		if len(data) > 0:
+			ws.send_data(json.dumps(data))
+		# time.sleep(1)
+		# os._exit(1)
 	try:
 		with buffer_mutex:
 			if filename not in buffers:
@@ -33,7 +41,7 @@ def print_logs(filename, logstring):
 				buffers[filename]["time"] = 0
 				buffers[filename]["data"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n"
 
-			buffers[filename]["data"] += log_string
+			buffers[filename]["data"] += logstring
 
 			if buffers[filename]["time"] == 0:
 				buffers[filename]["time"] = time.time()
@@ -95,6 +103,7 @@ def log_manager_init():
 
 	print_thread = threading.Thread(target=time_thread, args=(lambda: stop_thread,))
 	print_thread.start()
+	ws.start_server(8765)
 
 
 def log_manager_exit():
@@ -103,5 +112,6 @@ def log_manager_exit():
 	stop_thread = True
 	try:
 		print_thread.join()
+		ws.stop_server()
 	except RuntimeError:
 		print("Log thread has been completed. ", end='')
