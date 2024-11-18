@@ -1821,7 +1821,7 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
             if(operands.dst_type == 1) {    // Memory mode
                 mylog("logs/main.log", "Instruction 0x%02X: OR %s (0x%04X @ 0x%08X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.dst.address, operands.source, operands.src_val, res_val);
             } else if(operands.src_type == 1) {    // Memory mode
-                mylog("logs/main.log", "Instruction 0x%02X: OR %s (0x%04X), %s (0x%04X@ 0x%08X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, operands.src.address, res_val);
+                mylog("logs/main.log", "Instruction 0x%02X: OR %s (0x%04X), %s (0x%04X @ 0x%08X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, operands.src.address, res_val);
             } else {
                 mylog("logs/main.log", "Instruction 0x%02X: OR %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             }

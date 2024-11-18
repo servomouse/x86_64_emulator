@@ -13,7 +13,9 @@ buffer_size = 1 * 1024 * 1024  # 1 MB
 buffer_mutex = threading.Lock()
 
 ignore_files = [
-	'logs/code_mem_log.txt'
+	'logs/code_mem_log.txt',
+	'logs/mem_log.txt',
+	'logs/main.log',
 ]
 
 
@@ -28,12 +30,11 @@ def print_logs(filename, logstring):
 	if filename in ignore_files:
 		return
 	if filename == "logs/video_mem_log.txt" and logstring.startswith("VIDEO_BUF"):
-		# print(f"Sending string: {logstring}")
-		data = {'text': logstring[11:]}
-		if len(data) > 0:
-			ws.send_data(json.dumps(data))
-		# time.sleep(1)
-		# os._exit(1)
+		data = json.dumps({'text': logstring[11:]})	# {'text': ""}
+		# print_logs(str.encode("logs/video_mem_prints_log.txt"), str.encode(data + '\n'))
+		if len(data) > 14:
+			ws.send_data(data)
+		return
 	try:
 		with buffer_mutex:
 			if filename not in buffers:
