@@ -1,0 +1,8 @@
+
+[FDC]
+module = ["devices/FDC.c"]
+tests = ["tests/test_fdc.c"]
+
+[TIMER]
+module = ["devices/8253_timer.c"]
+tests = [""]
