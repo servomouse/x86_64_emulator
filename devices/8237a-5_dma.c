@@ -70,6 +70,9 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
         case 0x83:
             ret_val = regs.reg3;
             break;
+        case 0x08:
+            ret_val = 1;
+            break;
         default:
             // printf("DMA ERROR: incorrect address: 0x%08X\n", addr);
             ret_val = regs.registers[addr];
