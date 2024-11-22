@@ -57,9 +57,6 @@ void set_int_vector(uint8_t vector);
 // void set_delayed_int(uint8_t vector, uint16_t dely_ticks);
 operands_t decode_operands(uint8_t opcode, uint8_t *data, uint8_t single);
 
-#define DLL_PREFIX __declspec(dllexport)
-// #define DLL_PREFIX 
-
 // API functions:
 void connect_address_space(uint8_t space_type, WRITE_FUNC_PTR(write_func), READ_FUNC_PTR(read_func));
 void set_code_read_func(READ_FUNC_PTR(read_func));

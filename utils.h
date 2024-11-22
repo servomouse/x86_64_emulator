@@ -11,7 +11,13 @@ typedef struct {
 #define READ_FUNC_PTR(_func_name)  uint16_t(*_func_name)(uint32_t, uint8_t)
 #define WRITE_FUNC_PTR(_func_name) void(*_func_name)(uint32_t, uint16_t, uint8_t)
 
-// #define PRINT_LOGS
+#define PRINT_LOGS
+
+#ifdef __unix__
+    #define DLL_PREFIX 
+#elif defined(_WIN32) || defined(WIN32)
+    #define DLL_PREFIX __declspec(dllexport)
+#endif
 
 void mylog(const char *log_file, const char *format, ...);
 void clear_console(void);
