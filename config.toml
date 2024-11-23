@@ -1,0 +1,55 @@
+
+[fdc]
+type = "device"
+module = ["devices/FDC.c"]
+tests = ["tests/test_fdc.c"]
+
+[timer]
+type = "device"
+module = ["devices/8253_timer.c"]
+tests = [""]
+
+[cga]
+type = "device"
+module = ["devices/8086_cga.c"]
+tests = [""]
+
+[cpu]
+type = "processor"
+module = ["devices/8086_cpu.c"]
+tests = [""]
+
+[ioc]
+type = "address_space"
+module = ["devices/8086_io.c"]
+tests = [""]
+
+[memory]
+type = "address_space"
+module = ["devices/8086_mem.c"]
+tests = [""]
+
+[io_exp_box]    # IO Expansion box
+type = "device"
+module = ["devices/8086_io_expansion_box.c"]
+tests = [""]
+
+[mda]
+type = "device"
+module = ["devices/8086_mda.c"]
+tests = [""]
+
+[ppi]
+type = "device"
+module = ["devices/8255a-5_ppi.c"]
+tests = [""]
+
+[intc]
+type = "device"
+module = ["devices/8259a_interrupt_controller.c"]
+tests = [""]
+
+[dma]
+type = "device"
+module = ["devices/8237a-5_dma.c"]
+tests = [""]

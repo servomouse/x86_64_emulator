@@ -10,33 +10,52 @@ import toml     # pip install toml
 # gcc -shared -o bin/8086_mem.dll 8086_mem.c utils.c -I. -I./devices -Wall
 # gcc -shared -o bin/8086_cpu.dll 8086.c utils.c -I. -I./devices -I./tests -Wall
 
-files_to_build = ["main.c",
-                  "8086.c",
-                  "8086_io.c",
-                  "8086_mem.c",
-                  "8086_mda.c",
-                  "8086_ppi.c",
-                  "8253_timer.c",
-                  "devices/8259a_interrupt_controller.c",
-                  "utils.c",
-                  "log_server_iface/logs_win.c"]
-output_file_name = "main"
-flags = ["-lm", "-g", "-Wall", "-lws2_32", "-I.", "-I./devices", "-I./tests"]
+common_flags = ["-lm", "-g", "-Wall", "-lws2_32", "-I.", "-I./devices", "-I./tests", "utils.c"]
 
 
-def get_targets(filename: str):
+def get_config(filename: str):
     with open(filename, 'r') as f:
         targets = toml.load(f)
     return targets
 
 
+def build_target(target, config):
+    if len(config[target]['module'][0]) > 0:
+        print(f"Building {target} . . . ", end='', flush=True)
+        fname = f"bin/{target}.dll"
+        if os.path.isfile(fname):
+            os.remove(fname)
+        srcs = ' '.join(config[target]['module'])
+        flags = ' '.join(common_flags)
+        output = subprocess.getoutput(f"gcc -shared {flags} {srcs} -o {fname}")
+        if len(output) == 0:
+            print("Done")
+        else:
+            print(f"Failed\nERROR: {output}")
+    if len(config[target]['tests'][0]) > 0:
+        print(f"Building tests for {target} . . . ", end='', flush=True)
+        fname = f"bin/test_{target}.dll"
+        if os.path.isfile(fname):
+            os.remove(fname)
+        srcs = ' '.join(config[target]['module']) + ' ' + ' '.join(config[target]['tests'])
+        flags = ' '.join(common_flags)
+        output = subprocess.getoutput(f"gcc {flags} {srcs} -o {fname}")
+        if len(output) == 0:
+            print("Done")
+        else:
+            print(f"Failed\nERROR: {output}")
+
+
 def build(target):
-    targets = get_targets("targets.toml")
+    config = get_config("config.toml")
     if target == "all":
-        pass
+        for target in config:
+            build_target(target, config)
     else:
-        if target in targets and len(targets[target]['module'][0]) > 0:
-            pass
+        if target in config:
+            build_target(target, config)
+        else:
+            print(f"ERROR: Target {target} not found!")
 
 
 
@@ -59,11 +78,13 @@ def build_all():
 def main():
     if len(sys.argv) > 1:
         if sys.argv[1] == "all":
-            build_all()
+            build("all")
+        else:
+            build(sys.argv[1])
     else:
-        build_all()
+        build("all")
 
 
 if __name__ == "__main__":
-    print(get_targets("targets.toml"))
-    # main()
+    # print(get_config("targets.toml"))
+    main()

@@ -2,8 +2,11 @@ import log_manager
 import os
 import sys
 import time
+import toml
+
 from wires import (WireType, WireState, Wire)
 from device_manager import (DevModule, AddressSpace, Processor, DevManager)
+from build import get_config
 
 
 stop_main_thread = False
@@ -13,83 +16,73 @@ mb = None
 
 def system_init():
     global mb
-    devices = {
-        "int_ctrlr": {"file": "bin/8259a_interrupt_controller.dll", "type": "device"},
-        "dma_ctrlr": {"file": "bin/8237a-5_dma.dll", "type": "device"},
-        "cga_ctrlr": {"file": "bin/8086_cga.dll", "type": "device"},
-        "mda_ctrlr": {"file": "bin/8086_mda.dll", "type": "device"},
-        "ppi_ctrlr": {"file": "bin/8255a-5_ppi.dll", "type": "device"},
-        "timer": {"file": "bin/8253_timer.dll", "type": "device"},
-        "io_expansion_box": {"file": "bin/8086_io_expansion_box.dll", "type": "device"},
-        "io_ctrlr": {"file": "bin/8086_io.dll", "type": "address_space"},
-        "memory": {"file": "bin/8086_mem.dll", "type": "address_space"},
-        "cpu": {"file": "bin/8086_cpu.dll", "type": "processor"},
-    }
-    for dev_name, config in devices.items():
-        if config["type"] == "device":
-            mb.add_device(DevModule(config["file"]), dev_name)
-        elif config["type"] == "address_space":
-            mb.add_device(AddressSpace(config["file"]), dev_name)
-        elif config["type"] == "processor":
-            mb.add_device(Processor(config["file"]), dev_name)
+    config = get_config("config.toml")
+
+    for dev_name, dev_config in config.items():
+        so_name = f"bin/{dev_name}.dll"
+        if dev_config["type"] == "device":
+            mb.add_device(DevModule(so_name), dev_name)
+        elif dev_config["type"] == "address_space":
+            mb.add_device(AddressSpace(so_name), dev_name)
+        elif dev_config["type"] == "processor":
+            mb.add_device(Processor(so_name), dev_name)
         else:
-            print(f"Unknown device type: {config['type']}")
+            print(f"Unknown device type: {dev_config['type']}")
             os._exit(1)
 
     wires = {
-        "nmi_wire": {"devices": ["cpu", "int_ctrlr"], "default_state": WireState.WIRE_LOW},
-        "int_wire": {"devices": ["cpu", "int_ctrlr"], "default_state": WireState.WIRE_LOW},
-        "int0_wire": {"devices": ["timer", "int_ctrlr"], "default_state": WireState.WIRE_LOW},
+        "nmi_wire": {"devices": ["cpu", "intc"], "default_state": WireState.WIRE_LOW},
+        "int_wire": {"devices": ["cpu", "intc"], "default_state": WireState.WIRE_LOW},
+        "int0_wire": {"devices": ["timer", "intc"], "default_state": WireState.WIRE_LOW},
         "ch1_output_wire": {"devices": ["timer"], "default_state": WireState.WIRE_LOW}, # Dummy wire
         "ch2_output_wire": {"devices": ["timer"], "default_state": WireState.WIRE_LOW}, # Dummy wire
-        "int1_wire": {"devices": ["ppi_ctrlr", "int_ctrlr"], "default_state": WireState.WIRE_LOW},
+        "int1_wire": {"devices": ["ppi", "intc"], "default_state": WireState.WIRE_LOW},
     }
 
     for wire_name, config in wires.items():
         temp_wire = Wire(wire_name)
         for dev in config["devices"]:
             temp_wire.connect_device(mb.devices[dev].device)
-        # temp_wire.connect_device(mb.devices["int_ctrlr"].device)
         temp_wire.set_state(config["default_state"])
 
-    int_ctrlr = mb.devices["int_ctrlr"]
-    dma_ctrlr = mb.devices["dma_ctrlr"]
-    cga_ctrlr = mb.devices["cga_ctrlr"]
-    mda_ctrlr = mb.devices["mda_ctrlr"]
-    ppi_ctrlr = mb.devices["ppi_ctrlr"]
+    intc = mb.devices["intc"]
+    dma = mb.devices["dma"]
+    cga = mb.devices["cga"]
+    mda = mb.devices["mda"]
+    ppi = mb.devices["ppi"]
     timer = mb.devices["timer"]
-    io_ctrlr = mb.devices["io_ctrlr"]
-    io_expansion_box = mb.devices["io_expansion_box"]
+    ioc = mb.devices["ioc"]
+    io_exp_box = mb.devices["io_exp_box"]
 
-    int_ctrlr.id0 = io_ctrlr.map_device(int_ctrlr.addr_start, int_ctrlr.addr_end, int_ctrlr.data_write_p, int_ctrlr.data_read_p)
-    int_ctrlr.id1 = io_ctrlr.map_device(0x20, 0x21, int_ctrlr.data_write_p, int_ctrlr.data_read_p)
-    io_expansion_box.id0 = io_ctrlr.map_device(io_expansion_box.addr_start, io_expansion_box.addr_end, io_expansion_box.data_write_p, io_expansion_box.data_read_p)
-    dma_ctrlr.id0 = io_ctrlr.map_device(dma_ctrlr.addr_start, dma_ctrlr.addr_end, dma_ctrlr.data_write_p, dma_ctrlr.data_read_p)
-    dma_ctrlr.id1 = io_ctrlr.map_device(0x00, 0x0F, dma_ctrlr.data_write_p, dma_ctrlr.data_read_p)
-    cga_ctrlr.id = io_ctrlr.map_device(cga_ctrlr.addr_start, cga_ctrlr.addr_end, cga_ctrlr.data_write_p, cga_ctrlr.data_read_p)
-    mda_ctrlr.id = io_ctrlr.map_device(mda_ctrlr.addr_start, mda_ctrlr.addr_end, mda_ctrlr.data_write_p, mda_ctrlr.data_read_p)
-    ppi_ctrlr.id = io_ctrlr.map_device(ppi_ctrlr.addr_start, ppi_ctrlr.addr_end, ppi_ctrlr.data_write_p, ppi_ctrlr.data_read_p)
-    timer.id = io_ctrlr.map_device(timer.addr_start, timer.addr_end, timer.data_write_p, timer.data_read_p)
+    intc.id0 = ioc.map_device(intc.addr_start, intc.addr_end, intc.data_write_p, intc.data_read_p)
+    intc.id1 = ioc.map_device(0x20, 0x21, intc.data_write_p, intc.data_read_p)
+    io_exp_box.id0 = ioc.map_device(io_exp_box.addr_start, io_exp_box.addr_end, io_exp_box.data_write_p, io_exp_box.data_read_p)
+    dma.id0 = ioc.map_device(dma.addr_start, dma.addr_end, dma.data_write_p, dma.data_read_p)
+    dma.id1 = ioc.map_device(0x00, 0x0F, dma.data_write_p, dma.data_read_p)
+    cga.id = ioc.map_device(cga.addr_start, cga.addr_end, cga.data_write_p, cga.data_read_p)
+    mda.id = ioc.map_device(mda.addr_start, mda.addr_end, mda.data_write_p, mda.data_read_p)
+    ppi.id = ioc.map_device(ppi.addr_start, ppi.addr_end, ppi.data_write_p, ppi.data_read_p)
+    timer.id = ioc.map_device(timer.addr_start, timer.addr_end, timer.data_write_p, timer.data_read_p)
 
-    mb.devices["cpu"].connect_address_space(0, mb.devices["io_ctrlr"].data_write_p, mb.devices["io_ctrlr"].data_read_p)
+    mb.devices["cpu"].connect_address_space(0, mb.devices["ioc"].data_write_p, mb.devices["ioc"].data_read_p)
     mb.devices["cpu"].connect_address_space(1, mb.devices["memory"].data_write_p, mb.devices["memory"].data_read_p)
     mb.devices["cpu"].set_code_read_func(mb.devices["memory"].code_read_p)
 
 
 def test_system():
     global mb
-    io_ctrlr = mb.devices["io_ctrlr"]
-    io_ctrlr.data_write(0xA0, 19, 1)
-    result = io_ctrlr.data_read(0xA0, 1)
+    ioc = mb.devices["ioc"]
+    ioc.data_write(0xA0, 19, 1)
+    result = ioc.data_read(0xA0, 1)
     print(result)
-    # io_ctrlr.module_save()
+    # ioc.module_save()
     # mb.devices["cpu"].module_tick()
     mb.save_devices()
     mb.reset_devices()
-    result = io_ctrlr.data_read(0xA0, 1)
+    result = ioc.data_read(0xA0, 1)
     print("After reset: ", result)
     mb.restore_devices()
-    result = io_ctrlr.data_read(0xA0, 1)
+    result = ioc.data_read(0xA0, 1)
     print("After restore: ", result)
 
 
