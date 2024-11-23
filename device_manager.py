@@ -7,10 +7,14 @@ class CommonDevModule():
         self.id = 0
         self.filename = filename
         self.device = ctypes.CDLL(filename)
-        # Log function
+        # Log output function
         self.device.set_log_func.argtypes = [log_manager.print_callback_t]
         self.device.set_log_func.restype = None
         self.device.set_log_func(log_manager.print_callback)
+        # Log-level function
+        self.device.set_log_level.argtypes = [ctypes.c_uint8]
+        self.device.set_log_level.restype = None
+        self.set_log_level = self.device.set_log_level
 
         self.device.module_reset.argtypes = None
         self.device.module_reset.restype = None
@@ -84,11 +88,24 @@ class Processor(CommonDevModule):
         self.device.set_code_read_func.argtypes = [read_func_t]
         self.connect_address_space = self.device.connect_address_space
         self.set_code_read_func = self.device.set_code_read_func
+        # Get tick counter function
+        self.device.cpu_get_ticks.argtypes = None
+        self.device.cpu_get_ticks.restype = ctypes.c_uint32
+        self.cpu_get_ticks = self.device.cpu_get_ticks
 
 
 class DevManager():
     def __init__(self):
         self.devices = {}
+        self._save_state_at = 0
+        self._set_log_level_at = []  # [device_name, ticks, new_log_level]
+    
+    def save_state_at(self, ticks):
+        self._save_state_at = ticks
+    
+    def set_log_level_at(self, ticks):
+        ''' ticks: [device_name, ticks, new_log_level] '''
+        self._set_log_level_at.append(ticks)
     
     def add_device(self, device, dev_name):
         self.devices[dev_name] = device
@@ -107,8 +124,22 @@ class DevManager():
     
     def tick_devices(self):
         """ On fail saves devices and returns False """
-        for _, dev in self.devices.items():
-            if 0 != dev.module_tick():
-                self.save_devices()
+        for dev_name, dev in self.devices.items():
+            try:
+                if 0 != dev.module_tick():
+                    self.save_devices()
+                    return False
+            except Exception as e:
+                print(f"Error ticking device {dev_name}!")
+                print(e)
                 return False
+            # if dev_name == 'cpu':
+            #     ticks = dev.cpu_get_ticks()
+            #     if self._save_state_at > 0 and ticks == self._save_state_at:
+            #         self.save_devices()
+            #         print(f"Target ticks {self._save_state_at} reached, devices state saved!")
+            #     if len(self._set_log_level_at) > 0:
+            #         for i in self._set_log_level_at:
+            #             if i[1] == ticks:
+            #                 self.devices[i[0]].set_log_level(i[2])
         return True

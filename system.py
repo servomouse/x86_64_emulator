@@ -97,6 +97,9 @@ def main():
         if len(sys.argv) > 1 and sys.argv[1] == "--continue":
             print("Restoring devices")
             mb.restore_devices()
+        
+        mb.save_state_at(1_000_000)
+        mb.set_log_level_at(['cpu', 20_000_000, 0])
     except Exception as e:
         print(e)
         exit_program()

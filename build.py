@@ -30,11 +30,13 @@ def build_target(target, config):
         output = subprocess.getoutput(f"gcc -shared {flags} {srcs} -o {fname}")
         if len(output) == 0:
             print("Done")
+            return 0
         else:
             print(f"Failed\nERROR: {output}")
+            return 1
     if len(config[target]['tests'][0]) > 0:
         print(f"Building tests for {target} . . . ", end='', flush=True)
-        fname = f"bin/test_{target}.dll"
+        fname = f"bin/test_{target}"
         if os.path.isfile(fname):
             os.remove(fname)
         srcs = ' '.join(config[target]['module']) + ' ' + ' '.join(config[target]['tests'])
@@ -42,15 +44,18 @@ def build_target(target, config):
         output = subprocess.getoutput(f"gcc {flags} {srcs} -o {fname}")
         if len(output) == 0:
             print("Done")
+            return 0
         else:
             print(f"Failed\nERROR: {output}")
+            return 1
 
 
 def build(target):
     config = get_config("config.toml")
     if target == "all":
         for target in config:
-            build_target(target, config)
+            if build_target(target, config):
+                break
     else:
         if target in config:
             build_target(target, config)
