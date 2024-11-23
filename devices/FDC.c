@@ -13,6 +13,7 @@ typedef struct {
 } device_regs_t;
 
 device_regs_t regs;
+uint8_t error;
 
 void dummy_cb(wire_state_t new_state) {
     return;
@@ -31,13 +32,33 @@ void module_reset(void) {
 
 DLL_PREFIX
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
-    mylog(DEVICE_LOG_FILE, "FDC_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(0, DEVICE_LOG_FILE, "FDC_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    if(addr == 0x3F2) {
+        regs.DOR = value;
+    } else if(addr == 0x3F4) {
+        regs.MSR = value;
+    } else if(addr == 0x3F5) {
+        regs.data_reg = value;
+    } else {
+        printf("FDC ERROR: Incorrect address: 0x%04X", addr);
+        error = 1;
+    }
 }
 
 DLL_PREFIX
 uint16_t data_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
-    mylog(DEVICE_LOG_FILE, "FDC_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    if(addr == 0x3F2) {
+        ret_val = regs.DOR;
+    } else if(addr == 0x3F4) {
+        ret_val = regs.MSR;
+    } else if(addr == 0x3F5) {
+        ret_val = regs.data_reg;
+    } else {
+        printf("FDC ERROR: Incorrect address: 0x%04X", addr);
+        error = 1;
+    }
+    mylog(0, DEVICE_LOG_FILE, "FDC_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
 
@@ -56,5 +77,5 @@ void module_restore(void) {
 
 DLL_PREFIX
 int module_tick(void) {
-    return 0;
+    return error;
 }

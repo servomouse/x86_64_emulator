@@ -60,7 +60,7 @@ void module_reset(void) {
 
 __declspec(dllexport)
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
-    mylog(DEVICE_LOG_FILE, "PPI_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(0, DEVICE_LOG_FILE, "PPI_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     switch(addr) {
         case 0x60:
             // porta_reg = value;
@@ -68,7 +68,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
             break;
         case 0x61:
             if(((regs.portb_reg & 0x40) == 0) && ((value & 0x40) > 0)) {
-                mylog(DEVICE_LOG_FILE, "PPI Setting Interrupt 2\n");
+                mylog(0, DEVICE_LOG_FILE, "PPI Setting Interrupt 2\n");
                 module_reset();
                 regs.delayed_int = 1;
                 regs.delayed_int_ticks = 10;
@@ -107,7 +107,7 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
         default:
             printf("PPI ERROR: attempt to read from incorrect port 0x%04x\n", addr);
     }
-    mylog(DEVICE_LOG_FILE, "PPI_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    mylog(0, DEVICE_LOG_FILE, "PPI_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
 
@@ -131,7 +131,7 @@ int module_tick(void) {
             regs.delayed_int_ticks --;
         } else {
             if(int1_wire.wire_get_state() == WIRE_LOW) {
-                mylog(DEVICE_LOG_FILE, "PPI Triggering Interrupt 2\n");
+                mylog(0, DEVICE_LOG_FILE, "PPI Triggering Interrupt 2\n");
                 int1_wire.wire_set_state(WIRE_HIGH);
                 regs.delayed_int_ticks = 20;
             } else {

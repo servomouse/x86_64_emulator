@@ -510,7 +510,7 @@ uint16_t get_register_value(register_name_t reg_name) {
         case override_segment:
             return REGS->override_segment;
         default:
-            mylog("logs/main.log", "Invalid register name: 0x%02X\n", reg_name);
+            mylog(1, "logs/main.log", "Invalid register name: 0x%02X\n", reg_name);
             return 0;
     }
 }
@@ -587,7 +587,7 @@ void set_register_value(register_name_t reg_name, uint16_t value) {
             REGS->override_segment = value;
             break;
         default:
-            mylog("logs/main.log", "Invalid register name: 0x%02X\n", reg_name);
+            mylog(1, "logs/main.log", "Invalid register name: 0x%02X\n", reg_name);
     }
 }
 
@@ -761,16 +761,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x70: {    // JO SHORT-LABEL: [0x70, IP-INC8]
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x70: Relative Jump JO SHORT-LABEL");
+            mylog(0, "logs/main.log", "Instruction 0x70: Relative Jump JO SHORT-LABEL");
             #endif
             if (get_flag(OF) == 1) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition OF == 1 didn't meet: OF = %d\n", get_flag(OF));
+                mylog(0, "logs/main.log", ": condition OF == 1 didn't meet: OF = %d\n", get_flag(OF));
                 #endif
             }
             break;
@@ -778,17 +778,17 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x71: {    // JNO SHORT-LABEL: [0x71, IP-INC8]
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x71: Relative Jump JNO");
+            mylog(0, "logs/main.log", "Instruction 0x71: Relative Jump JNO");
             #endif
             if (get_flag(OF) == 0) {
                 // int8_t increment = (int8_t)(data[0]);
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition OF == 0 didn't meet: OF = %d\n", get_flag(OF));
+                mylog(0, "logs/main.log", ": condition OF == 0 didn't meet: OF = %d\n", get_flag(OF));
                 #endif
             }
             break;
@@ -796,16 +796,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x72: {    // JB/JNAE/SHORT-LABEL JC: [0x72, IP-INC8] (p269, 4-30)
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x72: Relative Jump JB/JNAE/SHORT-LABEL JC");
+            mylog(0, "logs/main.log", "Instruction 0x72: Relative Jump JB/JNAE/SHORT-LABEL JC");
             #endif
             if (get_flag(CF) == 1) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition CF == 1 didn't meet: CF = %d\n", get_flag(CF));
+                mylog(0, "logs/main.log", ": condition CF == 1 didn't meet: CF = %d\n", get_flag(CF));
                 #endif
             }
             break;
@@ -813,16 +813,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x73: {    // JNB/JAE SHORT-LABEL JNC: [0x73, IP-INC8] (p269, 4-30)
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x73: Relative Jump JNB/JAE");
+            mylog(0, "logs/main.log", "Instruction 0x73: Relative Jump JNB/JAE");
             #endif
             if (get_flag(CF) == 0) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition CF == 0 didn't meet: CF = %d\n", get_flag(CF));
+                mylog(0, "logs/main.log", ": condition CF == 0 didn't meet: CF = %d\n", get_flag(CF));
                 #endif
             }
             break;
@@ -830,16 +830,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x74: {  // JE/JZ SHORT-LABEL: [0x74, IP-INC8]
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x74: Relative Jump JE/JZ");
+            mylog(0, "logs/main.log", "Instruction 0x74: Relative Jump JE/JZ");
             #endif
             if (get_flag(ZF) == 1) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition ZF == 1 didn't meet: ZF = %d\n", get_flag(ZF));
+                mylog(0, "logs/main.log", ": condition ZF == 1 didn't meet: ZF = %d\n", get_flag(ZF));
                 #endif
             }
             break;
@@ -847,16 +847,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x75: {    // JNE/JNZ SHORT-LABEL: [0x75, IP-INC8] (p269, 4-30)
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x75: Relative Jump JNE/JNZ");
+            mylog(0, "logs/main.log", "Instruction 0x75: Relative Jump JNE/JNZ");
             #endif
             if (get_flag(ZF) == 0) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition ZF == 0 didn't meet: ZF = %d\n", get_flag(ZF));
+                mylog(0, "logs/main.log", ": condition ZF == 0 didn't meet: ZF = %d\n", get_flag(ZF));
                 #endif
             }
             break;
@@ -864,16 +864,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x76: {  // JBE/JNA SHORT-LABEL: [0x76, IP-INC8]
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x76: Relative Jump JBE/JNA SHORT-LABEL");
+            mylog(0, "logs/main.log", "Instruction 0x76: Relative Jump JBE/JNA SHORT-LABEL");
             #endif
             if ((get_flag(CF) == 1) || (get_flag(ZF) == 1)) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition (CF == 1 or ZF == 1) didn't meet: ZF = %d and CF = %d\n", get_flag(ZF), get_flag(CF));
+                mylog(0, "logs/main.log", ": condition (CF == 1 or ZF == 1) didn't meet: ZF = %d and CF = %d\n", get_flag(ZF), get_flag(CF));
                 #endif
             }
             break;
@@ -881,16 +881,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x78: {  // JS SHORT-LABEL: [0x78, IP-INC8]
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x78: Relative Jump JS SHORT-LABEL");
+            mylog(0, "logs/main.log", "Instruction 0x78: Relative Jump JS SHORT-LABEL");
             #endif
             if (get_flag(SF) == 1) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition SF == 1 didn't meet: SF = %d\n", get_flag(SF));
+                mylog(0, "logs/main.log", ": condition SF == 1 didn't meet: SF = %d\n", get_flag(SF));
                 #endif
             }
             break;
@@ -898,16 +898,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x79: {    // JNS SHORT-LABEL: [0x79, IP-INC8] (p269, 4-30)
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x79: Relative Jump JNS");
+            mylog(0, "logs/main.log", "Instruction 0x79: Relative Jump JNS");
             #endif
             if (get_flag(SF) == 0) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition SF == 0 didn't meet: SF = %d\n", get_flag(SF));
+                mylog(0, "logs/main.log", ": condition SF == 0 didn't meet: SF = %d\n", get_flag(SF));
                 #endif
             }
             break;
@@ -915,16 +915,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x7A: {  // JP/JPE SHORT-LABEL: [0x7A, IP-INC8]
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x7A: Relative Jump JP/JPE");
+            mylog(0, "logs/main.log", "Instruction 0x7A: Relative Jump JP/JPE");
             #endif
             if (get_flag(PF) == 1) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition PF == 1 didn't meet: PF = %d\n", get_flag(PF));
+                mylog(0, "logs/main.log", ": condition PF == 1 didn't meet: PF = %d\n", get_flag(PF));
                 #endif
             }
             break;
@@ -932,16 +932,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x7B: {    // JNP/JPO SHORT-LABEL: [0x7B, IP-INC8] (p269, 4-30)
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x7B: Relative Jump JNP/JPO");
+            mylog(0, "logs/main.log", "Instruction 0x7B: Relative Jump JNP/JPO");
             #endif
             if (get_flag(PF) == 0) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition PF == 0 didn't meet: PF = %d\n", get_flag(PF));
+                mylog(0, "logs/main.log", ": condition PF == 0 didn't meet: PF = %d\n", get_flag(PF));
                 #endif
             }
             break;
@@ -949,16 +949,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
         case 0x7C: {   // JL/JNGE SHORT-LABEL: [0x7F, IP-INC8] (p269, 4-30)
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x7C: Relative Jump JL/JNGE");
+            mylog(0, "logs/main.log", "Instruction 0x7C: Relative Jump JL/JNGE");
             #endif
             if ((get_flag(SF) ^ get_flag(OF)) > 0) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition PF == 0 didn't meet: PF = %d\n", get_flag(PF));
+                mylog(0, "logs/main.log", ": condition PF == 0 didn't meet: PF = %d\n", get_flag(PF));
                 #endif
             }
             break;
@@ -970,7 +970,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             set_register_value(SP_register, sp_reg + 2);
             set_register_value(IP_register, temp);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xC3: Intrasegment RET to IP = 0x%04X\n", get_register_value(IP_register));
+            mylog(0, "logs/main.log", "Instruction 0xC3: Intrasegment RET to IP = 0x%04X\n", get_register_value(IP_register));
             #endif
             break;
         }
@@ -985,21 +985,21 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             // conditions are met, it jumps at label, otherwise falls through
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xE0: Relative Jump LOOPNE/LOOPNZ SHORT-LABEL: ");
+            mylog(0, "logs/main.log", "Instruction 0xE0: Relative Jump LOOPNE/LOOPNZ SHORT-LABEL: ");
             #endif
             uint16_t cx_val = get_register_value(CX_register);
             set_register_value(CX_register, cx_val - 1);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "CX = 0x%04X, ZF = 0x%02X;", get_register_value(CX_register), get_flag(ZF));
+            mylog(0, "logs/main.log", "CX = 0x%04X, ZF = 0x%02X;", get_register_value(CX_register), get_flag(ZF));
             #endif
             if(get_register_value(CX_register) != 0 && get_flag(ZF) == 0) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " jump to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " jump to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition (CX != 0 and ZF == 0) didn't meet: CX = 0x%04X, ZF = %d\n", get_register_value(CX_register), get_flag(ZF));
+                mylog(0, "logs/main.log", ": condition (CX != 0 and ZF == 0) didn't meet: CX = 0x%04X, ZF = %d\n", get_register_value(CX_register), get_flag(ZF));
                 #endif
             }
             break;
@@ -1009,21 +1009,21 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             // conditions are met, it jumps at label, otherwise falls through
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xE1: Relative Jump LOOPE/LOOPZ SHORT-LABEL: ");
+            mylog(0, "logs/main.log", "Instruction 0xE1: Relative Jump LOOPE/LOOPZ SHORT-LABEL: ");
             #endif
             uint16_t cx_val = get_register_value(CX_register);
             set_register_value(CX_register, cx_val - 1);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "CX = 0x%04X, ZF = 0x%02X;", get_register_value(CX_register), get_flag(ZF));
+            mylog(0, "logs/main.log", "CX = 0x%04X, ZF = 0x%02X;", get_register_value(CX_register), get_flag(ZF));
             #endif
             if(get_register_value(CX_register) != 0 && get_flag(ZF) == 1) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " jump to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " jump to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition (CX != 0 and ZF == 1) didn't meet: CX = 0x%04X, ZF = %d\n", get_register_value(CX_register), get_flag(ZF));
+                mylog(0, "logs/main.log", ": condition (CX != 0 and ZF == 1) didn't meet: CX = 0x%04X, ZF = %d\n", get_register_value(CX_register), get_flag(ZF));
                 #endif
             }
             break;
@@ -1033,7 +1033,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             // to the target operand if CX is not 0; otherwise the
             // instruction following LOOP is executed.
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xE2: Relative Jump LOOP SHORT-LABEL: ");
+            mylog(0, "logs/main.log", "Instruction 0xE2: Relative Jump LOOP SHORT-LABEL: ");
             #endif
             ip_inc += 2;
             uint16_t dest_val = get_register_value(CX_register);
@@ -1043,16 +1043,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             }
             set_register_value(CX_register, res_val);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "CX = 0x%04X;", res_val);
+            mylog(0, "logs/main.log", "CX = 0x%04X;", res_val);
             #endif
             if(res_val != 0) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " jump to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " jump to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition (CX != 0) didn't meet: CX = 0x%04X\n", res_val);
+                mylog(0, "logs/main.log", ": condition (CX != 0) didn't meet: CX = 0x%04X\n", res_val);
                 #endif
             }
             break;
@@ -1061,16 +1061,16 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             // JCXZ (Jump if CX Zero)
             ip_inc += 2;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xE3: Relative Jump JCXZ");
+            mylog(0, "logs/main.log", "Instruction 0xE3: Relative Jump JCXZ");
             #endif
             if (get_register_value(CX_register) == 0) {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", " to 0x%02X\n", data[0]);
+                mylog(0, "logs/main.log", " to 0x%02X\n", data[0]);
                 #endif
                 ip_inc += ((int8_t*)data)[0];
             } else {
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", ": condition CX == 0 didn't meet: CX = 0x%04X\n", get_register_value(CX_register));
+                mylog(0, "logs/main.log", ": condition CX == 0 didn't meet: CX = 0x%04X\n", get_register_value(CX_register));
                 #endif
             }
             break;
@@ -1080,7 +1080,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             ip_inc += 3 + offset;
             push_register(get_register_value(IP_register)+3);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xE8: Call: IP + 0x%04X\n", offset);
+            mylog(0, "logs/main.log", "Instruction 0xE8: Call: IP + 0x%04X\n", offset);
             #endif
             break;
         }
@@ -1089,7 +1089,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             ip_inc += 3;
             ip_inc += offset;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xE9: Relative jump to 0x%04X\n", offset);
+            mylog(0, "logs/main.log", "Instruction 0xE9: Relative jump to 0x%04X\n", offset);
             #endif
             break;
         }
@@ -1099,7 +1099,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
                 operands_t operands = decode_operands(opcode, data, 8);
                 set_register_value(IP_register, operands.src_val);
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", "Instruction 0xFF: intrasegment indirect JMP 0x%04X\n", get_register_value(IP_register));
+                mylog(0, "logs/main.log", "Instruction 0xFF: intrasegment indirect JMP 0x%04X\n", get_register_value(IP_register));
                 #endif
             } else {    // if 5: // JMP REG16/MEM16 (inter): [0xFE, MOD 101 R/M, DISP-LO, DISP-HI] (only memory)
                 uint16_t addr = data[0] + (data[1] << 8);
@@ -1107,7 +1107,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
                 set_register_value(IP_register, mem_read(addr, 2));
                 set_register_value(CS_register, mem_read(addr+2, 2));
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", "Instruction 0xFF: intersegment indirect JMP 0x%04X\n", get_register_value(IP_register));
+                mylog(0, "logs/main.log", "Instruction 0xFF: intersegment indirect JMP 0x%04X\n", get_register_value(IP_register));
                 #endif
             }
             break;
@@ -1117,7 +1117,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             set_register_value(CS_register, data[2] + (data[3] << 8));
             ip_inc = 0;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xEA: Far jump to IP = 0x%04X, CS = 0x%04X\n", REGS->IP, REGS->CS);
+            mylog(0, "logs/main.log", "Instruction 0xEA: Far jump to IP = 0x%04X, CS = 0x%04X\n", REGS->IP, REGS->CS);
             #endif
             break;
         }
@@ -1125,7 +1125,7 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             ip_inc += 2;
             ip_inc += ((int8_t*)data)[0];
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xEB: Relative jump to 0x%02X\n", data[0]);
+            mylog(0, "logs/main.log", "Instruction 0xEB: Relative jump to 0x%02X\n", data[0]);
             #endif
             break;
         }
@@ -1148,11 +1148,11 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             operands_t operands = decode_operands(opcode, data, 0);
             #ifdef PRINT_LOGS
             if (operands.dst_type == 1) { 
-                mylog("logs/main.log", "Instruction 0x%02X: MOV %s (0x%04X @ 0x%06X), %s (0x%04X)\n", opcode, operands.destination, operands.dst_val, operands.dst.address, operands.source, operands.src_val);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: MOV %s (0x%04X @ 0x%06X), %s (0x%04X)\n", opcode, operands.destination, operands.dst_val, operands.dst.address, operands.source, operands.src_val);
             } else if (operands.src_type == 1) {
-                mylog("logs/main.log", "Instruction 0x%02X: MOV %s (0x%04X), %s (0x%04X @ 0x%06X)\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, operands.src.address);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: MOV %s (0x%04X), %s (0x%04X @ 0x%06X)\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, operands.src.address);
             } else {
-                mylog("logs/main.log", "Instruction 0x%02X: MOV %s (0x%04X), %s (0x%04X)\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: MOV %s (0x%04X), %s (0x%04X)\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val);
             }
             #endif
             ret_val += operands.num_bytes;
@@ -1181,7 +1181,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
                 printf("ERROR: Incorrect reg field: opcode = 0x%02X, reg_field = 0x%02X\n", opcode, reg_field);
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV %s, %s\n", opcode, operands.destination, get_reg_name_string(operands.src.register_name));
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV %s, %s\n", opcode, operands.destination, get_reg_name_string(operands.src.register_name));
             #endif
             if (operands.dst_type == 0) {
                 set_register_value(operands.dst.register_name, get_register_value(operands.src.register_name));
@@ -1209,7 +1209,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
                 printf("ERROR: Incorrect reg field: opcode = 0x%02X, reg_field = 0x%02X\n", opcode, reg_field);
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV SEGREG, %s\n", opcode, operands.source);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV SEGREG, %s\n", opcode, operands.source);
             #endif
             set_register_value(operands.dst.register_name, get_register_value(operands.src.register_name));
             break;
@@ -1218,7 +1218,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             uint16_t addr = get_addr(DS_register, data[0] + (data[1] << 8));
             uint16_t value = mem_read(addr, 1);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV AL, MEM8 (0x%04X @0x%08X)\n", opcode, value, addr);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV AL, MEM8 (0x%04X @0x%08X)\n", opcode, value, addr);
             #endif
             set_register_value(AL_register, value);
             ret_val = 3;
@@ -1228,7 +1228,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             uint16_t addr = get_addr(DS_register, data[0] + (data[1] << 8));
             uint16_t value = mem_read(addr, 2);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV AX, MEM16 (0x%04X @0x%08X)\n", opcode, value, addr);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV AX, MEM16 (0x%04X @0x%08X)\n", opcode, value, addr);
             #endif
             set_register_value(AX_register, value);
             break;
@@ -1238,7 +1238,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             mem_write(addr, get_register_value(AL_register), 1);
             ret_val = 3;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), AL (0x%04X)\n", opcode, addr, get_register_value(AL_register));
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), AL (0x%04X)\n", opcode, addr, get_register_value(AL_register));
             #endif
             break;
         }
@@ -1247,13 +1247,13 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             mem_write(addr, get_register_value(AX_register), 2);
             ret_val = 3;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV MEM16 (@0x%08X), AX (0x%04X)\n", opcode, addr, get_register_value(AX_register));
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV MEM16 (@0x%08X), AX (0x%04X)\n", opcode, addr, get_register_value(AX_register));
             #endif
             break;
         }
         case 0xB0: {  // MOV AL, IMMED8: [0xB0, immed8]
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV AL immed8 = 0x%02X\n", opcode, data[0]);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV AL immed8 = 0x%02X\n", opcode, data[0]);
             #endif
             set_register_value(AL_register, data[0]);
             ret_val = 2;
@@ -1261,7 +1261,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0xB1: {  // MOV CL, IMMED8: [0xB1, immed8]
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV CL immed8 = 0x%02X\n", opcode, data[0]);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV CL immed8 = 0x%02X\n", opcode, data[0]);
             #endif
             set_register_value(CL_register, data[0]);
             ret_val = 2;
@@ -1269,7 +1269,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0xB2: {  // MOV DL, IMMED8: [0xB2, immed8]
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV DL immed8 = 0x%02X\n", opcode, data[0]);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV DL immed8 = 0x%02X\n", opcode, data[0]);
             #endif
             set_register_value(DL_register, data[0]);
             ret_val = 2;
@@ -1277,7 +1277,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0xB3: {  // MOV BL, IMMED8: [0xB3, immed8]
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV BL immed8 = 0x%02X\n", opcode, data[0]);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV BL immed8 = 0x%02X\n", opcode, data[0]);
             #endif
             set_register_value(BL_register, data[0]);
             ret_val = 2;
@@ -1285,7 +1285,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0xB4: {  // MOV AH, IMMED8: [0xB4, immed8]
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV AH immed8 = 0x%02X\n", opcode, data[0]);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV AH immed8 = 0x%02X\n", opcode, data[0]);
             #endif
             set_register_value(AH_register, data[0]);
             ret_val = 2;
@@ -1293,7 +1293,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0xB5: {  // MOV CH, IMMED8: [0xB5, immed8]
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV CH immed8 = 0x%02X\n", opcode, data[0]);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV CH immed8 = 0x%02X\n", opcode, data[0]);
             #endif
             set_register_value(CH_register, data[0]);
             ret_val = 2;
@@ -1301,7 +1301,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0xB6: {  // MOV DH, IMMED8: [0xB6, immed8]
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV DH immed8 = 0x%02X\n", opcode, data[0]);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV DH immed8 = 0x%02X\n", opcode, data[0]);
             #endif
             set_register_value(DH_register, data[0]);
             ret_val = 2;
@@ -1309,7 +1309,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         }
         case 0xB7: {  // MOV BH, IMMED8: [0xB7, immed8]
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV BH immed8 = 0x%02X\n", opcode, data[0]);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV BH immed8 = 0x%02X\n", opcode, data[0]);
             #endif
             set_register_value(BH_register, data[0]);
             ret_val = 2;
@@ -1318,7 +1318,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         case 0xB8: {  // MOV AX, IMMED16: [0xB8, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV AX, IMMED16 = 0x%04X\n", opcode, immed_data);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV AX, IMMED16 = 0x%04X\n", opcode, immed_data);
             #endif
             set_register_value(AX_register, immed_data);
             ret_val = 3;
@@ -1327,7 +1327,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         case 0xB9: {  // MOV CX, IMMED16: [0xB9, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV CX, IMMED16 = 0x%04X\n", opcode, immed_data);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV CX, IMMED16 = 0x%04X\n", opcode, immed_data);
             #endif
             set_register_value(CX_register, immed_data);
             ret_val = 3;
@@ -1336,7 +1336,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         case 0xBA: {  // MOV DX, IMMED16: [0xBB, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV DX, IMMED16 = 0x%04X\n", opcode, immed_data);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV DX, IMMED16 = 0x%04X\n", opcode, immed_data);
             #endif
             set_register_value(DX_register, immed_data);
             ret_val = 3;
@@ -1345,7 +1345,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         case 0xBB: {  // MOV BX, IMMED16: [0xBB, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV BX, IMMED16 = 0x%04X\n", opcode, immed_data);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV BX, IMMED16 = 0x%04X\n", opcode, immed_data);
             #endif
             set_register_value(BX_register, immed_data);
             ret_val = 3;
@@ -1354,7 +1354,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         case 0xBC: {  // MOV SP, IMMED16: [0xBC, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV SP, IMMED16 = 0x%04X\n", opcode, immed_data);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV SP, IMMED16 = 0x%04X\n", opcode, immed_data);
             #endif
             set_register_value(SP_register, immed_data);
             ret_val = 3;
@@ -1363,7 +1363,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         case 0xBD: {  // MOV BP, IMMED16: [0xBD, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV BP, IMMED16 = 0x%04X\n", opcode, immed_data);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV BP, IMMED16 = 0x%04X\n", opcode, immed_data);
             #endif
             set_register_value(BP_register, immed_data);
             ret_val = 3;
@@ -1372,7 +1372,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         case 0xBE: {  // MOV SI, IMMED16: [0xBC, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV SI, IMMED16 = 0x%04X\n", opcode, immed_data);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV SI, IMMED16 = 0x%04X\n", opcode, immed_data);
             #endif
             set_register_value(SI_register, immed_data);
             ret_val = 3;
@@ -1381,7 +1381,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
         case 0xBF: {  // MOV DI, IMMED16: [0xBC, DATA-LO, DATA-HI]
             uint16_t immed_data = data[0] + (data[1] << 8);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOV DI, IMMED16 = 0x%04X\n", opcode, immed_data);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOV DI, IMMED16 = 0x%04X\n", opcode, immed_data);
             #endif
             set_register_value(DI_register, immed_data);
             ret_val = 3;
@@ -1392,7 +1392,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
                 uint16_t addr = get_addr(DS_register, data[1] + (data[2] << 8));
                 mem_write(addr, data[3], 1);
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), IMMED8 (0x%02X)\n", opcode, addr, data[3]);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: MOV MEM8 (@0x%08X), IMMED8 (0x%02X)\n", opcode, addr, data[3]);
                 #endif
                 ret_val = 5;
             } else {
@@ -1408,7 +1408,7 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
                 uint16_t value = data[operands.num_bytes] + (data[operands.num_bytes+1] << 8);
                 mem_write(operands.dst.address, value, 2);
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", "Instruction 0x%02X: MOV MEM16 (@0x%08X), IMMED16 (0x%04X)\n", opcode, operands.dst.address, value);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: MOV MEM16 (@0x%08X), IMMED16 (0x%04X)\n", opcode, operands.dst.address, value);
                 #endif
             } else {
                 REGS->invalid_operations ++;
@@ -1447,7 +1447,7 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                     res_val = (operands.dst_val << operands.src_val) | (operands.dst_val >> (16 - operands.src_val));
                     update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SHIFT_L_OP);
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: ROL %s (0x%04X), %d: result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: ROL %s (0x%04X), %d: result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     #endif
                     break;
                 case 1: // ROR REG/MEM, 1/CL: [opcode, MOD 001 R/M, DISP-LO, DISP-HI]
@@ -1466,14 +1466,14 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                     res_val = operands.dst_val << operands.src_val;
                     update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SHIFT_L_OP);
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: SAL/SHL %s (0x%04X), %d: dst , result = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: SAL/SHL %s (0x%04X), %d: dst , result = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     #endif
                     break;
                 case 5: // SHR REG/MEM, 1/CL: [opcode, MOD 101 R/M, DISP-LO, DISP-HI]
                     res_val = operands.dst_val >> operands.src_val;
                     update_flags(operands.dst_val, operands.src_val, res_val, 2, SHIFT_R_OP);
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: SHR %s (0x%04X), CL %d; result = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: SHR %s (0x%04X), CL %d; result = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     #endif
                     break;
                 case 6: // INVALID_INSTRUCTION
@@ -1500,7 +1500,7 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
                     }
                     update_flags(operands.dst_val, operands.src_val, res_val, 2, SHIFT_R_OP);
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: SAR %s (0x%04X), CL %d; result = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: SAR %s (0x%04X), CL %d; result = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     #endif
                     break;
                 }
@@ -1533,7 +1533,7 @@ uint8_t cmp_instr(uint8_t opcode, uint8_t *data) {
             res_val = operands.dst_val - operands.src_val;
             update_flags(operands.dst_val, operands.src_val, res_val, operands.num_bytes, SUB_OP);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: CMP %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: CMP %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             #endif
             break;
         }
@@ -1542,7 +1542,7 @@ uint8_t cmp_instr(uint8_t opcode, uint8_t *data) {
             operands.dst_val = get_register_value(AL_register);
             res_val = operands.dst_val - operands.src_val;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x3D: CMP AX immed16 = 0x%04X\n", operands.src_val);
+            mylog(0, "logs/main.log", "Instruction 0x3D: CMP AX immed16 = 0x%04X\n", operands.src_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, 2, SUB_OP);
             ret_val = 2;
@@ -1553,7 +1553,7 @@ uint8_t cmp_instr(uint8_t opcode, uint8_t *data) {
             operands.dst_val = get_register_value(AX_register);
             res_val = operands.dst_val - operands.src_val;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x3D: CMP AX immed16 = 0x%04X\n", operands.src_val);
+            mylog(0, "logs/main.log", "Instruction 0x3D: CMP AX immed16 = 0x%04X\n", operands.src_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, 2, SUB_OP);
             ret_val = 3;
@@ -1633,7 +1633,7 @@ uint8_t mul_instr(uint8_t opcode, uint8_t *data) {
                 }
                 update_flags(operands.dst_val, operands.src_val, res_val, operands.width, MUL_OP);
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", "Instruction 0x%02X: MUL %s (0x%04X), (0x%04X); res = 0x%08X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: MUL %s (0x%04X), (0x%04X); res = 0x%08X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                 #endif
             } else if(reg_field == 5) { // IMUL REG/MEM (signed): [opcode, MOD 101 R/M, (DISP-LO), (DISP-HI)]
                 int32_t res_val = 0;
@@ -1649,7 +1649,7 @@ uint8_t mul_instr(uint8_t opcode, uint8_t *data) {
                 }
                 update_flags(operands.dst_val, operands.src_val, res_val, operands.width, IMUL_OP);
                 #ifdef PRINT_LOGS
-                mylog("logs/main.log", "Instruction 0x%02X: IMUL %s (0x%04X), (0x%04X); res = 0x%08X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: IMUL %s (0x%04X), (0x%04X); res = 0x%08X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                 #endif
             }
             break;
@@ -1671,7 +1671,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             ret_val += operands.num_bytes + operands.width;
             res_val = operands.src_val + operands.dst_val;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: ADD %s (0x%04X), immed (0x%04X); res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: ADD %s (0x%04X), immed (0x%04X); res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, ADD_OP);
             if(operands.dst_type == 0) {    // Register mode
@@ -1693,7 +1693,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             }
             res_val = operands.src_val + operands.dst_val;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: ADD %s (0x%04X), (int16_t)immed8 (0x%04X); res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: ADD %s (0x%04X), (int16_t)immed8 (0x%04X); res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, ADD_OP);
             if(operands.dst_type == 0) {    // Register mode
@@ -1711,7 +1711,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             ret_val += operands.num_bytes;
             res_val = operands.dst_val + operands.src_val;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: ADD %s (0x%04X), %s (0x%04X); res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: ADD %s (0x%04X), %s (0x%04X); res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, ADD_OP);
             if(operands.dst_type == 0) {    // Register mode
@@ -1726,7 +1726,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             int8_t dst_val = get_register_value(AL_register);
             res_val = dst_val + src_val;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: ADD AL (0x%04X), immed (0x%04X); res = 0x%04X\n", opcode, dst_val, src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: ADD AL (0x%04X), immed (0x%04X); res = 0x%04X\n", opcode, dst_val, src_val, res_val);
             #endif
             update_flags(dst_val, src_val, res_val, 1, ADD_OP);
             set_register_value(AL_register, res_val);
@@ -1738,7 +1738,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
             int16_t dst_val = get_register_value(AX_register);
             res_val = dst_val + src_val;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: ADD AX (0x%04X), immed (0x%04X); res = 0x%04X\n", opcode, dst_val, src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: ADD AX (0x%04X), immed (0x%04X); res = 0x%04X\n", opcode, dst_val, src_val, res_val);
             #endif
             update_flags(dst_val, src_val, res_val, 2, ADD_OP);
             set_register_value(AX_register, res_val);
@@ -1755,7 +1755,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
                 res_val += 1;
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: ADC %s (0x%02X), %s (0x%02X), CF = %d; res = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, get_flag(CF), res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: ADC %s (0x%02X), %s (0x%02X), CF = %d; res = 0x%02X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, get_flag(CF), res_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, ADD_OP);
             if(operands.dst_type == 0) {    // Register mode
@@ -1773,7 +1773,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
                 res_val += 1;
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: ADC %s (0x%04X), %s (0x%04X), CF = %d; res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, get_flag(CF), res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: ADC %s (0x%04X), %s (0x%04X), CF = %d; res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, get_flag(CF), res_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, ADD_OP);
             if(operands.dst_type == 0) {    // Register mode
@@ -1792,7 +1792,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
                 res_val += 1;
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: ADC AL (0x%04X), immed8 (0x%04X), CF = %d; res = 0x%04X\n", opcode, operands.dst_val, operands.src_val, get_flag(CF), res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: ADC AL (0x%04X), immed8 (0x%04X), CF = %d; res = 0x%04X\n", opcode, operands.dst_val, operands.src_val, get_flag(CF), res_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, 1, ADD_OP);
             set_register_value(AL_register, res_val);
@@ -1808,7 +1808,7 @@ uint8_t add_instr(uint8_t opcode, uint8_t *data) {
                 res_val += 1;
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: ADC AL (0x%04X), immed16 (0x%04X), CF = %d; res = 0x%04X\n", opcode, operands.dst_val, operands.src_val, get_flag(CF), res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: ADC AL (0x%04X), immed16 (0x%04X), CF = %d; res = 0x%04X\n", opcode, operands.dst_val, operands.src_val, get_flag(CF), res_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, 2, ADD_OP);
             set_register_value(AL_register, res_val);
@@ -1850,7 +1850,7 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
             #endif
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X[%d] %s %s (0x%04X), immed (0x%04X), CF = %d; res = 0x%02X\n", opcode, reg_field, operation, operands.destination, operands.dst_val, operands.src_val, get_flag(CF), res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X[%d] %s %s (0x%04X), immed (0x%04X), CF = %d; res = 0x%02X\n", opcode, reg_field, operation, operands.destination, operands.dst_val, operands.src_val, get_flag(CF), res_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
             if(reg_field != 7) {
@@ -1886,7 +1886,7 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
                 return res_val;
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: %s %s (0x%04X), immed8 (DATA-SX for 16-bit) (0x%04X), res = 0x%04X\n", opcode, operation, operands.destination, operands.dst_val, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: %s %s (0x%04X), immed8 (DATA-SX for 16-bit) (0x%04X), res = 0x%04X\n", opcode, operation, operands.destination, operands.dst_val, operands.src_val, res_val);
             #else
             (void) operation;
             #endif
@@ -1912,7 +1912,7 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
             ret_val += operands.num_bytes;
             res_val = operands.dst_val - operands.src_val;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.destination, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.destination, operands.src_val, res_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
             if(operands.dst_type == 0) {
@@ -1945,7 +1945,7 @@ uint8_t sub_instr(uint8_t opcode, uint8_t *data) {
                 }
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.destination, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: SUB %s (0x%04X), %s (0x%04X), res = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.destination, operands.src_val, res_val);
             #endif
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SUB_OP);
             if(opcode == 0x2C) {
@@ -1967,7 +1967,7 @@ uint8_t sahf_instr(void) {
     // values from the corresponding bits in the AH register (7, 6, 4, 2, 0 respectively)
     uint8_t AH = get_h(REGS->AX);
     #ifdef PRINT_LOGS
-    mylog("logs/main.log", "Instruction 0x9E: SAHF: AH = 0x%02X, flags before: 0x%04X, ", AH, REGS->flags);
+    mylog(0, "logs/main.log", "Instruction 0x9E: SAHF: AH = 0x%02X, flags before: 0x%04X, ", AH, REGS->flags);
     #endif
     set_flag(CF, AH & 0x01);
     set_flag(PF, AH & 0x04);
@@ -1975,7 +1975,7 @@ uint8_t sahf_instr(void) {
     set_flag(ZF, AH & 0x40);
     set_flag(SF, AH & 0x80);
     #ifdef PRINT_LOGS
-    mylog("logs/main.log", "flags after: 0x%04X\n", REGS->flags);
+    mylog(0, "logs/main.log", "flags after: 0x%04X\n", REGS->flags);
     #endif
     return 1;
 }
@@ -1983,11 +1983,11 @@ uint8_t sahf_instr(void) {
 uint8_t lahf_instr(void) {
     // Loads lower byte from the flags register into AH register
     #ifdef PRINT_LOGS
-    mylog("logs/main.log", "Instruction 0x9F: LAHF: flags = 0x%04X, AX before: 0x%04X, ", REGS->flags, REGS->AX);
+    mylog(0, "logs/main.log", "Instruction 0x9F: LAHF: flags = 0x%04X, AX before: 0x%04X, ", REGS->flags, REGS->AX);
     #endif
     set_register_value(AH_register, 0xFF & REGS->flags);
     #ifdef PRINT_LOGS
-    mylog("logs/main.log", "AX after: 0x%04X\n", REGS->AX);
+    mylog(0, "logs/main.log", "AX after: 0x%04X\n", REGS->AX);
     #endif
     return 1;
 }
@@ -2010,7 +2010,7 @@ uint8_t xor_instr(uint8_t opcode, uint8_t *data) {
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: XOR %s, %s: dst = 0x%04X, src = 0x%04X, result = 0x%04X\n", opcode, operands.destination, operands.source, operands.dst_val, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: XOR %s, %s: dst = 0x%04X, src = 0x%04X, result = 0x%04X\n", opcode, operands.destination, operands.source, operands.dst_val, operands.src_val, res_val);
             #endif
             break;
         }
@@ -2048,11 +2048,11 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
             #ifdef PRINT_LOGS
             if(operands.dst_type == 1) {    // Memory mode
-                mylog("logs/main.log", "Instruction 0x%02X: OR %s (0x%04X @ 0x%08X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.dst.address, operands.source, operands.src_val, res_val);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: OR %s (0x%04X @ 0x%08X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.dst.address, operands.source, operands.src_val, res_val);
             } else if(operands.src_type == 1) {    // Memory mode
-                mylog("logs/main.log", "Instruction 0x%02X: OR %s (0x%04X), %s (0x%04X @ 0x%08X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, operands.src.address, res_val);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: OR %s (0x%04X), %s (0x%04X @ 0x%08X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, operands.src.address, res_val);
             } else {
-                mylog("logs/main.log", "Instruction 0x%02X: OR %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: OR %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             }
             #endif
             break;
@@ -2065,7 +2065,7 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
             set_register_value(AL_register, res_val);
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: OR AL (0x%04X), IMMED-8 (0x%04X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: OR AL (0x%04X), IMMED-8 (0x%04X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
             #endif
             ret_val = 2;
             break;
@@ -2078,7 +2078,7 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
             set_register_value(AX_register, res_val);
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: OR AX (0x%04X), IMMED-16 (0x%04X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: OR AX (0x%04X), IMMED-16 (0x%04X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
             #endif
             ret_val = 3;
             break;
@@ -2094,7 +2094,7 @@ uint8_t or_instr(uint8_t opcode, uint8_t *data) {
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: OR %s (0x%04X), immed8 (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: OR %s (0x%04X), immed8 (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
             #endif
             break;
         }
@@ -2122,7 +2122,7 @@ uint8_t adj_instr(uint8_t opcode, uint8_t *data) {
             set_flag(ZF, (res_val & 0xFF) == 0);
             set_flag(PF, get_parity(res_val & 0xFF));
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: DAA AL = (0x%02X); result = 0x%04X\n", opcode, src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: DAA AL = (0x%02X); result = 0x%04X\n", opcode, src_val, res_val);
             #endif
             break;
         }
@@ -2150,7 +2150,7 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: AND %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: AND %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             #endif
             break;
         }
@@ -2165,7 +2165,7 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             }
             update_flags(operands.dst_val, operands.src_val, res_val, 1, LOGIC_OP);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: AND AL (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: AND AL (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
             #endif
             ret_val = 2;
             break;
@@ -2181,7 +2181,7 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             }
             update_flags(operands.dst_val, operands.src_val, res_val, 2, LOGIC_OP);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: AND AL (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: AND AL (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.dst_val, operands.src_val, res_val);
             #endif
             ret_val = 3;
             break;
@@ -2198,7 +2198,7 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: AND %s (0x%04X), IMMED (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: AND %s (0x%04X), IMMED (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             #endif
             break;
         }
@@ -2215,9 +2215,9 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
             update_flags(operands.dst_val, operands.src_val, res_val, 1, LOGIC_OP);
             #ifdef PRINT_LOGS
             if(operands.dst_type == 0) {    // Register_mode
-                mylog("logs/main.log", "Instruction 0x%02X: TEST %s (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: TEST %s (0x%02X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
             } else {
-                mylog("logs/main.log", "Instruction 0x%02X: TEST %s (0x%02X @ 0x%06X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.dst.address, operands.src_val, res_val);
+                mylog(0, "logs/main.log", "Instruction 0x%02X: TEST %s (0x%02X @ 0x%06X), immed8 (0x%02X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.dst.address, operands.src_val, res_val);
             }
             #endif
             break;
@@ -2271,7 +2271,7 @@ uint8_t pop_reg_instr(uint8_t opcode, uint8_t *data) {
                 reg = FLAGS_register;
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: POP %s\n", opcode, get_reg_name_string(reg));
+            mylog(0, "logs/main.log", "Instruction 0x%02X: POP %s\n", opcode, get_reg_name_string(reg));
             #endif
             pop_register(reg);
             break;
@@ -2329,7 +2329,7 @@ uint8_t push_reg_instr(uint8_t opcode, uint8_t *data) {
             }
             push_register(get_register_value(reg));
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: PUSH %s\n", opcode, get_reg_name_string(reg));
+            mylog(0, "logs/main.log", "Instruction 0x%02X: PUSH %s\n", opcode, get_reg_name_string(reg));
             #endif
             break;
         }
@@ -2342,7 +2342,7 @@ uint8_t push_reg_instr(uint8_t opcode, uint8_t *data) {
 
 uint8_t esc_instr(uint8_t opcode, uint8_t *data) {
     #ifdef PRINT_LOGS
-    mylog("logs/main.log", "Instruction 0xD8: ESC\n");
+    mylog(0, "logs/main.log", "Instruction 0xD8: ESC\n");
     #endif
     return 2;
 }
@@ -2378,7 +2378,7 @@ int16_t inc_instr(uint8_t opcode, uint8_t *data) {
             }
             uint16_t val = get_register_value(reg);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: INC %s: 0x%04X => 0x%04X\n", opcode, get_reg_name_string(reg), val, val+1);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: INC %s: 0x%04X => 0x%04X\n", opcode, get_reg_name_string(reg), val, val+1);
             #endif
             set_register_value(reg, val+1);
             update_flags(val, 1, val+1, 2, ADD_OP);
@@ -2390,7 +2390,7 @@ int16_t inc_instr(uint8_t opcode, uint8_t *data) {
             ret_val += operands.num_bytes;
             uint16_t res_val = operands.dst_val + 1;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: INC %s: 0x%04X => 0x%04X\n", opcode, operands.destination, operands.dst_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: INC %s: 0x%04X => 0x%04X\n", opcode, operands.destination, operands.dst_val, res_val);
             #endif
             update_flags(res_val, 1, res_val, operands.width, ADD_OP);
             if (operands.dst_type == 0) {   // Reg mode
@@ -2438,7 +2438,7 @@ int16_t dec_instr(uint8_t opcode, uint8_t *data) {
             }
             uint16_t val = get_register_value(reg);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: DEC %s: 0x%04X => 0x%04X\n", opcode, get_reg_name_string(reg), val, val-1);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: DEC %s: 0x%04X => 0x%04X\n", opcode, get_reg_name_string(reg), val, val-1);
             #endif
             set_register_value(reg, val - 1);
             update_flags(val, 1, val-1, 2, SUB_OP);
@@ -2450,7 +2450,7 @@ int16_t dec_instr(uint8_t opcode, uint8_t *data) {
             ret_val += operands.num_bytes;
             uint16_t res_val = operands.dst_val - 1;
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: DEC %s: 0x%04X => 0x%04X\n", opcode, operands.destination, operands.dst_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: DEC %s: 0x%04X => 0x%04X\n", opcode, operands.destination, operands.dst_val, res_val);
             #endif
             update_flags(res_val, 1, res_val, operands.width, SUB_OP);
             if (operands.dst_type == 0) {   // Reg mode
@@ -2468,11 +2468,11 @@ int16_t dec_instr(uint8_t opcode, uint8_t *data) {
 }
 
 void print_registers(void) {
-    mylog("logs/main.log", "Registers values: ");
-    mylog("logs/main.log", "AX=0x%04X,BX=0x%04X,CX=0x%04X,DX=0x%04X,", REGS->AX, REGS->BX, REGS->CX, REGS->DX);
-    mylog("logs/main.log", "SI=0x%04X,DI=0x%04X,BP=0x%04X,SP=0x%04X,", REGS->SI, REGS->DI, REGS->BP, REGS->SP);
-    mylog("logs/main.log", "CS=0x%04X,DS=0x%04X,SS=0x%04X,ES=0x%04X,", REGS->CS, REGS->DS, REGS->SS, REGS->ES);
-    mylog("logs/main.log", "IP=0x%04X,FL=0x%04X;\n", REGS->IP, REGS->flags);
+    mylog(0, "logs/main.log", "Registers values: ");
+    mylog(0, "logs/main.log", "AX=0x%04X,BX=0x%04X,CX=0x%04X,DX=0x%04X,", REGS->AX, REGS->BX, REGS->CX, REGS->DX);
+    mylog(0, "logs/main.log", "SI=0x%04X,DI=0x%04X,BP=0x%04X,SP=0x%04X,", REGS->SI, REGS->DI, REGS->BP, REGS->SP);
+    mylog(0, "logs/main.log", "CS=0x%04X,DS=0x%04X,SS=0x%04X,ES=0x%04X,", REGS->CS, REGS->DS, REGS->SS, REGS->ES);
+    mylog(0, "logs/main.log", "IP=0x%04X,FL=0x%04X;\n", REGS->IP, REGS->flags);
 }
 
 uint8_t xchg_instr(uint8_t opcode, uint8_t *data) {
@@ -2489,11 +2489,11 @@ uint8_t xchg_instr(uint8_t opcode, uint8_t *data) {
             }
             set_register_value(operands.dst.register_name, operands.src_val);
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: XCHG %s (0x%04X), %s (0x%04X)\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: XCHG %s (0x%04X), %s (0x%04X)\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val);
             #endif
             break;
         }
-        case 0x90:  // XCHG AX, AX (NOP))
+        case 0x90:  // XCHG AX, AX (NOP)
         case 0x91:  // XCHG AX, CX
         case 0x92:  // XCHG AX, DX
         case 0x93:  // XCHG AX, BX
@@ -2506,42 +2506,42 @@ uint8_t xchg_instr(uint8_t opcode, uint8_t *data) {
             if(opcode == 0x90) {  // XCHG AX, AX (NOP))
                     r2 = AX_register;
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, AX (NOP)\n", opcode);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: XCHG AX, AX (NOP)\n", opcode);
                     #endif
             } else if(opcode == 0x91) {  // XCHG AX, CX
                     r2 = CX_register;
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, CX\n", opcode);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: XCHG AX, CX\n", opcode);
                     #endif
             } else if(opcode == 0x92) {  // XCHG AX, DX
                     r2 = DX_register;
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, DX\n", opcode);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: XCHG AX, DX\n", opcode);
                     #endif
             } else if(opcode == 0x93) {  // XCHG AX, BX
                     r2 = BX_register;
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, BX\n", opcode);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: XCHG AX, BX\n", opcode);
                     #endif
             } else if(opcode == 0x94) {  // XCHG AX, SP
                     r2 = SP_register;
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, SP\n", opcode);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: XCHG AX, SP\n", opcode);
                     #endif
             } else if(opcode == 0x95) {  // XCHG AX, BP
                     r2 = BP_register;
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, BP\n", opcode);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: XCHG AX, BP\n", opcode);
                     #endif
             } else if(opcode == 0x96) {  // XCHG AX, SI
                     r2 = SI_register;
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, SI\n", opcode);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: XCHG AX, SI\n", opcode);
                     #endif
             } else if(opcode == 0x97) {  // XCHG AX, DI
                     r2 = DI_register;
                     #ifdef PRINT_LOGS
-                    mylog("logs/main.log", "Instruction 0x%02X: XCHG AX, DI\n", opcode);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: XCHG AX, DI\n", opcode);
                     #endif
             }
             set_register_value(AX_register, get_register_value(r2));
@@ -2602,7 +2602,7 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
                 set_register_value(SI_register, get_register_value(SI_register) + 2);
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: MOVS DEST-STR16, SRC-STR16 (0x%08X <= 0x%04X @ 0x%08X)\n", opcode, dst_addr, val, src_addr);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: MOVS DEST-STR16, SRC-STR16 (0x%08X <= 0x%04X @ 0x%08X)\n", opcode, dst_addr, val, src_addr);
             #endif
             break;
         }
@@ -2615,7 +2615,7 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
                 set_register_value(DI_register, get_register_value(DI_register) + 1);
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: STOS DEST-STR8 (0x%08X)\n", opcode, addr);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: STOS DEST-STR8 (0x%08X)\n", opcode, addr);
             #endif
             break;
         }
@@ -2628,7 +2628,7 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
                 set_register_value(DI_register, get_register_value(DI_register) + 2);
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: STOS DEST-STR16 (0x%08X)\n", opcode, addr);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: STOS DEST-STR16 (0x%08X)\n", opcode, addr);
             #endif
             break;
         }
@@ -2641,7 +2641,7 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
                 set_register_value(SI_register, get_register_value(SI_register) + 1);
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: LODS SRC-STR8 (addr = 0x%08X, value = 0x%04X)\n", opcode, addr, get_register_value(AL_register));
+            mylog(0, "logs/main.log", "Instruction 0x%02X: LODS SRC-STR8 (addr = 0x%08X, value = 0x%04X)\n", opcode, addr, get_register_value(AL_register));
             #endif
             break;
         }
@@ -2654,7 +2654,7 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
                 set_register_value(SI_register, get_register_value(SI_register) + 2);
             }
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x%02X: LODS SRC-STR16 (0x%08X)\n", opcode, addr);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: LODS SRC-STR16 (0x%08X)\n", opcode, addr);
             #endif
             break;
         }
@@ -2672,10 +2672,10 @@ uint8_t string_instr(uint8_t opcode, uint8_t *data) {
 int16_t process_instruction(uint8_t * memory) {
     // mylog("logs/main.log", "===============================================================\n");
     #ifdef PRINT_LOGS
-    mylog("logs/main.log", ">>>Step %d, processing bytes: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X:\n",
+    mylog(0, "logs/main.log", ">>>Step %d, processing bytes: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X:\n",
            REGS->ticks, memory[0], memory[1], memory[2], memory[3], memory[4], memory[5]);
     print_registers();
-    mylog("logs/short.log", "Step: %d, IP: 0x%04X, data: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n",
+    mylog(0, "logs/short.log", "Step: %d, IP: 0x%04X, data: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n",
           REGS->ticks, REGS->IP, memory[0], memory[1], memory[2], memory[3], memory[4], memory[5]);
     #endif
     int16_t ret_val = 1;
@@ -2747,7 +2747,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0x26:  // ES:
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x26: ES (override segment)\n");
+            mylog(0, "logs/main.log", "Instruction 0x26: ES (override segment)\n");
             #endif
             set_register_value(override_segment, ES_register);
             break;
@@ -2764,7 +2764,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0x2E:  // CS:
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x2E: CS (override segment)\n");
+            mylog(0, "logs/main.log", "Instruction 0x2E: CS (override segment)\n");
             #endif
             set_register_value(override_segment, CS_register);
             break;
@@ -2782,7 +2782,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0x36:  // SS:
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x36: SS (override segment)\n");
+            mylog(0, "logs/main.log", "Instruction 0x36: SS (override segment)\n");
             #endif
             set_register_value(override_segment, SS_register);
             break;
@@ -2801,7 +2801,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0x3E:  // DS:
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0x3E: DS (override segment)\n");
+            mylog(0, "logs/main.log", "Instruction 0x3E: DS (override segment)\n");
             #endif
             set_register_value(override_segment, DS_register);
             break;
@@ -3115,7 +3115,7 @@ int16_t process_instruction(uint8_t * memory) {
             set_register_value(operands.dst.register_name, mem_read(operands.src.address, 2));
             set_register_value(DS_register, mem_read(operands.src.address+2, 2));
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xC5: LDS REG16 (%s), MEM16 (0x%04X @ 0x%08X);\n", operands.destination, mem_read(operands.src.address, 2), operands.src.address);
+            mylog(0, "logs/main.log", "Instruction 0xC5: LDS REG16 (%s), MEM16 (0x%04X @ 0x%08X);\n", operands.destination, mem_read(operands.src.address, 2), operands.src.address);
             #endif
             break;
         }
@@ -3210,14 +3210,14 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0xE4:  // IN AL, IMMED8
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xE4: IN AL IMMED8, immed8 = 0x%02X;\n", memory[1]);
+            mylog(0, "logs/main.log", "Instruction 0xE4: IN AL IMMED8, immed8 = 0x%02X;\n", memory[1]);
             #endif
             set_register_value(AL_register, io_read(memory[1], 1));
             ret_val = 2;
             break;
         case 0xE5:  // IN AX, IMMED8
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xE5: IN AX IMMED8, immed8 = 0x%02X;\n", memory[1]);
+            mylog(0, "logs/main.log", "Instruction 0xE5: IN AX IMMED8, immed8 = 0x%02X;\n", memory[1]);
             #endif
             set_register_value(AL_register, io_read(memory[1], 2));
             ret_val = 2;
@@ -3225,14 +3225,14 @@ int16_t process_instruction(uint8_t * memory) {
         case 0xE6:  // OUT AL, IMMED8
             // Move the content of the AL register to the io port specified in the immed8 field
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xE6: OUT AL IMMED8, immed8 = 0x%02X;\n", memory[1]);
+            mylog(0, "logs/main.log", "Instruction 0xE6: OUT AL IMMED8, immed8 = 0x%02X;\n", memory[1]);
             #endif
             io_write(memory[1], get_register_value(AL_register), 1);
             ret_val = 2;
             break;
         case 0xE7:  // OUT AX, IMMED8
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xE7: OUT AX IMMED8, immed8 = 0x%02X;\n", memory[1]);
+            mylog(0, "logs/main.log", "Instruction 0xE7: OUT AX IMMED8, immed8 = 0x%02X;\n", memory[1]);
             #endif
             io_write(memory[1], get_register_value(AX_register), 2);
             ret_val = 2;
@@ -3251,7 +3251,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0xEC:  // IN AL, DX
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xEC: IN AL DX\n");
+            mylog(0, "logs/main.log", "Instruction 0xEC: IN AL DX\n");
             #endif
             set_register_value(AL_register, io_read(get_register_value(DX_register), 1));
             break;
@@ -3260,7 +3260,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0xEE:  // OUT AL, DX
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xEE: OUT DX AL\n");
+            mylog(0, "logs/main.log", "Instruction 0xEE: OUT DX AL\n");
             #endif
             io_write(get_register_value(DX_register), get_register_value(AL_register), 1); // DATA-8
             break;
@@ -3270,7 +3270,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0xF0:  // LOCK (prefix)
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xF0: LOCK\n");
+            mylog(0, "logs/main.log", "Instruction 0xF0: LOCK\n");
             #endif
             break;
         case 0xF1:  // INVALID_INSTRUCTION;
@@ -3279,14 +3279,14 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0xF2:  // REPNE/REPNZ
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xF2: REPNE/REPNZ, setting prefix\n");
+            mylog(0, "logs/main.log", "Instruction 0xF2: REPNE/REPNZ, setting prefix\n");
             #endif
             // printf("Instruction 0xF2: REPNE/REPNZ, setting prefix\n");
             set_prefix(REPNE, 1);
             break;
         case 0xF3:  // REP/REPE/REPZ
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xF3: REP/REPE/REPZ, setting prefix\n");
+            mylog(0, "logs/main.log", "Instruction 0xF3: REP/REPE/REPZ, setting prefix\n");
             #endif
             // printf("Instruction 0xF3: REP/REPE/REPZ, setting prefix\n");
             set_prefix(REPE, 1);
@@ -3375,13 +3375,13 @@ int16_t process_instruction(uint8_t * memory) {
         }
         case 0xF8:  // CLC (Clear Carry Flag): [0xF9]
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xF8: Clear Carry Flag (CF)\n");
+            mylog(0, "logs/main.log", "Instruction 0xF8: Clear Carry Flag (CF)\n");
             #endif
             set_flag(CF, 0);
             break;
         case 0xF9:  // STC (Set Carry Flag): [0xF9]
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xF9: Set Carry Flag (CF)\n");
+            mylog(0, "logs/main.log", "Instruction 0xF9: Set Carry Flag (CF)\n");
             #endif
             set_flag(CF, 1);
             break;
@@ -3389,7 +3389,7 @@ int16_t process_instruction(uint8_t * memory) {
             // Clear Interrupt Flag, causes the processor to ignore maskable external interrupts
             printf("Disabling interrupts\n");
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xFA: Clear Interrupt Flag (IF) to disable interrupts\n");
+            mylog(0, "logs/main.log", "Instruction 0xFA: Clear Interrupt Flag (IF) to disable interrupts\n");
             #endif
             set_flag(IF, 0);
             break;
@@ -3397,19 +3397,19 @@ int16_t process_instruction(uint8_t * memory) {
             // Set Interrupt Flag
             printf("Enabling interrupts\n");
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xFB: Set Interrupt Flag (IF) to enable interrupts\n");
+            mylog(0, "logs/main.log", "Instruction 0xFB: Set Interrupt Flag (IF) to enable interrupts\n");
             #endif
             set_flag(IF, 1);
             break;
         case 0xFC:  // CLD: [0xFC]: Clear Direction Flag
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xFC: Clear Direction Flag (DF)\n");
+            mylog(0, "logs/main.log", "Instruction 0xFC: Clear Direction Flag (DF)\n");
             #endif
             set_flag(DF, 0);
             break;
         case 0xFD:  // STD: [0xFD]: Set Direction Flag
             #ifdef PRINT_LOGS
-            mylog("logs/main.log", "Instruction 0xFD: Set Direction Flag (DF)\n");
+            mylog(0, "logs/main.log", "Instruction 0xFD: Set Direction Flag (DF)\n");
             #endif
             set_flag(DF, 1);
             break;
@@ -3562,7 +3562,7 @@ int restore_registers(char *filename, registers_t *regs) {
     fscanf(f, "0x%04X\n", &temp);
     regs->prefixes = (uint16_t)temp;
     fclose(f);
-    mylog("logs/main.log", "Registers restored! ticks = 0x%08X\n", regs->ticks);
+    mylog(0, "logs/main.log", "Registers restored! ticks = 0x%08X\n", regs->ticks);
     return EXIT_SUCCESS;
 }
 
@@ -3576,7 +3576,7 @@ int init_cpu(uint8_t continue_simulation) {
     REGS = calloc(1, sizeof(registers_t));
     REGS->int_vector = 0xFFFF;
     if(continue_simulation) {
-        mylog("logs/main.log", "Restoring registers\n");
+        mylog(0, "logs/main.log", "Restoring registers\n");
         restore_registers(REGISTERS_FILE, REGS);
     } else {
         REGS->IP = 0xFFF0;
@@ -3654,40 +3654,40 @@ int module_tick(void) {
         code[i] = code_read(addr+i, 1);
     }
     if(REGS->IP == 0xE329) {
-        mylog("logs/short.log", "Start 8259 Interrupt Controller Test\n");
+        mylog(0, "logs/short.log", "Start 8259 Interrupt Controller Test\n");
         printf("Start 8259 Interrupt Controller Test\n");
     } else if(REGS->IP == 0xE2F0) {
-        mylog("logs/short.log", "CRT Error at 0xE2F0\n");
+        mylog(0, "logs/short.log", "CRT Error at 0xE2F0\n");
         printf("CRT Error 0xE2F0\n");
     } else if(REGS->IP == 0xE354) {
-        mylog("logs/short.log", "Interrupt Controller  or Timer Error at 0xE354\n");
+        mylog(0, "logs/short.log", "Interrupt Controller  or Timer Error at 0xE354\n");
         printf("Interrupt Controller or Timer Error at 0xE354\n");
     } else if(REGS->IP == 0xE3D7) {
-        mylog("logs/short.log", "Keyboard Test Error at 0xE3D7\n");
+        mylog(0, "logs/short.log", "Keyboard Test Error at 0xE3D7\n");
         printf("Keyboard Test Error at 0xE3D7\n");
     } else if(REGS->IP == 0xE35D) {
-        mylog("logs/short.log", "Start 8253 Timer Test\n");
+        mylog(0, "logs/short.log", "Start 8253 Timer Test\n");
         printf("Start 8253 Timer Test\n");
     } else if(REGS->IP == 0xE242) {
-        mylog("logs/short.log", "Initialize and start CRT controller\n");
+        mylog(0, "logs/short.log", "Initialize and start CRT controller\n");
         printf("Initialize and start CRT controller\n");
     } else if(REGS->IP == 0xE3A2) {
-        mylog("logs/short.log", "Start Keyboard Test\n");
+        mylog(0, "logs/short.log", "Start Keyboard Test\n");
         printf("Start Keyboard Test\n");
     } else if(REGS->IP == 0xE3DE) {
-        mylog("logs/short.log", "Setting Up Interrupt Vector Table\n");
+        mylog(0, "logs/short.log", "Setting Up Interrupt Vector Table\n");
         printf("Setting Up Interrupt Vector Table\n");
     } else if(REGS->IP == 0xE418) {
-        mylog("logs/short.log", "Start IO Box Test\n");
+        mylog(0, "logs/short.log", "Start IO Box Test\n");
         printf("Start IO Box Test\n");
     } else if(REGS->IP == 0xE46A) {
-        mylog("logs/short.log", "Start Additional Read/Write Storage Test\n");
+        mylog(0, "logs/short.log", "Start Additional Read/Write Storage Test\n");
         printf("Start Additional Read/Write Storage Test\n");
     } else if(REGS->IP == 0xE1CE) {
-        mylog("logs/short.log", "Initialize the 8259 Interrupt Controller\n");
+        mylog(0, "logs/short.log", "Initialize the 8259 Interrupt Controller\n");
         printf("Initialize the 8259 Interrupt Controller\n");
     } else if(REGS->IP == 0xF99C) {
-        mylog("logs/short.log", "PRINT_HEX procedure\n");
+        mylog(0, "logs/short.log", "PRINT_HEX procedure\n");
         printf("PRINT_HEX procedure\n");
     }
     uint8_t inc = process_instruction(code);
@@ -3714,21 +3714,26 @@ int module_tick(void) {
 
 void dummy_nmi_cb(wire_state_t new_state) {
     if(new_state == WIRE_HIGH)
-        mylog("logs/main.log", "NMI activated\n");
+        mylog(1, "logs/main.log", "NMI activated\n");
     return;
 }
 
 void int_cb(wire_state_t new_state) {
     if(new_state == WIRE_HIGH && REGS->ticks > 0) {
-        mylog("logs/main.log", "INT activated\n");
+        mylog(1, "logs/main.log", "INT activated\n");
         uint8_t vec = io_read(0xA0, 1);
         if(vec != 0xFF) {
-            mylog("logs/short.log", "INT activated\n");
+            mylog(1, "logs/short.log", "INT activated\n");
             set_int_vector(vec);
             // printf("CPU Interrupt %d\n", vec);
         }
     }
     return;
+}
+
+DLL_PREFIX
+uint32_t cpu_get_ticks(void) {
+    return REGS->ticks;
 }
 
 DLL_PREFIX

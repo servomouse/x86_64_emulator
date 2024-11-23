@@ -19,10 +19,12 @@ typedef struct {
     #define DLL_PREFIX __declspec(dllexport)
 #endif
 
-void mylog(const char *log_file, const char *format, ...);
+void mylog(uint8_t log_level, const char *log_file, const char *format, ...);
 void clear_console(void);
 void sleep_ms(uint32_t ms);
 char *get_time(void);
 int store_data(void *data, size_t size, char *filename);
 int restore_data(void *data, size_t size, char *filename);
 uint64_t get_hash(uint8_t *data, size_t size);
+
+void set_log_level(uint8_t new_log_level);

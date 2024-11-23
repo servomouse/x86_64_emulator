@@ -109,7 +109,7 @@ uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR(write
     if(!check_allocation()) {   // Allocation failed
         return 0;
     }
-    mylog(IO_LOG_FILE, "Device 0x%08X was successfully mapped at addressed 0x%04X-0x%04X\n", id, start_addr, end_addr);
+    mylog(0, IO_LOG_FILE, "Device 0x%08X was successfully mapped at addressed 0x%04X-0x%04X\n", id, start_addr, end_addr);
     return id;
 }
 
@@ -119,7 +119,7 @@ void unmap_device(uint32_t id) {
     for(uint32_t i=0; i<io_space.num_devices; i++) {
         if(io_space.dev_table[i].id == id) {
             io_space.dev_table[i].id = 0;
-            mylog(IO_LOG_FILE, "Device 0x%08X was successfully unmapped\n", id);
+            mylog(0, IO_LOG_FILE, "Device 0x%08X was successfully unmapped\n", id);
         }
     }
 }
@@ -142,7 +142,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
         printf("IO_WRITE ERROR: No device at address 0x%08X!\n", addr);
         io_error = 1;
     }
-    mylog(IO_LOG_FILE, "IO_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(0, IO_LOG_FILE, "IO_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     
     // if ((addr >= 0x3B0) && (addr <= 0x3DC)) {
     //     mda_write(addr, value, width);
@@ -185,7 +185,7 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
         printf("IO_READ ERROR: No device at address 0x%08X!\n", addr);
         io_error = 1;
     }
-    mylog(IO_LOG_FILE, "IO_READ addr = 0x%04X, width = %d bytes value: 0x%04X\n", addr, width, ret_val);
+    mylog(0, IO_LOG_FILE, "IO_READ addr = 0x%04X, width = %d bytes value: 0x%04X\n", addr, width, ret_val);
     // if(width == 1) {
     //     ret_val = 0xFF;
     // } else if (width == 2) {

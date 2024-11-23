@@ -64,3 +64,4 @@ void module_reset(void);
 void module_save(void);
 void module_restore(void);
 int module_tick(void);
+uint32_t cpu_get_ticks(void);

@@ -31,13 +31,13 @@ void module_reset(void) {
 
 __declspec(dllexport)
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
-    mylog(DEVICE_LOG_FILE, "DRAFT_DEVICE_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(0, DEVICE_LOG_FILE, "DRAFT_DEVICE_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
 }
 
 __declspec(dllexport)
 uint16_t data_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
-    mylog(DEVICE_LOG_FILE, "DRAFT_DEVICE_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    mylog(0, DEVICE_LOG_FILE, "DRAFT_DEVICE_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
 

@@ -12,13 +12,22 @@
 
 typedef void(*log_func_t)(const char*, char*);
 log_func_t print_log;
+uint8_t device_log_level = 1;
 
-__declspec(dllexport)
+DLL_PREFIX
 void set_log_func(log_func_t python_log_func) {
     print_log = python_log_func;
 }
 
-void mylog(const char *log_file, const char *format, ...) {
+DLL_PREFIX
+void set_log_level(uint8_t new_log_level) {
+    device_log_level = new_log_level;
+}
+
+// The highter log_level the highter priority
+void mylog(uint8_t log_level, const char *log_file, const char *format, ...) {
+    // if(log_level < device_log_level)
+    //     return;
     va_list args;
     va_start(args, format);
     char buffer[BUFFER_SIZE] = {0};

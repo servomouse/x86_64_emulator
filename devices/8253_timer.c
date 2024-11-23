@@ -131,7 +131,7 @@ static void set_value(timer_t *timer, uint16_t value) {
     if((timer->mode == 0) || (timer->mode == 4)) {
         timer->counter = timer->value;
     }
-    mylog(DEVICE_LOG_FILE, "Set timer %d value to 0x%04X, counter = 0x%04X, load-read = d\n", timer->value, timer->counter, timer->read_load);
+    mylog(0, DEVICE_LOG_FILE, "Set timer %d value to 0x%04X, counter = 0x%04X, load-read = d\n", timer->value, timer->counter, timer->read_load);
 }
 
 static uint8_t get_value(timer_t *timer) {
@@ -158,7 +158,7 @@ static uint8_t get_value(timer_t *timer) {
 
 __declspec(dllexport)
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
-    mylog(DEVICE_LOG_FILE, "TIMER_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(0, DEVICE_LOG_FILE, "TIMER_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     switch(addr) {
         case 0x40:
             set_value(&regs.timer[0], value);
@@ -175,7 +175,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
             uint8_t read_load = (value >> 4) & 0x03;
             uint8_t bcd = value & 0x01;
             if(timer_idx < 3) {
-                mylog(DEVICE_LOG_FILE, "Set timer %d mode to 0x%02X\n", timer_idx, mode);
+                mylog(0, DEVICE_LOG_FILE, "Set timer %d mode to 0x%02X\n", timer_idx, mode);
                 regs.timer[timer_idx].mode = mode;
                 regs.timer[timer_idx].read_load = read_load;
                 regs.timer[timer_idx].bcd = bcd;
@@ -212,7 +212,7 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
         default:
             printf("TIMER ERROR: attempt to read from incorrect port 0x%04x\n", addr);
     }
-    mylog(DEVICE_LOG_FILE, "TIMER_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    mylog(0, DEVICE_LOG_FILE, "TIMER_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
 

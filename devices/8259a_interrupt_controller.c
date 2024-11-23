@@ -117,7 +117,7 @@ void write_byte(uint8_t addr, uint8_t data) {
 
 __declspec(dllexport)
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
-    mylog(DEVICE_LOG_FILE, "INT_CONTROLLER_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(0, DEVICE_LOG_FILE, "INT_CONTROLLER_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     // regs.int_register = value;
     if(addr == 0xA0) {
         regs.triggerded_int = value;
@@ -143,7 +143,7 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
     } else if(addr == 0x21) {
         ret_val = regs.IMR;
     }
-    mylog(DEVICE_LOG_FILE, "INT_CONTROLLER_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    mylog(0, DEVICE_LOG_FILE, "INT_CONTROLLER_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
 
