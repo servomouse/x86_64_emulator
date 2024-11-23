@@ -5,14 +5,6 @@
 #define DEVICE_NAME "IO_Expansion_box"
 #define DEVICE_LOG_FILE "logs/io_expansion_box.log"
 #define DEVICE_DATA_FILE "data/io_expansion_box.bin"
-#define START_ADDR (uint32_t)0x210
-#define END_ADDR (uint32_t)0x217
-
-__declspec(dllexport)
-uint32_t *module_get_address_range(void) {
-    static uint32_t addresses[] = {START_ADDR, END_ADDR};
-    return addresses;
-}
 
 __declspec(dllexport)
 void module_reset(void) {

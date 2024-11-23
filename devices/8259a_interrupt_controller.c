@@ -5,8 +5,6 @@
 
 #define DEVICE_LOG_FILE "logs/8259a_interrupt_controller.log"
 #define DEVICE_DATA_FILE "data/8259a_interrupt_controller.bin"
-#define START_ADDR (uint32_t)0x0A0
-#define END_ADDR (uint32_t)0x0AF
 
 // check 0xFF2E
 
@@ -28,12 +26,6 @@ typedef struct {
 } device_regs_t;
 
 device_regs_t regs;
-
-__declspec(dllexport)
-uint32_t *module_get_address_range(void) {
-    static uint32_t addresses[] = {START_ADDR, END_ADDR};
-    return addresses;
-}
 
 __declspec(dllexport)
 void module_reset(void) {

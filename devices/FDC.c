@@ -5,8 +5,6 @@
 
 #define DEVICE_LOG_FILE "logs/fdc.log"
 #define DEVICE_DATA_FILE "data/fdc.bin"
-#define START_ADDR (uint32_t)0x3F0
-#define END_ADDR   (uint32_t)0x3F7
 
 typedef struct {
     uint8_t DOR;    // Data output register
@@ -15,12 +13,6 @@ typedef struct {
 } device_regs_t;
 
 device_regs_t regs;
-
-DLL_PREFIX
-uint32_t *module_get_address_range(void) {
-    static uint32_t addresses[] = {START_ADDR, END_ADDR};
-    return addresses;
-}
 
 void dummy_cb(wire_state_t new_state) {
     return;

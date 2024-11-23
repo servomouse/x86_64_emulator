@@ -5,8 +5,6 @@
 
 #define DEVICE_LOG_FILE "logs/timer.log"
 #define DEVICE_DATA_FILE "data/8253_timer.bin"
-#define START_ADDR (uint32_t)0x040
-#define END_ADDR (uint32_t)0x043
 
 typedef struct {
     uint8_t read_load;
@@ -54,24 +52,21 @@ void gate2_cb(wire_state_t new_state) {
 
 __declspec(dllexport)
 wire_t int0_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+
 __declspec(dllexport)
 wire_t ch0_gate_wire = WIRE_T(WIRE_INPUT, &gate0_cb);
 
 __declspec(dllexport)
 wire_t ch1_output_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+
 __declspec(dllexport)
 wire_t ch1_gate_wire = WIRE_T(WIRE_INPUT, &gate1_cb);
 
 __declspec(dllexport)
 wire_t ch2_output_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
-__declspec(dllexport)
-wire_t ch2_gate_wire = WIRE_T(WIRE_INPUT, &gate2_cb);
 
 __declspec(dllexport)
-uint32_t *module_get_address_range(void) {
-    static uint32_t addresses[] = {START_ADDR, END_ADDR};
-    return addresses;
-}
+wire_t ch2_gate_wire = WIRE_T(WIRE_INPUT, &gate2_cb);
 
 __declspec(dllexport)
 void module_save(void) {

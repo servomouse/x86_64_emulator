@@ -54,12 +54,12 @@ class ReadWriteModule:
 class DevModule(CommonDevModule, ReadWriteModule):
     def __init__(self, filename):
         super().__init__(filename)
-        self.device.module_get_address_range.argtypes = None
-        self.device.module_get_address_range.restype = ctypes.POINTER(ctypes.c_uint32)
-        range_ptr = self.device.module_get_address_range()
-        print(f"Device address range: {hex(range_ptr[0])} - {hex(range_ptr[1])}")
-        self.addr_start = range_ptr[0]
-        self.addr_end = range_ptr[1]
+        # self.device.module_get_address_range.argtypes = None
+        # self.device.module_get_address_range.restype = ctypes.POINTER(ctypes.c_uint32)
+        # range_ptr = self.device.module_get_address_range()
+        # print(f"Device address range: {hex(range_ptr[0])} - {hex(range_ptr[1])}")
+        # self.addr_start = range_ptr[0]
+        # self.addr_end = range_ptr[1]
         self.set_read_write_functions()
 
 

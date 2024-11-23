@@ -4,8 +4,6 @@
 
 #define DEVICE_LOG_FILE "logs/cga.log"
 #define DEVICE_DATA_FILE "data/cga.bin"
-#define START_ADDR (uint32_t)0x3D0
-#define END_ADDR (uint32_t)0x3DF
 
 typedef struct {    // | Type                       | I/O | 40x25 | 80x25 | Graphic Modes
     uint8_t R0;     // | Horizontal total           | WO  | 0x38  | 0x71  | 0x38
@@ -31,12 +29,6 @@ typedef struct {    // | Type                       | I/O | 40x25 | 80x25 | Grap
 } device_regs_t;
 
 device_regs_t regs;
-
-__declspec(dllexport)
-uint32_t *module_get_address_range(void) {
-    static uint32_t addresses[] = {START_ADDR, END_ADDR};
-    return addresses;
-}
 
 __declspec(dllexport)
 void module_reset(void) {

@@ -5,8 +5,6 @@
 
 #define DEVICE_LOG_FILE "logs/8237a-5_dma.log"
 #define DEVICE_DATA_FILE "data/8237a-5_dma.bin"
-#define START_ADDR (uint32_t)0x080
-#define END_ADDR (uint32_t)0x083
 
 typedef struct {
     uint8_t reg0;
@@ -17,12 +15,6 @@ typedef struct {
 } device_regs_t;
 
 device_regs_t regs;
-
-__declspec(dllexport)
-uint32_t *module_get_address_range(void) {
-    static uint32_t addresses[] = {START_ADDR, END_ADDR};
-    return addresses;
-}
 
 __declspec(dllexport)
 void module_reset(void) {

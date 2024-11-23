@@ -1,16 +1,18 @@
-
 [fdc]
 type = "device"
+address_ranges = [[0x3F0, 0x3F7]]
 module = ["devices/FDC.c"]
 tests = ["tests/test_fdc.c"]
 
 [timer]
 type = "device"
+address_ranges = [[0x040, 0x043]]
 module = ["devices/8253_timer.c"]
 tests = [""]
 
 [cga]
 type = "device"
+address_ranges = [[0x3D0, 0x3DF]]
 module = ["devices/8086_cga.c"]
 tests = [""]
 
@@ -31,25 +33,30 @@ tests = [""]
 
 [io_exp_box]    # IO Expansion box
 type = "device"
+address_ranges = [[0x210, 0x217]]
 module = ["devices/8086_io_expansion_box.c"]
 tests = [""]
 
 [mda]
 type = "device"
+address_ranges = [[0x3B0, 0x3BF]]
 module = ["devices/8086_mda.c"]
 tests = [""]
 
 [ppi]
 type = "device"
+address_ranges = [[0x060, 0x063]]
 module = ["devices/8255a-5_ppi.c"]
 tests = [""]
 
 [intc]
 type = "device"
+address_ranges = [[0x0A0, 0x0AF], [0x020, 0x021]]
 module = ["devices/8259a_interrupt_controller.c"]
 tests = [""]
 
 [dma]
 type = "device"
+address_ranges = [[0x080, 0x083], [0x00, 0x0F]]
 module = ["devices/8237a-5_dma.c"]
 tests = [""]

@@ -2,7 +2,6 @@ import log_manager
 import os
 import sys
 import time
-import toml
 
 from wires import (WireType, WireState, Wire)
 from device_manager import (DevModule, AddressSpace, Processor, DevManager)
@@ -18,6 +17,7 @@ def system_init():
     global mb
     config = get_config("config.toml")
 
+    # Instantiate devices
     for dev_name, dev_config in config.items():
         so_name = f"bin/{dev_name}.dll"
         if dev_config["type"] == "device":
@@ -29,6 +29,15 @@ def system_init():
         else:
             print(f"Unknown device type: {dev_config['type']}")
             os._exit(1)
+    
+    # Map devices
+    ioc = mb.devices["ioc"]
+    for dev_name, dev_config in config.items():
+        if dev_config['type'] == 'device':
+            dev = mb.devices[dev_name]
+            for addr_range in dev_config["address_ranges"]:
+                print(f"Mapping device {dev_name} at address range: {hex(addr_range[0])} - {hex(addr_range[1])}")
+                ioc.map_device(addr_range[0], addr_range[1], dev.data_write_p, dev.data_read_p)
 
     wires = {
         "nmi_wire": {"devices": ["cpu", "intc"], "default_state": WireState.WIRE_LOW},
@@ -44,25 +53,6 @@ def system_init():
         for dev in config["devices"]:
             temp_wire.connect_device(mb.devices[dev].device)
         temp_wire.set_state(config["default_state"])
-
-    intc = mb.devices["intc"]
-    dma = mb.devices["dma"]
-    cga = mb.devices["cga"]
-    mda = mb.devices["mda"]
-    ppi = mb.devices["ppi"]
-    timer = mb.devices["timer"]
-    ioc = mb.devices["ioc"]
-    io_exp_box = mb.devices["io_exp_box"]
-
-    intc.id0 = ioc.map_device(intc.addr_start, intc.addr_end, intc.data_write_p, intc.data_read_p)
-    intc.id1 = ioc.map_device(0x20, 0x21, intc.data_write_p, intc.data_read_p)
-    io_exp_box.id0 = ioc.map_device(io_exp_box.addr_start, io_exp_box.addr_end, io_exp_box.data_write_p, io_exp_box.data_read_p)
-    dma.id0 = ioc.map_device(dma.addr_start, dma.addr_end, dma.data_write_p, dma.data_read_p)
-    dma.id1 = ioc.map_device(0x00, 0x0F, dma.data_write_p, dma.data_read_p)
-    cga.id = ioc.map_device(cga.addr_start, cga.addr_end, cga.data_write_p, cga.data_read_p)
-    mda.id = ioc.map_device(mda.addr_start, mda.addr_end, mda.data_write_p, mda.data_read_p)
-    ppi.id = ioc.map_device(ppi.addr_start, ppi.addr_end, ppi.data_write_p, ppi.data_read_p)
-    timer.id = ioc.map_device(timer.addr_start, timer.addr_end, timer.data_write_p, timer.data_read_p)
 
     mb.devices["cpu"].connect_address_space(0, mb.devices["ioc"].data_write_p, mb.devices["ioc"].data_read_p)
     mb.devices["cpu"].connect_address_space(1, mb.devices["memory"].data_write_p, mb.devices["memory"].data_read_p)
