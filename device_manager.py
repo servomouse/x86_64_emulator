@@ -1,5 +1,6 @@
 import ctypes
 import log_manager
+import copy
 
 
 class CommonDevModule():
@@ -99,6 +100,7 @@ class DevManager():
         self.devices = {}
         self._save_state_at = 0
         self._set_log_level_at = []  # [device_name, ticks, new_log_level]
+        self._ticks = 0
     
     def save_state_at(self, ticks):
         self._save_state_at = ticks
@@ -133,13 +135,22 @@ class DevManager():
                 print(f"Error ticking device {dev_name}!")
                 print(e)
                 return False
-            # if dev_name == 'cpu':
-            #     ticks = dev.cpu_get_ticks()
-            #     if self._save_state_at > 0 and ticks == self._save_state_at:
-            #         self.save_devices()
-            #         print(f"Target ticks {self._save_state_at} reached, devices state saved!")
-            #     if len(self._set_log_level_at) > 0:
-            #         for i in self._set_log_level_at:
-            #             if i[1] == ticks:
-            #                 self.devices[i[0]].set_log_level(i[2])
+            if dev_name == 'cpu':
+                self._ticks = dev.cpu_get_ticks()
+        if self._save_state_at > 0 and self._ticks == self._save_state_at:
+            self.save_devices()
+            print(f"Target ticks {self._save_state_at} reached, devices state saved!")
+        if len(self._set_log_level_at) > 0:
+            temp_arr = []
+            need_update = False
+            for i in self._set_log_level_at:
+                if i[1] == self._ticks:
+                    print(f"Setting log_level for {i[0]} to {i[2]}")
+                    self.devices[i[0]].set_log_level(i[2])
+                    need_update = True
+                else:
+                    temp_arr.append(i)
+            if need_update:
+                self._set_log_level_at = copy.deepcopy(temp_arr)
+
         return True

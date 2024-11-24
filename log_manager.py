@@ -14,8 +14,8 @@ buffer_mutex = threading.Lock()
 
 ignore_files = [
 	'logs/code_mem_log.txt',
-	'logs/mem_log.txt',
-	'logs/main.log',
+	# 'logs/mem_log.txt',
+	# 'logs/main.log',
 ]
 
 

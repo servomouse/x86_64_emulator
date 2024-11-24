@@ -97,7 +97,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
             for(int i=0; i<VIDEO_BUFFER_SIZE; i++) {
                 video_buf[i] = MEMORY[VIDEO_BUFFER_OFFSET+(i*2)];
             }
-            mylog(0, VIDEO_MEM_LOG_FILE, "VIDEO_BUF: %s", video_buf);
+            mylog(1, VIDEO_MEM_LOG_FILE, "VIDEO_BUF: %s", video_buf);
         }
         mylog(0, VIDEO_MEM_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d byte(s)\n", addr, value, width);
     }else {

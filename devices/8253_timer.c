@@ -70,9 +70,9 @@ wire_t ch2_gate_wire = WIRE_T(WIRE_INPUT, &gate2_cb);
 
 __declspec(dllexport)
 void module_save(void) {
-    regs.timer[0].output = NULL;
-    regs.timer[1].output = NULL;
-    regs.timer[2].output = NULL;
+    // regs.timer[0].output = NULL;
+    // regs.timer[1].output = NULL;
+    // regs.timer[2].output = NULL;
     store_data(&regs, sizeof(device_regs_t), DEVICE_DATA_FILE);
 }
 

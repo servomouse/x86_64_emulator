@@ -11,6 +11,7 @@ from build import get_config
 stop_main_thread = False
 main_thread = None
 mb = None
+wires = []
 
 
 def system_init():
@@ -39,7 +40,7 @@ def system_init():
                 print(f"Mapping device {dev_name} at address range: {hex(addr_range[0])} - {hex(addr_range[1])}")
                 ioc.map_device(addr_range[0], addr_range[1], dev.data_write_p, dev.data_read_p)
 
-    wires = {
+    wires_map = {
         "nmi_wire": {"devices": ["cpu", "intc"], "default_state": WireState.WIRE_LOW},
         "int_wire": {"devices": ["cpu", "intc"], "default_state": WireState.WIRE_LOW},
         "int0_wire": {"devices": ["timer", "intc"], "default_state": WireState.WIRE_LOW},
@@ -48,11 +49,12 @@ def system_init():
         "int1_wire": {"devices": ["ppi", "intc"], "default_state": WireState.WIRE_LOW},
     }
 
-    for wire_name, config in wires.items():
+    for wire_name, config in wires_map.items():
         temp_wire = Wire(wire_name)
         for dev in config["devices"]:
             temp_wire.connect_device(mb.devices[dev].device)
         temp_wire.set_state(config["default_state"])
+        wires.append(temp_wire)
 
     mb.devices["cpu"].connect_address_space(0, mb.devices["ioc"].data_write_p, mb.devices["ioc"].data_read_p)
     mb.devices["cpu"].connect_address_space(1, mb.devices["memory"].data_write_p, mb.devices["memory"].data_read_p)
@@ -98,7 +100,7 @@ def main():
             print("Restoring devices")
             mb.restore_devices()
         
-        mb.save_state_at(1_000_000)
+        mb.save_state_at(20_000_000)
         mb.set_log_level_at(['cpu', 20_000_000, 0])
     except Exception as e:
         print(e)
