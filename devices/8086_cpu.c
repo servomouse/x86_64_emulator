@@ -964,27 +964,22 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             break;
         }
         case 0xC2:  // RET IMMED16 (intrasegment): [0xC2, DATA-LO, DATA-HI]
-            REGS->invalid_operations ++;
-            printf("Error: Unknown JMP instruction: 0x%02X\n", opcode);
-            break;
-        case 0xC3: {  // RET (intrasegment)
-            uint16_t sp_reg = get_register_value(SP_register);
-            uint32_t addr = get_addr(SS_register, sp_reg);
-            uint16_t temp = mem_read(addr, 2);
-            set_register_value(SP_register, sp_reg + 2);
-            set_register_value(IP_register, temp);
-            #ifdef PRINT_LOGS
-            mylog(0, "logs/main.log", "Instruction 0xC3: Intrasegment RET to IP = 0x%04X\n", get_register_value(IP_register));
-            #endif
-            break;
-        }
+        case 0xC3:  // RET (intrasegment)
         case 0xCA:  // RET IMMED16 (intersegment): [0xCA, DATA-LO, DATA-HI] p68
-            REGS->invalid_operations ++;
-            printf("Error: Unknown JMP instruction: 0x%02X\n", opcode);
-            break;
         case 0xCB:  // RET (intersegment): [0xCB]
-            REGS->invalid_operations ++;
-            printf("Error: Unknown JMP instruction: 0x%02X\n", opcode);
+            pop_register(IP_register);
+            if((opcode == 0xCA) || (opcode == 0xCB)) {
+                pop_register(CS_register);
+            }
+            if((opcode == 0xC2) || (opcode == 0xCA)) {
+                set_register_value(SP_register, get_register_value(SP_register) + (data[0] + (data[1] << 8)));
+            }
+            #ifdef PRINT_LOGS
+            mylog(0, "logs/main.log", "Instruction 00x%02X: RET (IP = 0x%04X, CS = 0x%04X, SP = 0x%04X)\n",
+                                                                   opcode, get_register_value(IP_register),
+                                                                   get_register_value(CS_register),
+                                                                   get_register_value(SP_register));
+            #endif
             break;
         case 0xCF: {  // IRET
             pop_register(IP_register);
@@ -1397,6 +1392,21 @@ uint8_t mov_instr(uint8_t opcode, uint8_t *data) {
             #endif
             set_register_value(DI_register, immed_data);
             ret_val = 3;
+            break;
+        }
+        case 0xC4:    // LES REG16, MEM16: [opcode, MOD REG R/M, DISP-LO, DISP-HI]  (p55)
+        case 0xC5: {  // LDS REG16, MEM16: [opcode, MOD REG R/M, DISP-LO, DISP-HI]
+            operands_t operands = decode_operands(opcode, &data[0], 1);
+            ret_val += operands.num_bytes;
+            uint32_t addr = get_addr(DS_register, operands.src_val);
+            set_register_value(operands.dst.register_name, mem_read(addr, 2));
+            if(opcode == 0xC4) {
+                set_register_value(ES_register, mem_read(addr+2, 2));
+                mylog(0, "logs/main.log", "Instruction 0x%02X: LES REG16 (%s), MEM16 (0x%04X @ 0x%08X), ES, MEM16 (0x%04X @ 0x%08X);\n", opcode, operands.destination, get_register_value(operands.dst.register_name), addr, get_register_value(ES_register), addr+2);
+            } else if(opcode == 0xC5) {
+                set_register_value(DS_register, mem_read(addr+2, 2));
+                mylog(0, "logs/main.log", "Instruction 0x%02X: LDS REG16 (%s), MEM16 (0x%04X @ 0x%08X), DS, MEM16 (0x%04X @ 0x%08X);\n", opcode, operands.destination, get_register_value(operands.dst.register_name), addr, get_register_value(DS_register), addr+2);
+            }
             break;
         }
         case 0xC6: {  // MOV MEM8, IMMED8: [0xC6, MOD 000 R/M, DISP-LO, DISP-HI, DATA-8]
@@ -3116,9 +3126,7 @@ int16_t process_instruction(uint8_t * memory) {
         case 0xC3:  // RET (intrasegment)
             ret_val = jmp_instr(memory[0], &memory[1]);
             break;
-        // case 0xC4:  // LES REG16, MEM16
-        //     REGS->IP += les_op(memory[1], &memory[2]);  // MOD REG R/M, DISP-LO, DISP-HI
-        //     break;
+        case 0xC4:  // LES REG16, MEM16: [MOD REG R/M, DISP-LO, DISP-HI]  (p55)
         case 0xC5: {  // LDS REG16, MEM16: [opcode, MOD REG R/M, DISP-LO, DISP-HI]
             operands_t operands = decode_operands(memory[0] | 0x02, &memory[1], 0); // Swap source and destination
             ret_val += operands.num_bytes;
