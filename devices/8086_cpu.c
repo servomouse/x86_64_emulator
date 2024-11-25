@@ -963,6 +963,10 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             }
             break;
         }
+        case 0xC2:  // RET IMMED16 (intrasegment): [0xC2, DATA-LO, DATA-HI]
+            REGS->invalid_operations ++;
+            printf("Error: Unknown JMP instruction: 0x%02X\n", opcode);
+            break;
         case 0xC3: {  // RET (intrasegment)
             uint16_t sp_reg = get_register_value(SP_register);
             uint32_t addr = get_addr(SS_register, sp_reg);
@@ -974,6 +978,14 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             #endif
             break;
         }
+        case 0xCA:  // RET IMMED16 (intersegment): [0xCA, DATA-LO, DATA-HI] p68
+            REGS->invalid_operations ++;
+            printf("Error: Unknown JMP instruction: 0x%02X\n", opcode);
+            break;
+        case 0xCB:  // RET (intersegment): [0xCB]
+            REGS->invalid_operations ++;
+            printf("Error: Unknown JMP instruction: 0x%02X\n", opcode);
+            break;
         case 0xCF: {  // IRET
             pop_register(IP_register);
             pop_register(CS_register);
@@ -3100,9 +3112,7 @@ int16_t process_instruction(uint8_t * memory) {
             REGS->invalid_operations ++;
             printf("Invalid instruction: 0x%02X\n", memory[0]);
             break;
-        // case 0xC2:  // RET IMMED16 (intrasegment)
-        //     REGS->IP += ret_op(memory[1], &memory[2]);  // DATA-LO, DATA-HI
-        //     break;
+        case 0xC2:  // RET IMMED16 (intrasegment): [0xC2, DATA-LO, DATA-HI]
         case 0xC3:  // RET (intrasegment)
             ret_val = jmp_instr(memory[0], &memory[1]);
             break;
@@ -3128,12 +3138,10 @@ int16_t process_instruction(uint8_t * memory) {
             REGS->invalid_operations ++;
             printf("Invalid instruction: 0x%02X\n", memory[0]);
             break;
-        // case 0xCA:  // RET IMMED16 (intersegment)
-        //     REGS->IP += ret_op(memory[1], &memory[2]);  // DATA-LO, DATA-HI
-        //     break;
-        // case 0xCB:  // RET (intersegment)
-        //     REGS->IP += ret_op(memory[1], &memory[2]);
-        //     break;
+        case 0xCA:  // RET IMMED16 (intersegment): [0xCA, DATA-LO, DATA-HI] p68
+        case 0xCB:  // RET (intersegment): [0xCB]
+            ret_val = jmp_instr(memory[0], &memory[1]);
+            break;
         case 0xCC:  // INT 3
             set_int_vector(3);
             ret_val = 1;
@@ -3295,15 +3303,14 @@ int16_t process_instruction(uint8_t * memory) {
             // halts the CPU until the next external interrupt is fired
             REGS->halt = 1;
             break;
-        // case 0xF5:  // CMC
-        //     // Inverts the CF flag
-        //     if(REGS->flags.CF) {
-        //         REGS->flags.CF = 0;
-        //     } else {
-        //         REGS->flags.CF = 1;
-        //     }
-        //     REGS->IP += 1;
-        //     break;
+        case 0xF5:  // CMC
+            // Inverts the CF flag
+            if(get_flag(CF)) {
+                set_flag(CF, 0);
+            } else {
+                set_flag(CF, 1);
+            }
+            break;
         case 0xF6: {
             uint8_t reg_field = get_register_field(memory[1]);
             if(reg_field == 0) { // TEST REG8/MEM8, IMMED8: [0xF6, MOD 000 R/M, DISP-LO, DISP-HI, DATA-8]

@@ -100,8 +100,9 @@ def main():
             print("Restoring devices")
             mb.restore_devices()
         
-        mb.save_state_at(20_000_000)
-        mb.set_log_level_at(['cpu', 20_000_000, 0])
+        mb.save_state_at(20_700_000)    # 20749786, 21423128
+        mb.set_log_level_at(['cpu', 20_700_000, 0])
+        mb.set_log_level_at(['fdc', 20_000_000, 0])
     except Exception as e:
         print(e)
         exit_program()

@@ -26,7 +26,7 @@ DLL_PREFIX
 void module_reset(void) {
     memset(&regs, 0, sizeof(device_regs_t));
     regs.DOR = 0;
-    regs.MSR = 0;
+    regs.MSR = 0x80;
     regs.data_reg = 0;
 }
 
