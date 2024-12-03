@@ -86,19 +86,17 @@ uint8_t * mem_init(uint8_t continue_simulation) {
     return memory;
 }
 
-#define VIDEO_BUFFER_SIZE 20
-#define VIDEO_BUFFER_OFFSET 0xB0000
 
 __declspec(dllexport)
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
-    char video_buf[VIDEO_BUFFER_SIZE];
+    // char video_buf[VIDEO_BUFFER_SIZE];
     if((addr >= 0xA0000) && (addr < 0xC0000)) {
-        if((MEMORY[VIDEO_BUFFER_OFFSET] >= 0x20) && (MEMORY[VIDEO_BUFFER_OFFSET] < 0x7F)) {
-            for(int i=0; i<VIDEO_BUFFER_SIZE; i++) {
-                video_buf[i] = MEMORY[VIDEO_BUFFER_OFFSET+(i*2)];
-            }
-            mylog(1, VIDEO_MEM_LOG_FILE, "VIDEO_BUF: %s", video_buf);
-        }
+        // if((MEMORY[VIDEO_BUFFER_OFFSET] >= 0x20) && (MEMORY[VIDEO_BUFFER_OFFSET] < 0x7F)) {
+        //     for(int i=0; i<VIDEO_BUFFER_SIZE; i++) {
+        //         video_buf[i] = MEMORY[VIDEO_BUFFER_OFFSET+(i*2)];
+        //     }
+        //     mylog(1, VIDEO_MEM_LOG_FILE, "VIDEO_BUF: %s", video_buf);
+        // }
         mylog(0, VIDEO_MEM_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d byte(s)\n", addr, value, width);
     }else {
         mylog(0, MEMORY_LOG_FILE, "MEM_WRITE addr = 0x%06X, value = 0x%04X, width = %d byte(s)\n", addr, value, width);
@@ -123,9 +121,9 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
         printf("MEM READ ERROR: Incorrect width: %d", width);
     }
     if((addr >= 0xA0000) && (addr < 0xC0000)) {
-        mylog(0, VIDEO_MEM_LOG_FILE, "MEM_READ  addr = 0x%06X, value = 0x%04X, width = %d byte(s)\n", addr, width, ret_val);
-    }else {
-        mylog(0, MEMORY_LOG_FILE, "MEM_READ  addr = 0x%06X, value = 0x%04X, width = %d byte(s)\n", addr, width, ret_val);
+        mylog(0, VIDEO_MEM_LOG_FILE, "MEM_READ  addr = 0x%06X, value = 0x%04X, width = %d byte(s)\n", addr, ret_val, width);
+    } else {
+        mylog(0, MEMORY_LOG_FILE, "MEM_READ  addr = 0x%06X, value = 0x%04X, width = %d byte(s)\n", addr, ret_val, width);
     }
     return ret_val;
 }
@@ -144,7 +142,7 @@ uint16_t code_read(uint32_t addr, uint8_t width) {
     } else {
         printf("CODE READ ERROR: Incorrect width: %d", width);
     }
-    mylog(0, CODE_MEM_LOG_FILE, "CODE_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    // mylog(0, CODE_MEM_LOG_FILE, "CODE_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
     return ret_val;
 }
 
@@ -186,7 +184,23 @@ uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR(write
     return 0;
 }
 
+uint32_t counter = 0;
+#define VIDEO_BUFFER_SIZE 128
+#define VIDEO_BUFFER_OFFSET 0xB0000
+
 __declspec(dllexport)
 int module_tick(void) {
+    if(counter == 8000) {
+        char video_buf[VIDEO_BUFFER_SIZE];
+        
+        if((MEMORY[VIDEO_BUFFER_OFFSET] >= 0x20) && (MEMORY[VIDEO_BUFFER_OFFSET] < 0x7F)) {
+            for(int i=0; i<VIDEO_BUFFER_SIZE; i++) {
+                video_buf[i] = MEMORY[VIDEO_BUFFER_OFFSET+(i*2)];
+            }
+            mylog(1, VIDEO_MEM_LOG_FILE, "VIDEO_BUF: %s", video_buf);
+        }
+        counter = 0;
+    }
+    counter++;
     return error;
 }
