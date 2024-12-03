@@ -47,6 +47,7 @@ def system_init():
         "ch1_output_wire": {"devices": ["timer"], "default_state": WireState.WIRE_LOW}, # Dummy wire
         "ch2_output_wire": {"devices": ["timer"], "default_state": WireState.WIRE_LOW}, # Dummy wire
         "int1_wire": {"devices": ["ppi", "intc"], "default_state": WireState.WIRE_LOW},
+        "int6_wire": {"devices": ["fdc", "intc"], "default_state": WireState.WIRE_LOW},
     }
 
     for wire_name, config in wires_map.items():
@@ -103,6 +104,7 @@ def main():
         mb.save_state_at(20_700_000)    # 20749786, 21423128
         mb.set_log_level_at(['cpu', 20_700_000, 0])
         mb.set_log_level_at(['fdc', 20_000_000, 0])
+        # mb.set_log_level_at(['memory', 10, 0])
     except Exception as e:
         print(e)
         exit_program()
