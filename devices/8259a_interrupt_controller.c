@@ -76,11 +76,23 @@ void int1_cb(wire_state_t new_state) {
     }
 }
 
+void int6_cb(wire_state_t new_state) {  // Diskette interrupt
+    uint8_t int_num = 1 << 6;   // 0x0E
+    if(new_state == WIRE_LOW) {
+        trigger_interrupt(int_num, 0);
+    } else {
+        trigger_interrupt(int_num, 1);
+    }
+}
+
 __declspec(dllexport)   // Timer interrupt
 wire_t int0_wire = WIRE_T(WIRE_INPUT, &int0_cb);
 
 __declspec(dllexport)   // Keyboard interrupt
 wire_t int1_wire = WIRE_T(WIRE_INPUT, &int1_cb);
+
+__declspec(dllexport)   // Diskette interrupt
+wire_t int6_wire = WIRE_T(WIRE_INPUT, &int6_cb);
 
 void write_byte(uint8_t addr, uint8_t data) {
     static int state;

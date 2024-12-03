@@ -3,6 +3,8 @@
 #include "wires.h"
 #include <string.h>
 
+// p166
+
 #define DEVICE_LOG_FILE "logs/fdc.log"
 #define DEVICE_DATA_FILE "data/fdc.bin"
 
@@ -10,17 +12,12 @@ typedef struct {
     uint8_t DOR;    // Data output register
     uint8_t MSR;
     uint8_t data_reg;
+    uint8_t delayed_int;
+    uint16_t delayed_int_ticks;
 } device_regs_t;
 
 device_regs_t regs;
 uint8_t error;
-
-void dummy_cb(wire_state_t new_state) {
-    return;
-}
-
-DLL_PREFIX   // Keyboard interrupt
-wire_t test_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
 
 DLL_PREFIX
 void module_reset(void) {
@@ -34,6 +31,10 @@ DLL_PREFIX
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     mylog(0, DEVICE_LOG_FILE, "FDC_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     if(addr == 0x3F2) {
+        if(((regs.DOR & 0x04) == 0) && ((value & 0x04) == 0x04)) {
+            regs.delayed_int = 1;
+            regs.delayed_int_ticks = 10;
+        }
         regs.DOR = value;
     } else if(addr == 0x3F4) {
         regs.MSR = value;
@@ -75,7 +76,28 @@ void module_restore(void) {
     }
 }
 
+void dummy_cb(wire_state_t new_state) {
+    return;
+}
+
+DLL_PREFIX   // Disk Controller interrupt
+wire_t int6_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+
 DLL_PREFIX
 int module_tick(void) {
+    if(regs.delayed_int == 1) {
+        if(regs.delayed_int_ticks > 0) {
+            regs.delayed_int_ticks --;
+        } else {
+            if(int6_wire.wire_get_state() == WIRE_LOW) {
+                mylog(0, DEVICE_LOG_FILE, "FDC Triggering Interrupt 6\n");
+                int6_wire.wire_set_state(WIRE_HIGH);
+                regs.delayed_int_ticks = 20;
+            } else {
+                int6_wire.wire_set_state(WIRE_LOW);
+                regs.delayed_int = 0;
+            }
+        }
+    }
     return error;
 }
