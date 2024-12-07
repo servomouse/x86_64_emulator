@@ -40,6 +40,9 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
         regs.MSR = value;
     } else if(addr == 0x3F5) {
         regs.data_reg = value;
+        if(value == 0x08) {
+            regs.MSR |= 0x40;
+        }
     } else {
         printf("FDC ERROR: Incorrect address: 0x%04X", addr);
         error = 1;
@@ -53,6 +56,7 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
         ret_val = regs.DOR;
     } else if(addr == 0x3F4) {
         ret_val = regs.MSR;
+        regs.MSR &= ~0x40;
     } else if(addr == 0x3F5) {
         ret_val = regs.data_reg;
     } else {
@@ -76,12 +80,13 @@ void module_restore(void) {
     }
 }
 
-void dummy_cb(wire_state_t new_state) {
-    return;
-}
+// void dummy_cb(wire_state_t new_state) {
+//     return;
+// }
 
 DLL_PREFIX   // Disk Controller interrupt
-wire_t int6_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+pin_t int6_pin = CREATE_PIN(PIN_OUTPUT_PP, &dummy_cb);
+// wire_t int6_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
 
 DLL_PREFIX
 int module_tick(void) {
@@ -89,12 +94,12 @@ int module_tick(void) {
         if(regs.delayed_int_ticks > 0) {
             regs.delayed_int_ticks --;
         } else {
-            if(int6_wire.wire_get_state() == WIRE_LOW) {
+            if(int6_pin.pin_get_state() == 0) {
                 mylog(0, DEVICE_LOG_FILE, "FDC Triggering Interrupt 6\n");
-                int6_wire.wire_set_state(WIRE_HIGH);
+                int6_pin.pin_set_state(1);
                 regs.delayed_int_ticks = 20;
             } else {
-                int6_wire.wire_set_state(WIRE_LOW);
+                int6_pin.pin_set_state(0);
                 regs.delayed_int = 0;
             }
         }
