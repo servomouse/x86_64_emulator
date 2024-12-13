@@ -1,6 +1,6 @@
 #include "8253_timer.h"
 #include "utils.h"
-#include "wires.h"
+#include "pins.h"
 #include <string.h>
 
 #define DEVICE_LOG_FILE "logs/timer.log"
@@ -13,7 +13,7 @@ typedef struct {
     uint8_t bcd;
     uint16_t value;
     uint16_t counter;
-    wire_t* output;
+    pin_t* output;
     uint8_t counts;
 } timer_t;
 
@@ -23,12 +23,8 @@ typedef struct {
 
 device_regs_t regs;
 
-void dummy_cb(wire_state_t new_state) {
-    return;
-}
-
-void set_timer_state(timer_t * timer, wire_state_t gate_state) {
-    if(gate_state == WIRE_LOW) {
+void set_timer_state(timer_t * timer, uint8_t gate_state) {
+    if(gate_state == 0) {
         timer->counts = 0;
     } else {
         timer->counts = 1;
@@ -38,35 +34,25 @@ void set_timer_state(timer_t * timer, wire_state_t gate_state) {
     }
 }
 
-void gate0_cb(wire_state_t new_state) {
+void gate0_cb(uint8_t new_state) {
     set_timer_state(&(regs.timer[0]), new_state);
 }
 
-void gate1_cb(wire_state_t new_state) {
+void gate1_cb(uint8_t new_state) {
     set_timer_state(&(regs.timer[1]), new_state);
 }
 
-void gate2_cb(wire_state_t new_state) {
+void gate2_cb(uint8_t new_state) {
     set_timer_state(&(regs.timer[2]), new_state);
 }
 
-__declspec(dllexport)
-wire_t int0_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+CREATE_PIN(int0_pin, PIN_OUTPUT_PP)
+CREATE_PIN(ch1_output_pin, PIN_OUTPUT_PP)
+CREATE_PIN(ch2_output_pin, PIN_OUTPUT_PP)
 
-__declspec(dllexport)
-wire_t ch0_gate_wire = WIRE_T(WIRE_INPUT, &gate0_cb);
-
-__declspec(dllexport)
-wire_t ch1_output_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
-
-__declspec(dllexport)
-wire_t ch1_gate_wire = WIRE_T(WIRE_INPUT, &gate1_cb);
-
-__declspec(dllexport)
-wire_t ch2_output_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
-
-__declspec(dllexport)
-wire_t ch2_gate_wire = WIRE_T(WIRE_INPUT, &gate2_cb);
+CREATE_PIN(ch0_gate_pin, PIN_INPUT, &gate0_cb)
+CREATE_PIN(ch1_gate_pin, PIN_INPUT, &gate1_cb)
+CREATE_PIN(ch2_gate_pin, PIN_INPUT, &gate2_cb)
 
 __declspec(dllexport)
 void module_save(void) {
@@ -82,9 +68,9 @@ void module_restore(void) {
     if(EXIT_SUCCESS == restore_data(&data, sizeof(device_regs_t), DEVICE_DATA_FILE)) {
         memcpy(&regs, &data, sizeof(device_regs_t));
     }
-    regs.timer[0].output = &int0_wire;
-    regs.timer[1].output = &ch1_output_wire;
-    regs.timer[2].output = &ch2_output_wire;
+    regs.timer[0].output = &int0_pin;
+    regs.timer[1].output = &ch1_output_pin;
+    regs.timer[2].output = &ch2_output_pin;
 }
 
 __declspec(dllexport)
@@ -98,9 +84,9 @@ void module_reset(void) {
     regs.timer[i].counter = 0;
     regs.timer[i].counts = 0;
     }
-    regs.timer[0].output = &int0_wire;
-    regs.timer[1].output = &ch1_output_wire;
-    regs.timer[2].output = &ch2_output_wire;
+    regs.timer[0].output = &int0_pin;
+    regs.timer[1].output = &ch1_output_pin;
+    regs.timer[2].output = &ch2_output_pin;
 }
 
 static void set_value(timer_t *timer, uint16_t value) {
@@ -217,7 +203,6 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
 }
 
 void timer_tick(timer_t *timer) {
-    // struct {uint8_t read_load; uint8_t mode; uint8_t bcd; uint16_t value; uint16_t counter; wire_t* output; uint8_t counts} timer;
     if(timer->counts == 0) {
         return;
     }
@@ -225,8 +210,8 @@ void timer_tick(timer_t *timer) {
         case 0:     // Interrupt on terminal count (one-shot)
         case 1: {   // Programmable one-shot (retriggerable)
             if(timer->counter == 0) {
-                if(timer->output->wire_get_state() == WIRE_LOW) {
-                    timer->output->wire_set_state(WIRE_HIGH);
+                if(timer->output->get_state() == 0) {
+                    timer->output->set_state(1);
                 }
                 if(timer->mode == 0) {
                     timer->value = 0;
@@ -236,8 +221,8 @@ void timer_tick(timer_t *timer) {
                     timer->counts = 0;
                 }
             } else {
-                if(timer->output->wire_get_state() == WIRE_HIGH) {
-                    timer->output->wire_set_state(WIRE_LOW);
+                if(timer->output->get_state() == 1) {
+                    timer->output->set_state(0);
                 }
                 timer->counter --;
             }
@@ -248,8 +233,8 @@ void timer_tick(timer_t *timer) {
         case 5:     // Hardware triggered strobe
         case 6: {   // Rate generator (auto reload)
             if(timer->counter == 0) {
-                if(timer->output->wire_get_state() == WIRE_LOW) {
-                    timer->output->wire_set_state(WIRE_HIGH);
+                if(timer->output->get_state() == 0) {
+                    timer->output->set_state(1);
                 }
                 if(timer->mode == 4) {
                     timer->value = 0;
@@ -260,12 +245,12 @@ void timer_tick(timer_t *timer) {
                 }
             } else {
                 if(timer->counter == 1) {    // Low between 1 and 0, the rest of the time is high
-                    if(timer->output->wire_get_state() == WIRE_HIGH) {
-                        timer->output->wire_set_state(WIRE_LOW);
+                    if(timer->output->get_state() == 1) {
+                        timer->output->set_state(0);
                     }
                 } else {
-                    if(timer->output->wire_get_state() == WIRE_LOW) {
-                        timer->output->wire_set_state(WIRE_HIGH);
+                    if(timer->output->get_state() == 0) {
+                        timer->output->set_state(1);
                     }
                 }
                 timer->counter --;
@@ -275,18 +260,18 @@ void timer_tick(timer_t *timer) {
         case 3:     // Square wave generator
         case 7: {
             if(timer->counter == 0) {
-                if(timer->output->wire_get_state() == WIRE_LOW) {
-                    timer->output->wire_set_state(WIRE_HIGH);
+                if(timer->output->get_state() == 0) {
+                    timer->output->set_state(1);
                 }
                 timer->counter = timer->value;
             } else {
                 if(timer->counter <= (timer->value >> 1)) {    // First half of the count stay high, then low
-                    if(timer->output->wire_get_state() == WIRE_HIGH) {
-                        timer->output->wire_set_state(WIRE_LOW);
+                    if(timer->output->get_state() == 1) {
+                        timer->output->set_state(0);
                     }
                 } else {
-                    if(timer->output->wire_get_state() == WIRE_LOW) {
-                        timer->output->wire_set_state(WIRE_HIGH);
+                    if(timer->output->get_state() == 0) {
+                        timer->output->set_state(1);
                     }
                 }
                 timer->counter --;

@@ -1,5 +1,4 @@
 #include "8237a-5_dma.h"
-#include "wires.h"
 #include "utils.h"
 #include <string.h>
 

@@ -1,5 +1,5 @@
 #include "8259a_interrupt_controller.h"
-#include "wires.h"
+#include "pins.h"
 #include "utils.h"
 #include <string.h>
 
@@ -27,20 +27,45 @@ typedef struct {
 
 device_regs_t regs;
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_reset(void) {
     memset(&regs, 0, sizeof(device_regs_t));
 }
 
-void dummy_cb(wire_state_t new_state) {
-    return;
+void trigger_interrupt(uint8_t int_num, uint8_t active);
+
+void int0_cb(uint8_t new_state) {
+    uint8_t int_num = 0;
+    if(new_state == 0) {
+        trigger_interrupt(int_num, 0);
+    } else {
+        trigger_interrupt(int_num, 1);
+    }
 }
 
-__declspec(dllexport)
-wire_t nmi_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+void int1_cb(uint8_t new_state) {
+    uint8_t int_num = 1;
+    if(new_state == 0) {
+        trigger_interrupt(int_num, 0);
+    } else {
+        trigger_interrupt(int_num, 1);
+    }
+}
 
-__declspec(dllexport)
-wire_t int_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+void int6_cb(uint8_t new_state) {  // Diskette interrupt
+    uint8_t int_num = 0x0E;   // 0x0E or 0x06
+    if(new_state == 0) {
+        trigger_interrupt(int_num, 0);
+    } else {
+        trigger_interrupt(int_num, 1);
+    }
+}
+
+CREATE_PIN(int0_pin, PIN_INPUT, &int0_cb)   // Timer interrupt
+CREATE_PIN(int1_pin, PIN_INPUT, &int1_cb)   // Keyboard interrupt
+CREATE_PIN(int6_pin, PIN_INPUT, &int6_cb)   // Diskette interrupt
+CREATE_PIN(nmi_pin, PIN_OUTPUT_PP)   // Diskette interrupt
+CREATE_PIN(int_pin, PIN_OUTPUT_PP)   // Diskette interrupt
 
 void trigger_interrupt(uint8_t int_num, uint8_t active) {
     uint8_t int_mask = 1 << int_num;
@@ -48,52 +73,16 @@ void trigger_interrupt(uint8_t int_num, uint8_t active) {
         regs.triggerded_int = 0;
         regs.ISR &= ~int_mask;
         regs.IRR &= ~int_mask;
-        int_wire.wire_set_state(WIRE_LOW);
+        int_pin.set_state(0);
     } else {
         regs.triggerded_int = int_num;
         regs.IRR |= int_mask;
         if(((regs.IMR & int_mask) == 0) && (regs.ISR == 0)) {
             regs.ISR |= int_mask;
-            int_wire.wire_set_state(WIRE_HIGH);
+            int_pin.set_state(1);
         }
     }
 }
-
-void int0_cb(wire_state_t new_state) {
-    uint8_t int_num = 0;
-    if(new_state == WIRE_LOW) {
-        trigger_interrupt(int_num, 0);
-    } else {
-        trigger_interrupt(int_num, 1);
-    }
-}
-
-void int1_cb(wire_state_t new_state) {
-    uint8_t int_num = 1;
-    if(new_state == WIRE_LOW) {
-        trigger_interrupt(int_num, 0);
-    } else {
-        trigger_interrupt(int_num, 1);
-    }
-}
-
-void int6_cb(wire_state_t new_state) {  // Diskette interrupt
-    uint8_t int_num = 0x0E;   // 0x0E or 0x06
-    if(new_state == WIRE_LOW) {
-        trigger_interrupt(int_num, 0);
-    } else {
-        trigger_interrupt(int_num, 1);
-    }
-}
-
-__declspec(dllexport)   // Timer interrupt
-wire_t int0_wire = WIRE_T(WIRE_INPUT, &int0_cb);
-
-__declspec(dllexport)   // Keyboard interrupt
-wire_t int1_wire = WIRE_T(WIRE_INPUT, &int1_cb);
-
-__declspec(dllexport)   // Diskette interrupt
-wire_t int6_wire = WIRE_T(WIRE_INPUT, &int6_cb);
 
 void write_byte(uint8_t addr, uint8_t data) {
     static int state;
@@ -128,7 +117,7 @@ void write_byte(uint8_t addr, uint8_t data) {
     
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     mylog(0, DEVICE_LOG_FILE, "INT_CONTROLLER_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     // regs.int_register = value;
@@ -139,13 +128,13 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     }
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 uint16_t data_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
     if(addr == 0xA0) {
         ret_val = regs.triggerded_int;
-        if(int_wire.wire_get_state() == WIRE_HIGH) {
-            int_wire.wire_set_state(WIRE_LOW);
+        if(int_pin.get_state() == 1) {
+            int_pin.set_state(0);
         }
     } else if(addr == 0x20) {
         if(regs.OCW3 & 0x01) {
@@ -160,12 +149,12 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
     return ret_val;
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_save(void) {
     store_data(&regs, sizeof(device_regs_t), DEVICE_DATA_FILE);
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_restore(void) {
     device_regs_t data;
     if(EXIT_SUCCESS == restore_data(&data, sizeof(device_regs_t), DEVICE_DATA_FILE)) {
@@ -173,7 +162,7 @@ void module_restore(void) {
     }
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 int module_tick(void) {
     return 0;
 }

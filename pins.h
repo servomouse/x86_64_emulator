@@ -19,7 +19,7 @@ typedef struct pin_t {
     uint8_t(*wire_get_state)(void);
     void(*set_state)(uint8_t);
     void(*wire_set_state)(uint8_t);
-    void(*pin_state_change_cb)(uint8_t);  // User defined
+    void(*wire_state_change_cb)(uint8_t);  // User defined
 } pin_t;
 
 // Create pin with custom callback
@@ -34,7 +34,7 @@ pin_t _pin_name = {                             \
     .wire_get_state = NULL,                     \
     .set_state = _pin_name##_set_state,         \
     .wire_set_state = NULL,                     \
-    .pin_state_change_cb = _cb                  \
+    .wire_state_change_cb = _cb                  \
 };                                              \
 void _pin_name##_set_state(uint8_t new_state) { \
     if(_pin_name.wire_set_state) {              \
@@ -63,7 +63,7 @@ pin_t _pin_name = {                             \
     .wire_get_state = NULL,                     \
     .set_state = _pin_name##_set_state,         \
     .wire_set_state = NULL,                     \
-    .pin_state_change_cb = dummy_cb             \
+    .wire_state_change_cb = dummy_cb             \
 };                                              \
 void _pin_name##_set_state(uint8_t new_state) { \
     if(_pin_name.wire_set_state) {              \

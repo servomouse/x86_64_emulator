@@ -1,5 +1,5 @@
 #include "8086_cpu.h"
-#include "wires.h"
+#include "pins.h"
 #include <string.h>
 
 #define COMMON_LOG_FILE "logs/cpu_log.txt"
@@ -3733,14 +3733,14 @@ int module_tick(void) {
     return EXIT_FAILURE;
 }
 
-void dummy_nmi_cb(wire_state_t new_state) {
-    if(new_state == WIRE_HIGH)
+void dummy_nmi_cb(uint8_t new_state) {
+    if(new_state == 1)
         mylog(1, "logs/main.log", "NMI activated\n");
     return;
 }
 
-void int_cb(wire_state_t new_state) {
-    if(new_state == WIRE_HIGH && REGS->ticks > 0) {
+void int_cb(uint8_t new_state) {
+    if(new_state == 1 && REGS->ticks > 0) {
         mylog(1, "logs/main.log", "INT activated\n");
         uint8_t vec = io_read(0xA0, 1);
         if(vec != 0xFF) {
@@ -3758,7 +3758,7 @@ uint32_t cpu_get_ticks(void) {
 }
 
 DLL_PREFIX
-wire_t nmi_wire = WIRE_T(WIRE_INPUT, &dummy_nmi_cb);
+CREATE_PIN(nmi_pin, PIN_INPUT, &dummy_nmi_cb);
 
 DLL_PREFIX
-wire_t int_wire = WIRE_T(WIRE_INPUT, &int_cb);
+CREATE_PIN(int_pin, PIN_INPUT, &int_cb);

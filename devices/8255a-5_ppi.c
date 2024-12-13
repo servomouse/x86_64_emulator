@@ -1,7 +1,6 @@
 #include "8255a-5_ppi.h"
-// #include "8086.h"
 #include "utils.h"
-#include "wires.h"
+#include "pins.h"
 #include <string.h>
 
 #define DEVICE_LOG_FILE "logs/8255a-5_ppi.log"
@@ -27,12 +26,7 @@ typedef struct {
 
 device_regs_t regs;
 
-void dummy_cb(wire_state_t new_state) {
-    return;
-}
-
-__declspec(dllexport)   // Keyboard interrupt
-wire_t int1_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+CREATE_PIN(int1_pin, PIN_OUTPUT_PP)   // Keyboard interrupt
 
 void update_portc(void) {
     regs.portc_reg = 0;
@@ -130,12 +124,12 @@ int module_tick(void) {
         if(regs.delayed_int_ticks > 0) {
             regs.delayed_int_ticks --;
         } else {
-            if(int1_wire.wire_get_state() == WIRE_LOW) {
+            if(int1_pin.get_state() == 0) {
                 mylog(0, DEVICE_LOG_FILE, "PPI Triggering Interrupt 2\n");
-                int1_wire.wire_set_state(WIRE_HIGH);
+                int1_pin.set_state(1);
                 regs.delayed_int_ticks = 20;
             } else {
-                int1_wire.wire_set_state(WIRE_LOW);
+                int1_pin.set_state(0);
                 regs.delayed_int = 0;
             }
         }

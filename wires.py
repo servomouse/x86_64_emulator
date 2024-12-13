@@ -21,9 +21,11 @@ class Wire:
         print(f"{self.name}: setting new state to {new_state}")
         self.state = new_state
         for conn in self.connections:
-            conn.wire_state_change_cb(new_state)
+            if new_state != conn.get_state():
+                conn.set_state(new_state)
+                conn.wire_state_change_cb(new_state)
     
-    def connect_device(self, device):
+    def connect_device(self, device, pin_name):
         @ctypes.CFUNCTYPE(ctypes.c_uint8)
         def _wire_get_state():
             return self.state
@@ -35,10 +37,12 @@ class Wire:
         class WireStruct(ctypes.Structure):
             _fields_ = [("wire_type", WireType),
                         ("wire_get_state", ctypes.CFUNCTYPE(ctypes.c_uint8)),
+                        ("get_state", ctypes.CFUNCTYPE(ctypes.c_uint8)),
                         ("wire_set_state", ctypes.CFUNCTYPE(None, ctypes.c_uint8)),
+                        ("set_state", ctypes.CFUNCTYPE(None, ctypes.c_uint8)),
                         ("wire_state_change_cb", ctypes.CFUNCTYPE(None, ctypes.c_uint8))]
 
-        wire_struct = WireStruct.in_dll(device, self.name)
+        wire_struct = WireStruct.in_dll(device, pin_name)
         wire_struct.wire_get_state = _wire_get_state
         wire_struct.wire_set_state = _wire_set_state
         self.connections.append(wire_struct)

@@ -41,19 +41,19 @@ def system_init():
                 ioc.map_device(addr_range[0], addr_range[1], dev.data_write_p, dev.data_read_p)
 
     wires_map = {
-        "nmi_wire": {"devices": ["cpu", "intc"], "default_state": 0},
-        "int_wire": {"devices": ["cpu", "intc"], "default_state": 0},
-        "int0_wire": {"devices": ["timer", "intc"], "default_state": 0},
-        "ch1_output_wire": {"devices": ["timer"], "default_state": 0},
-        "ch2_output_wire": {"devices": ["timer"], "default_state": 0},
-        "int1_wire": {"devices": ["ppi", "intc"], "default_state": 0},
-        "int6_wire": {"devices": ["fdc", "intc"], "default_state": 0},
+        "nmi_wire": {"devices": {"cpu": "nmi_pin", "intc": "nmi_pin"}, "default_state": 0},
+        "int_wire": {"devices": {"cpu": "int_pin", "intc": "int_pin"}, "default_state": 0},
+        "int0_wire": {"devices": {"timer": "int0_pin", "intc": "int0_pin"}, "default_state": 0},
+        "ch1_output_wire": {"devices": {"timer": "ch1_output_pin"}, "default_state": 0},
+        "ch2_output_wire": {"devices": {"timer": "ch2_output_pin"}, "default_state": 0},
+        "int1_wire": {"devices": {"ppi": "int1_wire", "intc": "int1_wire"}, "default_state": 0},
+        "int6_wire": {"devices": {"fdc": "int6_wire", "intc": "int6_wire"}, "default_state": 0},
     }
 
     for wire_name, config in wires_map.items():
         temp_wire = Wire(wire_name)
-        for dev in config["devices"]:
-            temp_wire.connect_device(mb.devices[dev].device)
+        for dev, pin_name in config["devices"].items():
+            temp_wire.connect_device(mb.devices[dev].device, pin_name)
         temp_wire.set_state(config["default_state"])
         wires.append(temp_wire)
 
