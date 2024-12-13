@@ -46,14 +46,14 @@ def system_init():
         "int0_wire": {"devices": {"timer": "int0_pin", "intc": "int0_pin"}, "default_state": 0},
         "ch1_output_wire": {"devices": {"timer": "ch1_output_pin"}, "default_state": 0},
         "ch2_output_wire": {"devices": {"timer": "ch2_output_pin"}, "default_state": 0},
-        "int1_wire": {"devices": {"ppi": "int1_wire", "intc": "int1_wire"}, "default_state": 0},
-        "int6_wire": {"devices": {"fdc": "int6_wire", "intc": "int6_wire"}, "default_state": 0},
+        "int1_wire": {"devices": {"ppi": "int1_pin", "intc": "int1_pin"}, "default_state": 0},
+        "int6_wire": {"devices": {"fdc": "int6_pin", "intc": "int6_pin"}, "default_state": 0},
     }
 
     for wire_name, config in wires_map.items():
         temp_wire = Wire(wire_name)
         for dev, pin_name in config["devices"].items():
-            temp_wire.connect_device(mb.devices[dev].device, pin_name)
+            temp_wire.connect_device(mb.devices[dev].device, pin_name, dev)
         temp_wire.set_state(config["default_state"])
         wires.append(temp_wire)
 

@@ -34,7 +34,7 @@ pin_t _pin_name = {                             \
     .wire_get_state = NULL,                     \
     .set_state = _pin_name##_set_state,         \
     .wire_set_state = NULL,                     \
-    .wire_state_change_cb = _cb                  \
+    .wire_state_change_cb = _cb                 \
 };                                              \
 void _pin_name##_set_state(uint8_t new_state) { \
     if(_pin_name.wire_set_state) {              \
@@ -63,7 +63,7 @@ pin_t _pin_name = {                             \
     .wire_get_state = NULL,                     \
     .set_state = _pin_name##_set_state,         \
     .wire_set_state = NULL,                     \
-    .wire_state_change_cb = dummy_cb             \
+    .wire_state_change_cb = dummy_cb            \
 };                                              \
 void _pin_name##_set_state(uint8_t new_state) { \
     if(_pin_name.wire_set_state) {              \
