@@ -1,6 +1,5 @@
 #include "FDC.h"
-#include "utils.h"
-#include "wires.h"
+#include "pins.h"
 #include <string.h>
 
 // p166
@@ -80,13 +79,7 @@ void module_restore(void) {
     }
 }
 
-// void dummy_cb(wire_state_t new_state) {
-//     return;
-// }
-
-DLL_PREFIX   // Disk Controller interrupt
-pin_t int6_pin = CREATE_PIN(PIN_OUTPUT_PP, &dummy_cb);
-// wire_t int6_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+CREATE_PIN(int6_pin, PIN_OUTPUT_PP)   // Disk Controller interrupt
 
 DLL_PREFIX
 int module_tick(void) {
@@ -94,12 +87,12 @@ int module_tick(void) {
         if(regs.delayed_int_ticks > 0) {
             regs.delayed_int_ticks --;
         } else {
-            if(int6_pin.pin_get_state() == 0) {
+            if(int6_pin.get_state() == 0) {
                 mylog(0, DEVICE_LOG_FILE, "FDC Triggering Interrupt 6\n");
-                int6_pin.pin_set_state(1);
+                int6_pin.set_state(1);
                 regs.delayed_int_ticks = 20;
             } else {
-                int6_pin.pin_set_state(0);
+                int6_pin.set_state(0);
                 regs.delayed_int = 0;
             }
         }

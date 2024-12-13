@@ -3704,6 +3704,9 @@ int module_tick(void) {
     } else if(REGS->IP == 0xF99C) {
         mylog(0, "logs/short.log", "PRINT_HEX procedure\n");
         printf("PRINT_HEX procedure\n");
+    } else if(REGS->IP == 0xEE41) {
+        mylog(0, "logs/short.log", "NEC_OUTPUT procedure\n");
+        printf("NEC_OUTPUT procedure\n");
     } else if(REGS->IP == 0xE551) {
         mylog(0, "logs/short.log", "DISKETTE ATTACHMENT TEST\n");
         printf("DISKETTE ATTACHMENT TEST\n");

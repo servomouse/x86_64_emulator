@@ -3,7 +3,7 @@ import os
 import sys
 import time
 
-from wires import (WireType, WireState, Wire)
+from wires import (WireType, Wire)
 from device_manager import (DevModule, AddressSpace, Processor, DevManager)
 from build import get_config
 
@@ -41,13 +41,13 @@ def system_init():
                 ioc.map_device(addr_range[0], addr_range[1], dev.data_write_p, dev.data_read_p)
 
     wires_map = {
-        "nmi_wire": {"devices": ["cpu", "intc"], "default_state": WireState.WIRE_LOW},
-        "int_wire": {"devices": ["cpu", "intc"], "default_state": WireState.WIRE_LOW},
-        "int0_wire": {"devices": ["timer", "intc"], "default_state": WireState.WIRE_LOW},
-        "ch1_output_wire": {"devices": ["timer"], "default_state": WireState.WIRE_LOW}, # Dummy wire
-        "ch2_output_wire": {"devices": ["timer"], "default_state": WireState.WIRE_LOW}, # Dummy wire
-        "int1_wire": {"devices": ["ppi", "intc"], "default_state": WireState.WIRE_LOW},
-        "int6_wire": {"devices": ["fdc", "intc"], "default_state": WireState.WIRE_LOW},
+        "nmi_wire": {"devices": ["cpu", "intc"], "default_state": 0},
+        "int_wire": {"devices": ["cpu", "intc"], "default_state": 0},
+        "int0_wire": {"devices": ["timer", "intc"], "default_state": 0},
+        "ch1_output_wire": {"devices": ["timer"], "default_state": 0},
+        "ch2_output_wire": {"devices": ["timer"], "default_state": 0},
+        "int1_wire": {"devices": ["ppi", "intc"], "default_state": 0},
+        "int6_wire": {"devices": ["fdc", "intc"], "default_state": 0},
     }
 
     for wire_name, config in wires_map.items():
@@ -104,6 +104,7 @@ def main():
         mb.save_state_at(20_700_000)    # 20749786, 21423128
         mb.set_log_level_at(['cpu', 20_700_000, 0])
         mb.set_log_level_at(['fdc', 20_000_000, 0])
+        mb.set_log_level_at(['intc', 10, 0])
         # mb.set_log_level_at(['memory', 10, 0])
     except Exception as e:
         print(e)

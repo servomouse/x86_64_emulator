@@ -3,6 +3,7 @@ import os
 import sys
 import glob
 import toml     # pip install toml
+# import hcl2 as hcl     # pip install python-hcl2
 
 # gcc -shared -o bin/8259a_int_controller.dll devices/8259a_interrupt_controller.c utils.c log_server_iface/logs_win.c -lws2_32 -I. -I./devices
 # gcc -shared -o bin/8259a_int_controller.dll devices/8259a_interrupt_controller.c utils.c -I. -I./devices -Wall
@@ -16,6 +17,7 @@ common_flags = ["-lm", "-g", "-Wall", "-lws2_32", "-I.", "-I./devices", "-I./tes
 def get_config(filename: str):
     with open(filename, 'r') as f:
         targets = toml.load(f)
+        # targets = hcl.load(f)
     return targets
 
 
@@ -52,6 +54,7 @@ def build_target(target, config):
 
 def build(target):
     config = get_config("config.toml")
+    # config = get_config("config.hcl")
     if target == "all":
         for target in config:
             if build_target(target, config):

@@ -43,23 +43,24 @@ __declspec(dllexport)
 wire_t int_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
 
 void trigger_interrupt(uint8_t int_num, uint8_t active) {
+    uint8_t int_mask = 1 << int_num;
     if(active == 0) {
-        regs.triggerded_int &= ~int_num;
-        regs.ISR &= ~int_num;
-        regs.IRR &= ~int_num;
+        regs.triggerded_int = 0;
+        regs.ISR &= ~int_mask;
+        regs.IRR &= ~int_mask;
         int_wire.wire_set_state(WIRE_LOW);
     } else {
         regs.triggerded_int = int_num;
-        regs.IRR = int_num;
-        if((regs.IMR & int_num) == 0) {
-            regs.ISR = int_num;
+        regs.IRR |= int_mask;
+        if(((regs.IMR & int_mask) == 0) && (regs.ISR == 0)) {
+            regs.ISR |= int_mask;
             int_wire.wire_set_state(WIRE_HIGH);
         }
     }
 }
 
 void int0_cb(wire_state_t new_state) {
-    uint8_t int_num = 1 << 0;
+    uint8_t int_num = 0;
     if(new_state == WIRE_LOW) {
         trigger_interrupt(int_num, 0);
     } else {
@@ -68,7 +69,7 @@ void int0_cb(wire_state_t new_state) {
 }
 
 void int1_cb(wire_state_t new_state) {
-    uint8_t int_num = 1 << 1;
+    uint8_t int_num = 1;
     if(new_state == WIRE_LOW) {
         trigger_interrupt(int_num, 0);
     } else {
@@ -77,7 +78,7 @@ void int1_cb(wire_state_t new_state) {
 }
 
 void int6_cb(wire_state_t new_state) {  // Diskette interrupt
-    uint8_t int_num = 1 << 6;   // 0x0E
+    uint8_t int_num = 0x0E;   // 0x0E or 0x06
     if(new_state == WIRE_LOW) {
         trigger_interrupt(int_num, 0);
     } else {
