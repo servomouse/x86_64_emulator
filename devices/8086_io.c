@@ -87,7 +87,7 @@ static uint8_t check_allocation(void) {
 }
 
 /* Retunrs an ID which can be used to unmap the device. In case of error returns 0 */
-__declspec(dllexport)
+DLL_PREFIX
 uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR(write_func), READ_FUNC_PTR(read_func)) {
     uint32_t id = get_id(start_addr, end_addr);
     uint32_t overlaps_id = range_overlaps(start_addr, end_addr);
@@ -119,7 +119,7 @@ uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR(write
 }
 
 /* Use the ID returned by the map_device function to unmap it */
-__declspec(dllexport)
+DLL_PREFIX
 void unmap_device(uint32_t id) {
     for(uint32_t i=0; i<io_space.num_devices; i++) {
         if(io_space.dev_table[i].id == id) {
@@ -131,7 +131,7 @@ void unmap_device(uint32_t id) {
 
 uint8_t port213;
 
-__declspec(dllexport)
+DLL_PREFIX
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     uint8_t addr_found = 0;
     for(uint32_t i=0; i<io_space.num_devices; i++) {
@@ -169,7 +169,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
 
 // uint8_t counter = 0xFF;
 
-__declspec(dllexport)
+DLL_PREFIX
 uint16_t data_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0xFF;
     if(width == 2) {
@@ -247,7 +247,7 @@ int restore_io(uint8_t *io_space, const char *filename) {
     return EXIT_SUCCESS;
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_reset(void) {
     IO_SPACE = (uint8_t*)calloc(sizeof(uint8_t), IO_SPACE_SIZE);
     // mda_init();
@@ -276,12 +276,12 @@ int get_io_error(void) {
     return io_error;
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_save(void) {
     store_data(IO_SPACE, IO_SPACE_SIZE, IO_DUMP_FILE);
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_restore(void) {
     uint8_t temp[IO_SPACE_SIZE] = {0};
     if(EXIT_SUCCESS == restore_data(temp, IO_SPACE_SIZE, IO_DUMP_FILE)) {
@@ -289,7 +289,7 @@ void module_restore(void) {
     }
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 int module_tick(uint32_t ticks) {
     return io_error;
 }

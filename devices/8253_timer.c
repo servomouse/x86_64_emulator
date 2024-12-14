@@ -57,7 +57,7 @@ CREATE_PIN(ch0_gate_pin, PIN_INPUT, &gate0_cb)
 CREATE_PIN(ch1_gate_pin, PIN_INPUT, &gate1_cb)
 CREATE_PIN(ch2_gate_pin, PIN_INPUT, &gate2_cb)
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_save(void) {
     // regs.timer[0].output = NULL;
     // regs.timer[1].output = NULL;
@@ -65,7 +65,7 @@ void module_save(void) {
     store_data(&regs, sizeof(device_regs_t), DEVICE_DATA_FILE);
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_restore(void) {
     device_regs_t data;
     if(EXIT_SUCCESS == restore_data(&data, sizeof(device_regs_t), DEVICE_DATA_FILE)) {
@@ -76,7 +76,7 @@ void module_restore(void) {
     regs.timer[2].output = &ch2_output_pin;
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_reset(void) {
     for(uint8_t i=0; i<3; i++) {
     regs.timer[i].read_load = 0;
@@ -145,7 +145,7 @@ static uint8_t get_value(timer_t *timer) {
     return ret_val;
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     mylog(0, DEVICE_LOG_FILE, "TIMER_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
     switch(addr) {
@@ -182,7 +182,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     }
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 uint16_t data_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
     switch(addr) {
@@ -286,7 +286,7 @@ void timer_tick(timer_t *timer) {
 
 uint8_t tick_divider;
 
-__declspec(dllexport)
+DLL_PREFIX
 int module_tick(uint32_t ticks) {
     if(tick_divider) {
         tick_divider = 0;

@@ -76,7 +76,7 @@ int restore_memory(uint8_t *memory, const char *filename) {
     return EXIT_SUCCESS;
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 uint8_t * mem_init(uint8_t continue_simulation) {
     uint8_t *memory = (uint8_t*)calloc(sizeof(uint8_t), MEMORY_SIZE);
     if(continue_simulation) {
@@ -92,7 +92,7 @@ uint8_t * mem_init(uint8_t continue_simulation) {
 }
 
 
-__declspec(dllexport)
+DLL_PREFIX
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     // char video_buf[VIDEO_BUFFER_SIZE];
     if((addr >= 0xA0000) && (addr < 0xC0000)) {
@@ -115,7 +115,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
     }
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 uint16_t data_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
     if(width == 1) {
@@ -133,7 +133,7 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
     return ret_val;
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 uint16_t code_read(uint32_t addr, uint8_t width) {
     uint16_t ret_val = 0;
     if(addr < 0xE0000) {
@@ -151,12 +151,12 @@ uint16_t code_read(uint32_t addr, uint8_t width) {
     return ret_val;
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_save(void) {
     store_data(MEMORY, MEMORY_SIZE, MEMORY_DUMP_FILE);
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_restore(void) {
     uint8_t temp[MEMORY_SIZE] = {0};
     if(EXIT_SUCCESS == restore_data(temp, MEMORY_SIZE, MEMORY_DUMP_FILE)) {
@@ -164,7 +164,7 @@ void module_restore(void) {
     }
 }
 
-__declspec(dllexport)
+DLL_PREFIX
 void module_reset(void) {
     uint8_t *memory = (uint8_t*)calloc(sizeof(uint8_t), MEMORY_SIZE);
     // if(continue_simulation) {
@@ -184,7 +184,7 @@ void module_reset(void) {
 }
 
 /* Retunrs an ID which can be used to unmap the device. In case of error returns 0 */
-__declspec(dllexport)
+DLL_PREFIX
 uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR(write_func), READ_FUNC_PTR(read_func)) {
     return 0;
 }
@@ -193,7 +193,7 @@ uint32_t counter = 0;
 #define VIDEO_BUFFER_SIZE 128
 #define VIDEO_BUFFER_OFFSET 0xB0000
 
-__declspec(dllexport)
+DLL_PREFIX
 int module_tick(uint32_t ticks) {
     if(counter == 8000) {
         char video_buf[VIDEO_BUFFER_SIZE];
