@@ -43,7 +43,7 @@ def system_init():
     wires_map = {
         "nmi_wire": {"devices": {"cpu": "nmi_pin", "intc": "nmi_pin"}, "default_state": 0},
         "int_wire": {"devices": {"cpu": "int_pin", "intc": "int_pin"}, "default_state": 0},
-        "int0_wire": {"devices": {"timer": "int0_pin", "intc": "int0_pin"}, "default_state": 0},
+        "int0_wire": {"devices": {"timer": "ch0_output_pin", "intc": "int0_pin"}, "default_state": 0},
         "ch1_output_wire": {"devices": {"timer": "ch1_output_pin"}, "default_state": 0},
         "ch2_output_wire": {"devices": {"timer": "ch2_output_pin"}, "default_state": 0},
         "int1_wire": {"devices": {"ppi": "int1_pin", "intc": "int1_pin"}, "default_state": 0},
@@ -102,9 +102,11 @@ def main():
             mb.restore_devices()
         
         mb.save_state_at(20_700_000)    # 20749786, 21423128
+        # mb.set_log_level_at(['cpu', 1000_000, 0])
+        # mb.set_log_level_at(['timer', 10, 0])
         mb.set_log_level_at(['cpu', 20_700_000, 0])
         mb.set_log_level_at(['fdc', 20_000_000, 0])
-        mb.set_log_level_at(['intc', 10, 0])
+        # mb.set_log_level_at(['intc', 10, 0])
         # mb.set_log_level_at(['memory', 10, 0])
     except Exception as e:
         print(e)

@@ -24,7 +24,7 @@ class Wire:
             print(f"Checking {conn['device_name']}.{conn['pin_name']} state")
             if new_state != conn['struct'].get_state():
                 print(f"Setting {conn['device_name']}.{conn['pin_name']} to {new_state}")
-                conn['struct'].set_state(new_state)
+                conn['struct']._set_value(new_state)
                 conn["struct"].wire_state_change_cb(new_state)
     
     def connect_device(self, device, pin_name, dev_name):
@@ -35,7 +35,6 @@ class Wire:
         @ctypes.CFUNCTYPE(None, ctypes.c_uint8)
         def _wire_set_state(new_state):
             self.set_state(new_state)
-
 
         # typedef struct pin_t {
         #     uint8_t state;
@@ -53,6 +52,7 @@ class Wire:
                 ("pin_type", WireType),
                 ("get_state", ctypes.CFUNCTYPE(ctypes.c_uint8)),
                 ("wire_get_state", ctypes.CFUNCTYPE(ctypes.c_uint8)),
+                ("_set_value", ctypes.CFUNCTYPE(None, ctypes.c_uint8)),
                 ("set_state", ctypes.CFUNCTYPE(None, ctypes.c_uint8)),
                 ("wire_set_state", ctypes.CFUNCTYPE(None, ctypes.c_uint8)),
                 ("wire_state_change_cb", ctypes.CFUNCTYPE(None, ctypes.c_uint8))

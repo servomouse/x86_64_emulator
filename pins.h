@@ -17,6 +17,7 @@ typedef struct pin_t {
     pin_type_t pin_type;
     uint8_t(*get_state)(void);
     uint8_t(*wire_get_state)(void);
+    void(*_set_value)(uint8_t);     // Directly sets local value
     void(*set_state)(uint8_t);
     void(*wire_set_state)(uint8_t);
     void(*wire_state_change_cb)(uint8_t);  // User defined
@@ -25,6 +26,7 @@ typedef struct pin_t {
 // Create pin with custom callback
 #define CREATE_PIN_3(_pin_name, _pin_type, _cb) \
 void _pin_name##_set_state(uint8_t new_state);  \
+void _pin_name##_set_value(uint8_t new_state);  \
 uint8_t _pin_name##_get_state(void);            \
 DLL_PREFIX                                      \
 pin_t _pin_name = {                             \
@@ -32,11 +34,17 @@ pin_t _pin_name = {                             \
     .pin_type = _pin_type,                      \
     .get_state = _pin_name##_get_state,         \
     .wire_get_state = NULL,                     \
+    ._set_value = _pin_name##_set_value,        \
     .set_state = _pin_name##_set_state,         \
     .wire_set_state = NULL,                     \
     .wire_state_change_cb = _cb                 \
 };                                              \
+void _pin_name##_set_value(uint8_t new_state) { \
+    mylog(0, DEVICE_LOG_FILE, "%lld, %s " #_pin_name "_set_value(%d)\n", ticks_num, DEVICE_NAME, new_state); \
+    _pin_name.state = new_state;                \
+}                                               \
 void _pin_name##_set_state(uint8_t new_state) { \
+    mylog(0, DEVICE_LOG_FILE, "%lld, %s " #_pin_name "_set_state(%d)\n", ticks_num, DEVICE_NAME, new_state); \
     if(_pin_name.wire_set_state) {              \
         _pin_name.wire_set_state(new_state);    \
     } else {                                    \
@@ -44,6 +52,7 @@ void _pin_name##_set_state(uint8_t new_state) { \
     }                                           \
 }                                               \
 uint8_t _pin_name##_get_state(void) {           \
+    mylog(0, DEVICE_LOG_FILE, "%lld, %s " #_pin_name "_get_state()->%d\n", ticks_num, DEVICE_NAME, _pin_name.state); \
     if(_pin_name.wire_get_state) {              \
         return _pin_name.wire_get_state();      \
     } else {                                    \
@@ -54,6 +63,7 @@ uint8_t _pin_name##_get_state(void) {           \
 // Create pin with default (dummy) callback
 #define CREATE_PIN_2(_pin_name, _pin_type)      \
 void _pin_name##_set_state(uint8_t new_state);  \
+void _pin_name##_set_value(uint8_t new_state);  \
 uint8_t _pin_name##_get_state(void);            \
 DLL_PREFIX                                      \
 pin_t _pin_name = {                             \
@@ -61,11 +71,17 @@ pin_t _pin_name = {                             \
     .pin_type = _pin_type,                      \
     .get_state = _pin_name##_get_state,         \
     .wire_get_state = NULL,                     \
+    ._set_value = _pin_name##_set_value,        \
     .set_state = _pin_name##_set_state,         \
     .wire_set_state = NULL,                     \
     .wire_state_change_cb = dummy_cb            \
 };                                              \
+void _pin_name##_set_value(uint8_t new_state) { \
+    mylog(0, DEVICE_LOG_FILE, "%lld, %s " #_pin_name "_set_value(%d)\n", ticks_num, DEVICE_NAME, new_state); \
+    _pin_name.state = new_state;                \
+}                                               \
 void _pin_name##_set_state(uint8_t new_state) { \
+    mylog(0, DEVICE_LOG_FILE, "%lld, %s " #_pin_name "_set_state(%d)\n", ticks_num, DEVICE_NAME, new_state); \
     if(_pin_name.wire_set_state) {              \
         _pin_name.wire_set_state(new_state);    \
     } else {                                    \
@@ -73,6 +89,7 @@ void _pin_name##_set_state(uint8_t new_state) { \
     }                                           \
 }                                               \
 uint8_t _pin_name##_get_state(void) {           \
+    mylog(0, DEVICE_LOG_FILE, "%lld, %s " #_pin_name "_get_state()->%d\n", ticks_num, DEVICE_NAME, _pin_name.state); \
     if(_pin_name.wire_get_state) {              \
         return _pin_name.wire_get_state();      \
     } else {                                    \
