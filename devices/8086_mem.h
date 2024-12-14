@@ -15,4 +15,4 @@ void module_reset(void);
 void module_save(void);
 void module_restore(void);
 uint32_t map_device(uint32_t start_addr, uint32_t end_addr, WRITE_FUNC_PTR(write_func), READ_FUNC_PTR(read_func));
-int module_tick(void);
+int module_tick(uint32_t ticks);

@@ -2,9 +2,11 @@
 #include "utils.h"
 #include <string.h>
 
-#define DEVICE_NAME "IO_Expansion_box"
-#define DEVICE_LOG_FILE "logs/io_expansion_box.log"
-#define DEVICE_DATA_FILE "data/io_expansion_box.bin"
+#define DEVICE_NAME         "IO_Expansion_box"
+#define DEVICE_LOG_FILE     "logs/io_expansion_box.log"
+#define DEVICE_DATA_FILE    "data/io_expansion_box.bin"
+
+size_t ticks_num = 0;
 
 __declspec(dllexport)
 void module_reset(void) {
@@ -34,6 +36,6 @@ void module_restore(void) {
 }
 
 __declspec(dllexport)
-int module_tick(void) {
+int module_tick(uint32_t ticks) {
     return 0;
 }

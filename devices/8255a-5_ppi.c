@@ -3,8 +3,9 @@
 #include "pins.h"
 #include <string.h>
 
-#define DEVICE_LOG_FILE "logs/8255a-5_ppi.log"
-#define DEVICE_DATA_FILE "data/8255a-5_ppi.bin"
+#define DEVICE_NAME         "PPI"
+#define DEVICE_LOG_FILE     "logs/8255a-5_ppi.log"
+#define DEVICE_DATA_FILE    "data/8255a-5_ppi.bin"
 
 #define SW1 1
 #define SW2 0
@@ -25,6 +26,8 @@ typedef struct {
 } device_regs_t;
 
 device_regs_t regs;
+
+size_t ticks_num = 0;
 
 CREATE_PIN(int1_pin, PIN_OUTPUT_PP)   // Keyboard interrupt
 
@@ -119,7 +122,7 @@ void module_restore(void) {
 }
 
 __declspec(dllexport)
-int module_tick(void) {
+int module_tick(uint32_t ticks) {
     if(regs.delayed_int == 1) {
         if(regs.delayed_int_ticks > 0) {
             regs.delayed_int_ticks --;

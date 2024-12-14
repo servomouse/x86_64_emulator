@@ -3,8 +3,9 @@
 #include "pins.h"
 #include <string.h>
 
-#define DEVICE_LOG_FILE "logs/timer.log"
-#define DEVICE_DATA_FILE "data/8253_timer.bin"
+#define DEVICE_NAME         "TIMER"
+#define DEVICE_LOG_FILE     "logs/timer.log"
+#define DEVICE_DATA_FILE    "data/8253_timer.bin"
 
 typedef struct {
     uint8_t read_load;
@@ -22,6 +23,8 @@ typedef struct {
 } device_regs_t;
 
 device_regs_t regs;
+
+size_t ticks_num = 0;
 
 void set_timer_state(timer_t * timer, uint8_t gate_state) {
     if(gate_state == 0) {
@@ -46,7 +49,7 @@ void gate2_cb(uint8_t new_state) {
     set_timer_state(&(regs.timer[2]), new_state);
 }
 
-CREATE_PIN(int0_pin, PIN_OUTPUT_PP)
+CREATE_PIN(ch0_output_pin, PIN_OUTPUT_PP)
 CREATE_PIN(ch1_output_pin, PIN_OUTPUT_PP)
 CREATE_PIN(ch2_output_pin, PIN_OUTPUT_PP)
 
@@ -68,7 +71,7 @@ void module_restore(void) {
     if(EXIT_SUCCESS == restore_data(&data, sizeof(device_regs_t), DEVICE_DATA_FILE)) {
         memcpy(&regs, &data, sizeof(device_regs_t));
     }
-    regs.timer[0].output = &int0_pin;
+    regs.timer[0].output = &ch0_output_pin;
     regs.timer[1].output = &ch1_output_pin;
     regs.timer[2].output = &ch2_output_pin;
 }
@@ -84,7 +87,7 @@ void module_reset(void) {
     regs.timer[i].counter = 0;
     regs.timer[i].counts = 0;
     }
-    regs.timer[0].output = &int0_pin;
+    regs.timer[0].output = &ch0_output_pin;
     regs.timer[1].output = &ch1_output_pin;
     regs.timer[2].output = &ch2_output_pin;
 }
@@ -117,7 +120,7 @@ static void set_value(timer_t *timer, uint16_t value) {
     if((timer->mode == 0) || (timer->mode == 4)) {
         timer->counter = timer->value;
     }
-    mylog(0, DEVICE_LOG_FILE, "Set timer %d value to 0x%04X, counter = 0x%04X, load-read = d\n", timer->value, timer->counter, timer->read_load);
+    mylog(0, DEVICE_LOG_FILE, "Set timer value to 0x%04X, counter = 0x%04X, load-read = %d\n", timer->value, timer->counter, timer->read_load);
 }
 
 static uint8_t get_value(timer_t *timer) {
@@ -284,7 +287,7 @@ void timer_tick(timer_t *timer) {
 uint8_t tick_divider;
 
 __declspec(dllexport)
-int module_tick(void) {
+int module_tick(uint32_t ticks) {
     if(tick_divider) {
         tick_divider = 0;
         return 0;

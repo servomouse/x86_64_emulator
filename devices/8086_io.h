@@ -15,4 +15,4 @@ uint16_t data_read(uint32_t addr, uint8_t width);
 void module_reset(void);
 void module_save(void);
 void module_restore(void);
-int module_tick(void);
+int module_tick(uint32_t ticks);

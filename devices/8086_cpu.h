@@ -63,5 +63,5 @@ void set_code_read_func(READ_FUNC_PTR(read_func));
 void module_reset(void);
 void module_save(void);
 void module_restore(void);
-int module_tick(void);
+int module_tick(uint32_t ticks);
 uint32_t cpu_get_ticks(void);

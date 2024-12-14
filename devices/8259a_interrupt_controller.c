@@ -3,8 +3,9 @@
 #include "utils.h"
 #include <string.h>
 
-#define DEVICE_LOG_FILE "logs/8259a_interrupt_controller.log"
-#define DEVICE_DATA_FILE "data/8259a_interrupt_controller.bin"
+#define DEVICE_NAME         "INT_CONTROLLER"
+#define DEVICE_LOG_FILE     "logs/8259a_interrupt_controller.log"
+#define DEVICE_DATA_FILE    "data/8259a_interrupt_controller.bin"
 
 // check 0xFF2E
 
@@ -27,6 +28,8 @@ typedef struct {
 
 device_regs_t regs;
 
+size_t ticks_num = 0;
+
 DLL_PREFIX
 void module_reset(void) {
     memset(&regs, 0, sizeof(device_regs_t));
@@ -35,6 +38,7 @@ void module_reset(void) {
 void trigger_interrupt(uint8_t int_num, uint8_t active);
 
 void int0_cb(uint8_t new_state) {
+    printf("%lld, int0_cb(%d)\n", ticks_num, new_state);
     uint8_t int_num = 0;
     if(new_state == 0) {
         trigger_interrupt(int_num, 0);
@@ -97,7 +101,7 @@ void write_byte(uint8_t addr, uint8_t data) {
             state = 2;  // Wait for ICW3
         }
     } else if(state == 2) {     // ICW3
-        printf("INTERRUPT CONTROLLER ERROR: Write ICW3 is not implemented!\n");   // Not implemented
+        printf("%lld, %s ERROR: Write ICW3 is not implemented!\n", ticks_num, DEVICE_NAME);   // Not implemented
         state = 0;
     } else if(state == 3) { // ICW4
         regs.ICW4 = data;
@@ -119,7 +123,7 @@ void write_byte(uint8_t addr, uint8_t data) {
 
 DLL_PREFIX
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
-    mylog(0, DEVICE_LOG_FILE, "INT_CONTROLLER_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(0, DEVICE_LOG_FILE, "%lld, %s_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", ticks_num, DEVICE_NAME, addr, value, width);
     // regs.int_register = value;
     if(addr == 0xA0) {
         regs.triggerded_int = value;
@@ -145,7 +149,7 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
     } else if(addr == 0x21) {
         ret_val = regs.IMR;
     }
-    mylog(0, DEVICE_LOG_FILE, "INT_CONTROLLER_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    mylog(0, DEVICE_LOG_FILE, "%lld, %s_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", ticks_num, DEVICE_NAME, addr, width, ret_val);
     return ret_val;
 }
 
@@ -163,6 +167,7 @@ void module_restore(void) {
 }
 
 DLL_PREFIX
-int module_tick(void) {
+int module_tick(uint32_t ticks) {
+    ticks_num = ticks;
     return 0;
 }

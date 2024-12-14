@@ -13,7 +13,12 @@ char *BIOS_FILENAME_0XF8000 = "BIOS/08NOV82_F8000.BIN";
 #define VIDEO_MEM_LOG_FILE "logs/video_mem_log.txt"
 #define MEMORY_DUMP_FILE "data/memory_dump.bin"
 
+#define DEVICE_NAME         "MEMORY"
+#define DEVICE_LOG_FILE     MEMORY_LOG_FILE
+
 #define MEMORY_SIZE 0x100000
+
+size_t ticks_num = 0;
 
 static uint8_t *MEMORY = NULL;
 static uint8_t error = 0;
@@ -189,7 +194,7 @@ uint32_t counter = 0;
 #define VIDEO_BUFFER_OFFSET 0xB0000
 
 __declspec(dllexport)
-int module_tick(void) {
+int module_tick(uint32_t ticks) {
     if(counter == 8000) {
         char video_buf[VIDEO_BUFFER_SIZE];
         

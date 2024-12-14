@@ -9,6 +9,11 @@
 #define IO_DUMP_FILE "data/io_dump.bin"
 #define IO_SPACE_SIZE 0x100000
 
+#define DEVICE_NAME         "IO_SPACE"
+#define DEVICE_LOG_FILE     IO_LOG_FILE
+
+size_t ticks_num = 0;
+
 typedef struct {
     uint32_t id;
     uint32_t start;
@@ -285,6 +290,6 @@ void module_restore(void) {
 }
 
 __declspec(dllexport)
-int module_tick(void) {
+int module_tick(uint32_t ticks) {
     return io_error;
 }

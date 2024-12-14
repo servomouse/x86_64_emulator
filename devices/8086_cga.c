@@ -2,8 +2,9 @@
 #include "utils.h"
 #include <string.h>
 
-#define DEVICE_LOG_FILE "logs/cga.log"
-#define DEVICE_DATA_FILE "data/cga.bin"
+#define DEVICE_NAME         "CGA"
+#define DEVICE_LOG_FILE     "logs/cga.log"
+#define DEVICE_DATA_FILE    "data/cga.bin"
 
 typedef struct {    // | Type                       | I/O | 40x25 | 80x25 | Graphic Modes
     uint8_t R0;     // | Horizontal total           | WO  | 0x38  | 0x71  | 0x38
@@ -29,6 +30,8 @@ typedef struct {    // | Type                       | I/O | 40x25 | 80x25 | Grap
 } device_regs_t;
 
 device_regs_t regs;
+
+size_t ticks_num = 0;
 
 __declspec(dllexport)
 void module_reset(void) {
@@ -80,7 +83,7 @@ void module_restore(void) {
 size_t counter = 0;
 
 __declspec(dllexport)
-int module_tick(void) {
+int module_tick(uint32_t ticks) {
     if(counter++ == 20) {
         regs.status_register ^= 0x09;
         counter = 0;

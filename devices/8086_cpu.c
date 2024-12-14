@@ -6,6 +6,9 @@
 #define REGISTERS_FILE  "logs/regs.txt"
 #define CPU_DUMP_FILE  "data/cpu_regs.bin"
 
+#define DEVICE_NAME         "CPU"
+#define DEVICE_LOG_FILE     COMMON_LOG_FILE
+
 WRITE_FUNC_PTR(mem_write);
 READ_FUNC_PTR(mem_read);
 WRITE_FUNC_PTR(io_write);
@@ -121,6 +124,8 @@ typedef enum {
 //     char * source;
 //     char * destination;
 // } operands_t;
+
+size_t ticks_num = 0;
 
 uint32_t processed_commands[0xFF];
 
@@ -3650,7 +3655,7 @@ void module_restore(void) {
 }
 
 DLL_PREFIX
-int module_tick(void) {
+int module_tick(uint32_t ticks) {
     if(REGS->int_vector != 0xFFFF) {
         if(get_flag(IF)) {
             printf("CPU interrupt %d\n", REGS->int_vector);
@@ -3757,8 +3762,6 @@ uint32_t cpu_get_ticks(void) {
     return REGS->ticks;
 }
 
-DLL_PREFIX
 CREATE_PIN(nmi_pin, PIN_INPUT, &dummy_nmi_cb);
 
-DLL_PREFIX
 CREATE_PIN(int_pin, PIN_INPUT, &int_cb);

@@ -87,7 +87,7 @@ class CommonDevModule():
 
         self.module_save = get_dll_function(self.device, "void module_save(void)")
         self.module_restore = get_dll_function(self.device, "void module_restore(void)")
-        self.module_tick = get_dll_function(self.device, "int module_tick(void)")
+        self.module_tick = get_dll_function(self.device, "int module_tick(uint32_t)")
     
 
 class ReadWriteModule:
@@ -185,17 +185,18 @@ class DevManager():
     
     def tick_devices(self):
         """ On fail saves devices and returns False """
+        self._ticks += 1
         for dev_name, dev in self.devices.items():
             try:
-                if 0 != dev.module_tick():
+                if 0 != dev.module_tick(self._ticks):
                     self.save_devices()
                     return False
             except Exception as e:
                 print(f"Error ticking device {dev_name}!")
                 print(e)
                 return False
-            if dev_name == 'cpu':
-                self._ticks = dev.cpu_get_ticks()
+            # if dev_name == 'cpu':
+            #     self._ticks = dev.cpu_get_ticks()
         if self._save_state_at > 0 and self._ticks == self._save_state_at:
             self.save_devices()
             print(f"Target ticks {self._save_state_at} reached, devices state saved!")

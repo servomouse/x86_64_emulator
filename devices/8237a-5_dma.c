@@ -2,8 +2,9 @@
 #include "utils.h"
 #include <string.h>
 
-#define DEVICE_LOG_FILE "logs/8237a-5_dma.log"
-#define DEVICE_DATA_FILE "data/8237a-5_dma.bin"
+#define DEVICE_NAME         "DMA"
+#define DEVICE_LOG_FILE     "logs/8237a-5_dma.log"
+#define DEVICE_DATA_FILE    "data/8237a-5_dma.bin"
 
 typedef struct {
     uint8_t reg0;
@@ -14,6 +15,8 @@ typedef struct {
 } device_regs_t;
 
 device_regs_t regs;
+
+size_t ticks_num = 0;
 
 __declspec(dllexport)
 void module_reset(void) {
@@ -86,7 +89,7 @@ void module_restore(void) {
 }
 
 __declspec(dllexport)
-int module_tick(void) {
+int module_tick(uint32_t ticks) {
     return 0;
 }
 

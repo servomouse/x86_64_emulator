@@ -4,8 +4,9 @@
 
 // p166
 
-#define DEVICE_LOG_FILE "logs/fdc.log"
-#define DEVICE_DATA_FILE "data/fdc.bin"
+#define DEVICE_NAME         "FDC"
+#define DEVICE_LOG_FILE     "logs/fdc.log"
+#define DEVICE_DATA_FILE    "data/fdc.bin"
 
 typedef struct {
     uint8_t DOR;    // Data output register
@@ -17,6 +18,8 @@ typedef struct {
 
 device_regs_t regs;
 uint8_t error;
+
+size_t ticks_num = 0;
 
 DLL_PREFIX
 void module_reset(void) {
@@ -82,7 +85,7 @@ void module_restore(void) {
 CREATE_PIN(int6_pin, PIN_OUTPUT_PP)   // Disk Controller interrupt
 
 DLL_PREFIX
-int module_tick(void) {
+int module_tick(uint32_t ticks) {
     if(regs.delayed_int == 1) {
         if(regs.delayed_int_ticks > 0) {
             regs.delayed_int_ticks --;

@@ -1,10 +1,11 @@
 #include "draft_device.h"
 #include "utils.h"
-#include "wires.h"
+#include "pins.h"
 #include <string.h>
 
-#define DEVICE_LOG_FILE "logs/draft_device.log"
-#define DEVICE_DATA_FILE "data/draft_device.bin"
+#define DEVICE_NAME         "DRAFT"
+#define DEVICE_LOG_FILE     "logs/draft_device.log"
+#define DEVICE_DATA_FILE    "data/draft_device.bin"
 
 typedef struct {
     uint8_t reg1;
@@ -14,12 +15,9 @@ typedef struct {
 
 device_regs_t regs;
 
-void dummy_cb(wire_state_t new_state) {
-    return;
-}
+size_t ticks_num = 0;
 
-__declspec(dllexport)   // Keyboard interrupt
-wire_t test_wire = WIRE_T(WIRE_OUTPUT_PP, &dummy_cb);
+CREATE_PIN(test_wire, PIN_OUTPUT_PP)
 
 __declspec(dllexport)
 void module_reset(void) {
@@ -55,6 +53,6 @@ void module_restore(void) {
 }
 
 __declspec(dllexport)
-int module_tick(void) {
+int module_tick(uint32_t ticks) {
     return 0;
 }
