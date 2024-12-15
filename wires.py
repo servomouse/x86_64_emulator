@@ -20,10 +20,8 @@ class Wire:
             return
         print(f"{self.name}: changing state to {new_state}")
         for conn in self.connections:
-            print(f"Checking {conn['device_name']}.{conn['pin_name']} state")
-            if new_state != conn['struct'].get_state():
-                print(f"Setting {conn['device_name']}.{conn['pin_name']} to {new_state}")
-                conn['struct']._set_value(new_state)
+            print(f"Setting {conn['device_name']}.{conn['pin_name']} to {new_state}")
+            conn['struct']._set_value(new_state)
         self.state = new_state
     
     def connect_device(self, device, pin_name, dev_name):
