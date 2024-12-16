@@ -38,6 +38,8 @@ typedef struct {
     uint8_t PCN;
     commands_t command;
     uint8_t step;
+    uint8_t wait_write;
+    uint8_t mode;   // 1 for Non-DMA, 0 for DMA mode
 } device_regs_t;
 
 device_regs_t regs;
@@ -47,23 +49,50 @@ size_t ticks_num = 0;
 void state_machine(uint8_t cmd, uint8_t is_write) {
     // static commands_t command;
     // static uint8_t step = 0;
-    if(regs.command == 0) {
+    if(is_write && ((regs.wait_write == 0) || (regs.command == 0))) {
         regs.command = cmd;
         regs.step = 0;
     }
     switch(regs.command) {
         case SENSE_INTERRUPT_STATUS:
+            mylog(0, DEVICE_LOG_FILE, "%lld, FDC INFO: SENSE_INTERRUPT_STATUS command\n", ticks_num);
             if(is_write) {
+                regs.wait_write = 0;
                 regs.step = 1;
                 regs.MSR = 0xC0;    // Ready, Direction: output
                 regs.data_reg = 0;
-                regs.ST0 = 0x80;
+                regs.ST0 = 0xC0;
             } else if(regs.step == 1) {
                 regs.step = 2;
                 regs.data_reg = regs.ST0;
+                regs.MSR &= ~0x40;
             } else if(regs.step == 2) {
                 regs.command = 0;
+                regs.step = 0;
                 regs.data_reg = regs.PCN;
+            }
+            break;
+        case SPECIFY:
+            mylog(0, DEVICE_LOG_FILE, "%lld, FDC INFO: SPECIFY command\n", ticks_num);
+            if(regs.step == 0) {
+                regs.step = 1;
+                regs.wait_write = 1;
+                regs.MSR = 0x80;            // Ready, Direction: input
+            } else if(regs.step == 1) {     // Set SRT (Step Rate Time) and HUT (Head Unload Time), ignore for emulation
+                regs.step = 2;
+                regs.wait_write = 1;
+                regs.MSR = 0x80;            // Ready, Direction: input
+            } else if(regs.step == 2) {     // Set HLT (Head Load Time) and ND (Non-DMA mode)
+                if((cmd & 0x01) > 0) {
+                    regs.mode = 1;          // Non-DMA mode
+                } else {
+                    regs.mode = 0;          // DMA mode
+                }
+                regs.step = 0;
+                regs.wait_write = 0;
+                regs.command = 0;
+                regs.MSR = 0xC0;            // Ready, Direction: output
+                mylog(0, DEVICE_LOG_FILE, "%lld, FDC INFO: SPECIFY command second byte: 0x%02X\n", ticks_num, cmd);
             }
             break;
         default:
@@ -90,11 +119,9 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
         }
         regs.DOR = value;
     } else if(addr == 0x3F4) {
-        // regs.MSR = value;
         printf("FDC ERROR: Attempt to write the Main Status Register which can only be read!\n");
     } else if(addr == 0x3F5) {
         state_machine(value, 1);
-        // regs.data_reg = value;
     } else {
         printf("FDC ERROR: Incorrect address: 0x%04X\n", addr);
         error = 1;

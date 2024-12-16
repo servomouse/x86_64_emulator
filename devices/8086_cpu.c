@@ -3427,6 +3427,5 @@ uint32_t cpu_get_ticks(void) {
     return REGS->ticks;
 }
 
-CREATE_PIN(nmi_pin, PIN_INPUT, &dummy_nmi_cb);
-
-CREATE_PIN(int_pin, PIN_INPUT, &int_cb);
+CREATE_PIN(nmi_pin, PIN_INPUT, &dummy_nmi_cb)
+CREATE_PIN(int_pin, PIN_INPUT, &int_cb)
