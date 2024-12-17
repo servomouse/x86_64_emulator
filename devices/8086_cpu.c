@@ -957,9 +957,9 @@ int16_t jmp_instr(uint8_t opcode, uint8_t *data) {
             ip_inc += 2;
             uint16_t dest_val = get_register_value(CX_register);
             uint16_t res_val = dest_val - 1;
-            if((data[0] == 0xFE) && (res_val != 0)) {
-                res_val = 0;    // shortcut useless long waiting
-            }
+            // if((data[0] == 0xFE) && (res_val != 0)) {
+            //     res_val = 0;    // shortcut useless long waiting
+            // }
             set_register_value(CX_register, res_val);
             mylog(0, "logs/main.log", "CX = 0x%04X;", res_val);
             if(res_val != 0) {
@@ -1925,17 +1925,25 @@ uint8_t and_instr(uint8_t opcode, uint8_t *data) {
         case 0x20:  // AND REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x21:  // AND REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x22:  // AND REG8, REG8/MEM8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
-        case 0x23: {// AND REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x23:  // AND REG16, REG16/MEM16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
+        case 0x84: {// TEST REG8/MEM8,REG8      [MOD REG R/M, (DISP-LO), (DISP-HI)]
             operands_t operands = decode_operands(opcode, data, 0);
             ret_val += operands.num_bytes;
             res_val = operands.src_val & operands.dst_val;
-            if(operands.dst_type == 0) {    // Register mode
-                set_register_value(operands.dst.register_name, res_val);
-            } else {    // Memory mode
-                mem_write(operands.dst.address, res_val, 2);
+            char * operation;
+            if((opcode == 0x20) || (opcode == 0x21) || (opcode == 0x22) || (opcode == 0x23)) {
+                operation = "AND";
+                if(operands.dst_type == 0) {    // Register mode
+                    set_register_value(operands.dst.register_name, res_val);
+                } else {    // Memory mode
+                    mem_write(operands.dst.address, res_val, 2);
+                }
+            } else {
+                operation = "TEST";
             }
             update_flags(operands.dst_val, operands.src_val, res_val, operands.width, LOGIC_OP);
-            mylog(0, "logs/main.log", "Instruction 0x%02X: AND %s (0x%04X), %s (0x%04X); result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
+            mylog(0, "logs/main.log", "Instruction 0x%02X: %s %s (0x%04X), %s (0x%04X); result = 0x%04X\n",
+                  opcode, operation, operands.destination, operands.dst_val, operands.source, operands.src_val, res_val);
             break;
         }
         case 0xA8:      // TEST AL, IMMED8
@@ -2498,7 +2506,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         // case 0x2F:  // DAS
         //     das_op();
-        //     REGS->IP += 1;
+        //     ret_val = 1;
         //     break;
         case 0x30:  // XOR REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x31:  // XOR REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -2515,7 +2523,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         // case 0x37:  // AAA
         //     aaa_op();
-        //     REGS->IP += 1;
+        //     ret_val = 1;
         //     break;
         case 0x38:  // CMP REG8/MEM8, REG8;     [MOD REG R/M, (DISP-LO), (DISP-HI)]
         case 0x39:  // CMP REG16/MEM16, REG16   [MOD REG R/M, (DISP-LO), (DISP-HI)]
@@ -2532,7 +2540,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         // case 0x3F:  // AAS
         //     aas_op();
-        //     REGS->IP += 1;
+        //     ret_val = 1;
         //     break;
         case 0x40:  // INC AX
         case 0x41:  // INC CX
@@ -2696,11 +2704,11 @@ int16_t process_instruction(uint8_t * memory) {
             }
             break;
         }
-        // case 0x84:
-        //     REGS->IP += test_8b_op(memory[1], &memory[2]);
-        //     break;
+        case 0x84:   // TEST REG8/MEM8,REG8: [0x84, MOD REG R/M, (DISP-LO), (DISP-HI)]
+            ret_val = and_instr(memory[0], &memory[1]);
+            break;
         // case 0x85:
-        //     REGS->IP += test_16b_op(memory[1], &memory[2]);
+        //     ret_val = test_16b_op(memory[1], &memory[2]);
         //     break;
         case 0x86:  // XCHG REG8, REG8/MEM8: [0x86, MOD REG R/M (DISP-LO), (DISP-HI)]
         case 0x87:  // XCHG REG16, REG16/MEM16: [0x86, MOD REG R/M (DISP-LO), (DISP-HI)]
@@ -2715,7 +2723,7 @@ int16_t process_instruction(uint8_t * memory) {
             ret_val = mov_instr(memory[0], &memory[1]);
             break;
         // case 0x8D:  // LEA REG16, MEM16
-        //     REGS->IP += lea_op(memory[1], &memory[2]);  // DISP-LO, DISP-HI
+        //     ret_val = lea_op(memory[1], &memory[2]);  // DISP-LO, DISP-HI
         //     break;
         case 0x8E:  // MOV SEGREG, REG16/MEM16: [0x8C, MOD 0SR R/M, (DISP-LO), (DISP-HI)]
             // reg_field: Segment register code: OO=ES, 01=CS, 10=SS, 11 =DS
@@ -2723,7 +2731,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         // case 0x8F:
         //     if(0 == get_register_field(memory[1]))  // POP REG16/MEM16
-        //         REGS->IP += pop_op(memory[1], &memory[2]);  // DISP-LO, DISP-HI
+        //         ret_val = pop_op(memory[1], &memory[2]);  // DISP-LO, DISP-HI
         //     else
         //         INVALID_INSTRUCTION;
         //     break;
@@ -2738,16 +2746,16 @@ int16_t process_instruction(uint8_t * memory) {
             ret_val = xchg_instr(memory[0], &memory[1]);
             break;
         // case 0x98:  // CBW
-        //         REGS->IP += cbw_op();
+        //         ret_val = cbw_op();
         //     break;
         // case 0x99:  // CWD
-        //         REGS->IP += cwd_op();
+        //         ret_val = cwd_op();
         //     break;
         // case 0x9A:  // CALL FAR_PROC
-        //     REGS->IP += call_op(memory[1], &memory[2]); // [DISP-LO, DISP-HIGH, SEG-LO, SEG-HI]
+        //     ret_val = call_op(memory[1], &memory[2]); // [DISP-LO, DISP-HIGH, SEG-LO, SEG-HI]
         //     break;
         // case 0x9B:  // WAIT
-        //     REGS->IP += wait_op();
+        //     ret_val = wait_op();
         //     break;
         case 0x9C:  // PUSHF
             ret_val = push_reg_instr(memory[0], &memory[1]);
@@ -2768,16 +2776,16 @@ int16_t process_instruction(uint8_t * memory) {
             ret_val = mov_instr(memory[0], &memory[1]);
             break;
         // case 0xA4:  // MOVS DEST-STR8, SRC-STR8
-        //     REGS->IP += mov_str_op(memory[1], &memory[2]);
+        //     ret_val = mov_str_op(memory[1], &memory[2]);
         //     break;
         case 0xA5:  // MOVS DEST-STR16, SRC-STR16
             ret_val = string_instr(memory[0], &memory[1]);
             break;
         // case 0xA6:  // CMPSS DEST-STR8, SRC-STR8
-        //     REGS->IP += cmps_str_op(memory[1], &memory[2]);
+        //     ret_val = cmps_str_op(memory[1], &memory[2]);
         //     break;
         // case 0xA7:  // CMPSS DEST-STR16, SRC-STR16
-        //     REGS->IP += cmps_str_op(memory[1], &memory[2]);
+        //     ret_val = cmps_str_op(memory[1], &memory[2]);
         //     break;
         case 0xA8:  // TEST AL, IMMED8
         case 0xA9:  // TEST AX, IMMED16
@@ -2796,10 +2804,10 @@ int16_t process_instruction(uint8_t * memory) {
             ret_val = string_instr(memory[0], &memory[1]);
             break;
         // case 0xAE:  // SCAS DEST-STR8
-        //     REGS->IP += stos_str_op(memory[1], &memory[2]);
+        //     ret_val = stos_str_op(memory[1], &memory[2]);
         //     break;
         // case 0xAF:  // SCAS DEST-STR16
-        //     REGS->IP += stos_str_op(memory[1], &memory[2]);
+        //     ret_val = stos_str_op(memory[1], &memory[2]);
         //     break;
         case 0xB0:  // MOV AL, IMMED8: [0xB0, immed8]
         case 0xB1:  // MOV CL, IMMED8: [0xB1, immed8]
@@ -2873,14 +2881,14 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         // case 0xD4:
         //     if(memory[1] == 0b00001010) {  // AAM
-        //         REGS->IP += aam_op(memory[1]);  // memory[1] == 0b00001010
+        //         ret_val = aam_op(memory[1]);  // memory[1] == 0b00001010
         //     } else {
         //         INVALID_INSTRUCTION;
         //     }
         //     break;
         // case 0xD5:
         //     if(memory[1] == 0b00001010) {  // AAD
-        //         REGS->IP += aam_op(memory[1]);  // memory[1] == 0b00001010
+        //         ret_val = aam_op(memory[1]);  // memory[1] == 0b00001010
         //     } else {
         //         INVALID_INSTRUCTION;
         //     }
@@ -2890,7 +2898,7 @@ int16_t process_instruction(uint8_t * memory) {
             printf("Invalid instruction: 0x%02X\n", memory[0]);
             break;
         // case 0xD7:  // XLAT SOURCE-TABLE
-        //     REGS->IP += xlat_op();
+        //     ret_val = xlat_op();
         //     break;
         case 0xD8:  // ESC OPCODE, SOURCE
         // case 0xD9:
@@ -2970,7 +2978,7 @@ int16_t process_instruction(uint8_t * memory) {
             break;
         case 0xEF:  // OUT AX, DX
             io_write(get_register_value(DX_register), get_register_value(AX_register), 2); // DATA-16
-            REGS->IP += 1;
+            ret_val = 1;
             break;
         case 0xF0:  // LOCK (prefix)
             mylog(0, "logs/main.log", "Instruction 0xF0: LOCK\n");
