@@ -40,6 +40,9 @@ typedef struct {
     uint8_t step;
     uint8_t wait_write;
     uint8_t mode;   // 1 for Non-DMA, 0 for DMA mode
+    uint8_t selected_drive;
+    uint8_t selected_head;
+    uint8_t current_cylinder;
 } device_regs_t;
 
 device_regs_t regs;
@@ -54,7 +57,7 @@ void state_machine(uint8_t cmd, uint8_t is_write) {
         regs.step = 0;
     }
     switch(regs.command) {
-        case SENSE_INTERRUPT_STATUS:
+        case SENSE_INTERRUPT_STATUS: {
             mylog(0, DEVICE_LOG_FILE, "%lld, FDC INFO: SENSE_INTERRUPT_STATUS command\n", ticks_num);
             if(is_write) {
                 regs.wait_write = 0;
@@ -65,14 +68,15 @@ void state_machine(uint8_t cmd, uint8_t is_write) {
             } else if(regs.step == 1) {
                 regs.step = 2;
                 regs.data_reg = regs.ST0;
-                regs.MSR &= ~0x40;
+                regs.MSR &= ~0x40;    // Ready, Direction: input
             } else if(regs.step == 2) {
                 regs.command = 0;
                 regs.step = 0;
                 regs.data_reg = regs.PCN;
             }
             break;
-        case SPECIFY:
+        }
+        case SPECIFY: {
             mylog(0, DEVICE_LOG_FILE, "%lld, FDC INFO: SPECIFY command\n", ticks_num);
             if(regs.step == 0) {
                 regs.step = 1;
@@ -91,13 +95,49 @@ void state_machine(uint8_t cmd, uint8_t is_write) {
                 regs.step = 0;
                 regs.wait_write = 0;
                 regs.command = 0;
-                regs.MSR = 0xC0;            // Ready, Direction: output
-                mylog(0, DEVICE_LOG_FILE, "%lld, FDC INFO: SPECIFY command second byte: 0x%02X\n", ticks_num, cmd);
+                regs.MSR = 0x80;            // Ready, Direction: input
             }
             break;
+        }
+        case RECALIBRATE: {
+            mylog(0, DEVICE_LOG_FILE, "%lld, FDC INFO: RECALIBRATE command\n", ticks_num);
+            if(regs.step == 0) {
+                regs.step = 1;
+                regs.wait_write = 1;
+                regs.PCN = 0;
+                regs.MSR = 0x80;            // Ready, Direction: input
+            } else if(regs.step == 1) {
+                regs.step = 0;
+                regs.wait_write = 0;
+                regs.command = 0;
+                regs.MSR = 0x80;            // Ready, Direction: input
+            }
+            break;
+        }
+        case SEEK: {
+            mylog(0, DEVICE_LOG_FILE, "%lld, FDC INFO: SEEK command\n", ticks_num);
+            if(regs.step == 0) {
+                regs.step = 1;
+                regs.wait_write = 1;
+                regs.MSR = 0x80;            // Ready, Direction: input
+            } else if(regs.step == 1) {     // x x x x x HD US1 US0     (Head Num, Unit Select (drive number)
+                regs.step = 2;
+                regs.wait_write = 1;
+                regs.selected_drive = cmd & 0x03;
+                regs.selected_head = (cmd >> 2) & 0x01;
+                regs.MSR = 0x80;            // Ready, Direction: input
+            } else if(regs.step == 2) {     // NCN (New Cylinder Number - Desired position of head)
+                regs.step = 0;
+                regs.wait_write = 0;
+                regs.command = 0;
+                regs.current_cylinder = cmd;
+                regs.MSR = 0x80;            // Ready, Direction: input
+            }
+            break;
+        }
         default:
             mylog(0, DEVICE_LOG_FILE, "%lld, FDC ERROR: Unknown command: 0x%02X\n", ticks_num, regs.command);
-            printf("%lld, FDC ERROR: Unknown command: 0x%02X\n", ticks_num, regs.command);
+            printf("FDC ERROR: Unknown command: 0x%02X\n", regs.command);
     }
 }
 
