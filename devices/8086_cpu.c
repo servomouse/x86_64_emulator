@@ -3382,6 +3382,21 @@ int module_tick(uint32_t ticks) {
     } else if(REGS->IP == 0xF99C) {
         mylog(0, "logs/short.log", "PRINT_HEX procedure\n");
         printf("PRINT_HEX procedure\n");
+    } else if(REGS->IP == 0xEF57) {
+        mylog(0, "logs/short.log", "DISK_INT procedure\n");
+        printf("DISK_INT procedure\n");
+    } else if(REGS->IP == 0xEE6C) {
+        mylog(0, "logs/short.log", "DISK_GET_PARAM procedure\n");
+        printf("DISK_GET_PARAM procedure\n");
+    } else if(REGS->IP == 0xE597) {
+        mylog(0, "logs/short.log", "SETUP PRINTER AND RS232 BASE ADDRESSES\n");
+        printf("SETUP PRINTER AND RS232 BASE ADDRESSES\n");
+    } else if(REGS->IP == 0xF9D8) {
+        mylog(0, "logs/short.log", "ERR_BEEP PROC (not necessarily means error)\n");
+        printf("ERR_BEEP PROC (not necessarily means error)\n");
+    } else if(REGS->IP == 0xFA08) {
+        mylog(0, "logs/short.log", "BEEP PROC\n");
+        printf("BEEP PROC\n");
     } else if(REGS->IP == 0xEE41) {
         mylog(0, "logs/short.log", "NEC_OUTPUT procedure\n");
         printf("NEC_OUTPUT procedure\n");
