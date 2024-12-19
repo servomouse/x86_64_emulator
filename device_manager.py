@@ -180,8 +180,10 @@ class DevManager():
                 archive.write(f)
     
     def restore_devices(self):
-        for _, dev in self.devices.items():
+        for dev_name, dev in self.devices.items():
             dev.module_restore()
+            if dev_name == 'cpu':
+                self._ticks = dev.cpu_get_ticks()
     
     def tick_devices(self):
         """ On fail saves devices and returns False """
@@ -197,8 +199,9 @@ class DevManager():
                 return False
             # if dev_name == 'cpu':
             #     self._ticks = dev.cpu_get_ticks()
-        if self._save_state_at > 0 and self._ticks == self._save_state_at:
+        if self._save_state_at > 0 and self._ticks >= self._save_state_at:
             self.save_devices()
+            self._save_state_at = 0
             print(f"Target ticks {self._save_state_at} reached, devices state saved!")
         if len(self._set_log_level_at) > 0:
             temp_arr = []
