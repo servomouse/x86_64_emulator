@@ -43,6 +43,12 @@ address_ranges = [[0x3B0, 0x3BF]]
 module = ["devices/8086_mda.c"]
 tests = [""]
 
+[printer]
+type = "device"
+address_ranges = [[0x378, 0x37F]]
+module = ["devices/8086_printer.c"]
+tests = [""]
+
 [ppi]
 type = "device"
 address_ranges = [[0x060, 0x063]]

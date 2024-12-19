@@ -12,8 +12,6 @@
 #define DEVICE_NAME         "IO_SPACE"
 #define DEVICE_LOG_FILE     IO_LOG_FILE
 
-size_t ticks_num = 0;
-
 typedef struct {
     uint32_t id;
     uint32_t start;
