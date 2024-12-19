@@ -19,6 +19,10 @@ ignore_files = [
 ]
 
 
+def send_data_to_console(data):
+	ws.send_data(json.dumps(data))
+
+
 print_callback_t = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_char_p)
 
 

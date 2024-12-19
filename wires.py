@@ -7,10 +7,11 @@ class WireType(ctypes.c_int):
 
 
 class Wire:
-    def __init__(self, name):
+    def __init__(self, name, state_change_callback):
         self.name = name
         self.state = 0
         self.connections = []
+        self.state_change_callback = state_change_callback
     
     def get_state(self):
         return self.state
@@ -23,6 +24,8 @@ class Wire:
             print(f"Setting {conn['device_name']}.{conn['pin_name']} to {new_state}")
             conn['struct']._set_value(new_state)
         self.state = new_state
+        if self.state_change_callback:
+            self.state_change_callback(new_state)
     
     def connect_device(self, device, pin_name, dev_name):
         @ctypes.CFUNCTYPE(ctypes.c_uint8)
