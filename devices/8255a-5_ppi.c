@@ -30,6 +30,7 @@ device_regs_t regs;
 size_t ticks_num = 0;
 
 CREATE_PIN(int1_pin, PIN_OUTPUT_PP)   // Keyboard interrupt
+CREATE_PIN(beep_pin, PIN_OUTPUT_PP)   // Keyboard interrupt
 
 void update_portc(void) {
     regs.portc_reg = 0;
@@ -69,6 +70,13 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
                 module_reset();
                 regs.delayed_int = 1;
                 regs.delayed_int_ticks = 10;
+            }
+            if((value & 0x03) == 0x03) {    // Turn beep signal on
+                if(beep_pin.get_state() == 0)
+                    beep_pin.set_state(1);
+            } else  {                       // Turn beep signal off
+                if(beep_pin.get_state() == 1)
+                    beep_pin.set_state(0);
             }
             regs.portb_reg = value;
             update_portc();

@@ -14,6 +14,13 @@ mb = None
 wires = []
 
 
+def beep_wire_cb(new_state):
+    if new_state == 1:
+        log_manager.send_data_to_console({"controls": {"beep-led": "on"}})
+    else:
+        log_manager.send_data_to_console({"controls": {"beep-led": "off"}})
+
+
 def system_init():
     global mb
     config = get_config("config.toml")
@@ -41,17 +48,18 @@ def system_init():
                 ioc.map_device(addr_range[0], addr_range[1], dev.data_write_p, dev.data_read_p)
 
     wires_map = {
-        "nmi_wire": {"devices": {"cpu": "nmi_pin", "intc": "nmi_pin"}, "default_state": 0},
-        "int_wire": {"devices": {"cpu": "int_pin", "intc": "int_pin"}, "default_state": 0},
-        "int0_wire": {"devices": {"timer": "ch0_output_pin", "intc": "int0_pin"}, "default_state": 0},
-        "ch1_output_wire": {"devices": {"timer": "ch1_output_pin"}, "default_state": 0},
-        "ch2_output_wire": {"devices": {"timer": "ch2_output_pin"}, "default_state": 0},
-        "int1_wire": {"devices": {"ppi": "int1_pin", "intc": "int1_pin"}, "default_state": 0},
-        "int6_wire": {"devices": {"fdc": "int6_pin", "intc": "int6_pin"}, "default_state": 0},
+        "nmi_wire": {"devices": {"cpu": "nmi_pin", "intc": "nmi_pin"}, "default_state": 0, "state_change_callback": None},
+        "int_wire": {"devices": {"cpu": "int_pin", "intc": "int_pin"}, "default_state": 0, "state_change_callback": None},
+        "int0_wire": {"devices": {"timer": "ch0_output_pin", "intc": "int0_pin"}, "default_state": 0, "state_change_callback": None},
+        "ch1_output_wire": {"devices": {"timer": "ch1_output_pin"}, "default_state": 0, "state_change_callback": None},
+        "ch2_output_wire": {"devices": {"timer": "ch2_output_pin"}, "default_state": 0, "state_change_callback": None},
+        "int1_wire": {"devices": {"ppi": "int1_pin", "intc": "int1_pin"}, "default_state": 0, "state_change_callback": None},
+        "beep_wire": {"devices": {"ppi": "beep_pin"}, "default_state": 0, "state_change_callback": beep_wire_cb},
+        "int6_wire": {"devices": {"fdc": "int6_pin", "intc": "int6_pin"}, "default_state": 0, "state_change_callback": None},
     }
 
     for wire_name, config in wires_map.items():
-        temp_wire = Wire(wire_name)
+        temp_wire = Wire(wire_name, config["state_change_callback"])
         for dev, pin_name in config["devices"].items():
             temp_wire.connect_device(mb.devices[dev].device, pin_name, dev)
         temp_wire.set_state(config["default_state"])
@@ -101,13 +109,12 @@ def main():
             print("Restoring devices")
             mb.restore_devices()
         
-        mb.save_state_at(20_700_000)    # 20749786, 21423128
-        # mb.set_log_level_at(['cpu', 1000_000, 0])
+        mb.save_state_at(22_000_000)    # 20749786, 21423128
         # mb.set_log_level_at(['timer', 10, 0])
-        mb.set_log_level_at(['cpu', 20_700_000, 0])
-        mb.set_log_level_at(['fdc', 20_000_000, 0])
+        mb.set_log_level_at(['cpu', 22_000_000, 0])
+        mb.set_log_level_at(['fdc', 22_000_000, 0])
         # mb.set_log_level_at(['intc', 10, 0])
-        # mb.set_log_level_at(['memory', 10, 0])
+        mb.set_log_level_at(['ioc', 22_000_000, 0])
     except Exception as e:
         print(e)
         exit_program()
