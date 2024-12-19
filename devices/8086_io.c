@@ -31,6 +31,7 @@ typedef struct {
 uint8_t *IO_SPACE = NULL;
 dev_table_t io_space;
 int io_error = 0;
+size_t ticks_num = 0;
 
 static uint32_t get_id(uint32_t val1, uint32_t val2) {
     uint32_t id = (val1 & 0xFFFF) | ((val2 & 0xFFFF) << 16);
@@ -147,7 +148,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
         printf("IO_WRITE ERROR: No device at address 0x%08X!\n", addr);
         io_error = 1;
     }
-    mylog(0, IO_LOG_FILE, "IO_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(0, IO_LOG_FILE, "%lld, IO_WRITE addr = 0x%04X, value = 0x%04X, width = %d bytes\n", ticks_num, addr, value, width);
     
     // if ((addr >= 0x3B0) && (addr <= 0x3DC)) {
     //     mda_write(addr, value, width);
@@ -190,7 +191,7 @@ uint16_t data_read(uint32_t addr, uint8_t width) {
         printf("IO_READ ERROR: No device at address 0x%08X!\n", addr);
         io_error = 1;
     }
-    mylog(0, IO_LOG_FILE, "IO_READ addr = 0x%04X, width = %d bytes value: 0x%04X\n", addr, width, ret_val);
+    mylog(0, IO_LOG_FILE, "%lld, IO_READ addr = 0x%04X, width = %d bytes value: 0x%04X\n", ticks_num, addr, width, ret_val);
     // if(width == 1) {
     //     ret_val = 0xFF;
     // } else if (width == 2) {
@@ -291,5 +292,6 @@ void module_restore(void) {
 
 DLL_PREFIX
 int module_tick(uint32_t ticks) {
+    ticks_num = ticks;
     return io_error;
 }
