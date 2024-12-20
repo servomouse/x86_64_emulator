@@ -115,6 +115,8 @@ def main():
         mb.set_log_level_at(['fdc', 22_000_000, 0])
         # mb.set_log_level_at(['intc', 10, 0])
         mb.set_log_level_at(['ioc', 22_000_000, 0])
+        mb.set_log_level_at(['serial_port', 22_000_000, 0])
+        mb.set_log_level_at(['printer', 22_000_000, 0])
     except Exception as e:
         print(e)
         exit_program()
