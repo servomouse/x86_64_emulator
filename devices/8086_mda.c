@@ -54,7 +54,7 @@ void data_write(uint32_t addr, uint16_t value, uint8_t width) {
 
 DLL_PREFIX
 uint16_t data_read(uint32_t addr, uint8_t width) {
-    uint16_t ret_val = 0;
+    uint16_t ret_val = 0xFF;
     switch(addr) {
         case 0x3B8:
             ret_val = regs.mode_control_register;

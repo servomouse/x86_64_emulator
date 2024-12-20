@@ -29,13 +29,13 @@ void module_reset(void) {
 
 DLL_PREFIX
 void data_write(uint32_t addr, uint16_t value, uint8_t width) {
-    mylog(0, DEVICE_LOG_FILE, "DRAFT_DEVICE_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", addr, value, width);
+    mylog(0, DEVICE_LOG_FILE, "%lld, %s_WRITE addr = 0x%06X, value = 0x%04X, width = %d bytes\n", ticks_num, DEVICE_NAME, addr, value, width);
 }
 
 DLL_PREFIX
 uint16_t data_read(uint32_t addr, uint8_t width) {
-    uint16_t ret_val = 0;
-    mylog(0, DEVICE_LOG_FILE, "DRAFT_DEVICE_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", addr, width, ret_val);
+    uint16_t ret_val = 0xFF;
+    mylog(0, DEVICE_LOG_FILE, "%lld, %s_READ addr = 0x%04X, width = %d bytes, data = 0x%04X\n", ticks_num, DEVICE_NAME, addr, width, ret_val);
     return ret_val;
 }
 
@@ -54,5 +54,6 @@ void module_restore(void) {
 
 DLL_PREFIX
 int module_tick(uint32_t ticks) {
+    ticks_num = ticks;
     return 0;
 }
