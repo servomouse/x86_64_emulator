@@ -5,9 +5,9 @@
 
 // p229 and p542
 
-#define DEVICE_NAME         "DRAFT"
-#define DEVICE_LOG_FILE     "logs/draft_device.log"
-#define DEVICE_DATA_FILE    "data/draft_device.bin"
+#define DEVICE_NAME         "SERIAL_PORT"
+#define DEVICE_LOG_FILE     "logs/serial_port_device.log"
+#define DEVICE_DATA_FILE    "data/serial_port_device.bin"
 
 /*
 Note: Divisor Latch Access Bit (DLAB) is the Most Significant Bit of the Line Control Register

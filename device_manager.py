@@ -201,8 +201,8 @@ class DevManager():
             #     self._ticks = dev.cpu_get_ticks()
         if self._save_state_at > 0 and self._ticks >= self._save_state_at:
             self.save_devices()
-            self._save_state_at = 0
             print(f"Target ticks {self._save_state_at} reached, devices state saved!")
+            self._save_state_at = 0
         if len(self._set_log_level_at) > 0:
             temp_arr = []
             need_update = False

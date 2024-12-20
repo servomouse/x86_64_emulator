@@ -52,7 +52,7 @@ tests = [""]
 [serial_port]
 type = "device"
 address_ranges = [[0x2F8, 0x2FF], [0x3F8, 0x3FF]]
-module = ["devices/8086_printer.c"]
+module = ["devices/8086_serial_port.c"]
 tests = [""]
 
 [ppi]
