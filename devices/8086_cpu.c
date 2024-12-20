@@ -1293,6 +1293,7 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
         case 0xD3: {    // 16-bit shifts by CL
             operands_t operands = decode_operands(opcode, data, 1);
             ret_val += operands.num_bytes;
+            uint8_t width = operands.width * 8;
             if((opcode == 0xD0) || (opcode == 0xD1)) {
                 operands.src_val = 1;
             } else if((opcode == 0xD2) || (opcode == 0xD3)) {
@@ -1301,18 +1302,30 @@ uint8_t shift_instr(uint8_t opcode, uint8_t *data) {
             switch(get_register_field(data[0])) {
                 case 0:   // ROL REG/MEM, 1/CL: [opcode, MOD 000 R/M, DISP-LO, DISP-HI]
                     // rotr32(x, n) (( x>>n  ) | (x<<(64-n)))
-                    if(operands.src_val > 16) {
-                        operands.src_val = operands.src_val % 16;
+                    if(operands.src_val > width) {
+                        operands.src_val = operands.src_val % width;
                     }
-                    res_val = (operands.dst_val << operands.src_val) | (operands.dst_val >> (16 - operands.src_val));
+                    res_val = (operands.dst_val << operands.src_val) | (operands.dst_val >> (width - operands.src_val));
                     update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SHIFT_L_OP);
                     mylog(0, "logs/main.log", "Instruction 0x%02X: ROL %s (0x%04X), %d: result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     break;
                 case 1: // ROR REG/MEM, 1/CL: [opcode, MOD 001 R/M, DISP-LO, DISP-HI]
-                    printf("ERROR: unimplemented ROR REG/MEM, 1/CL operation\n");
-                    REGS->invalid_operations ++;
+                    if(operands.src_val > width) {
+                        operands.src_val = operands.src_val % width;
+                    }
+                    res_val = (operands.dst_val >> operands.src_val) | (operands.dst_val << (width - operands.src_val));
+                    update_flags(operands.dst_val, operands.src_val, res_val, operands.width, SHIFT_R_OP);
+                    mylog(0, "logs/main.log", "Instruction 0x%02X: ROR %s (0x%04X), %d: result = 0x%04X\n", opcode, operands.destination, operands.dst_val, operands.src_val, res_val);
                     break;
                 case 2: // RCL REG/MEM, 1/CL: [opcode, MOD 010 R/M, DISP-LO, DISP-HI]
+                    // RCL (Rotate through Carry Left) rotates the bits
+                    // in the byte or word destination operand to the left
+                    // by the number of bits specified in the count
+                    // operand. The carry flag (CF) is treated as "part
+                    // of" the destination operand; that is, its value is
+                    // rotated into the low-order bit of the destination,
+                    // and itself is replaced by the high-order bit of the
+                    // destination.
                     printf("ERROR: unimplemented RCL REG/MEM, 1/CL operation\n");
                     REGS->invalid_operations ++;
                     break;
