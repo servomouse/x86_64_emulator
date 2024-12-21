@@ -43,10 +43,10 @@ address_ranges = [[0x3B0, 0x3BF]]
 module = ["devices/8086_mda.c"]
 tests = [""]
 
-[printer]
+[dummy]
 type = "device"
-address_ranges = [[0x278, 0x27F], [0x378, 0x37F]]
-module = ["devices/8086_printer.c"]
+address_ranges = [[0x200, 0x20F], [0x278, 0x27F], [0x378, 0x37F]]
+module = ["devices/dummy_device.c"]
 tests = [""]
 
 [serial_port]

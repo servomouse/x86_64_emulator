@@ -159,7 +159,10 @@ class DevManager():
     
     def set_log_level_at(self, ticks):
         ''' ticks: [device_name, ticks, new_log_level] '''
-        self._set_log_level_at.append(ticks)
+        if ticks[0] in self.devices:
+            self._set_log_level_at.append(ticks)
+        else:
+            raise Exception(f"ERROR::: Cannot set_log_level_at for device {ticks[0]}: device does not exist!")
     
     def add_device(self, device, dev_name):
         self.devices[dev_name] = device

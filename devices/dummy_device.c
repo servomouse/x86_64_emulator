@@ -1,11 +1,11 @@
-#include "draft_device.h"
+#include "dummy_device.h"
 #include "utils.h"
 #include "pins.h"
 #include <string.h>
 
-#define DEVICE_NAME         "PRINTER"
-#define DEVICE_LOG_FILE     "logs/printer.log"
-#define DEVICE_DATA_FILE    "data/printer.bin"
+#define DEVICE_NAME         "DUMMY"
+#define DEVICE_LOG_FILE     "logs/dummy_device.log"
+#define DEVICE_DATA_FILE    "data/dummy_device.bin"
 
 typedef struct {
     uint8_t reg1;
